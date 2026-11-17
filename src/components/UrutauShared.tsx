@@ -109,31 +109,45 @@ const urutauRepousoMadeiraImg = urutauOlhosFechadosImg;
 const urutauRepousoEsmeraldaImg = urutauOlhosFechadosImg;
 
 export const ICONES_SVG = {
-  urutauOrnamental: `<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+  urutauOrnamental: `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="uGold" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#FEF08A"/>
-        <stop offset="50%" stop-color="#F59E0B"/>
-        <stop offset="100%" stop-color="#B45309"/>
+      <radialGradient id="bgGlow" cx="50%" cy="42%" r="58%">
+        <stop offset="0%" stop-color="#0C2A24"/>
+        <stop offset="65%" stop-color="#061714"/>
+        <stop offset="100%" stop-color="#030B0A"/>
+      </radialGradient>
+      <linearGradient id="plumage" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#4E7A6B"/>
+        <stop offset="50%" stop-color="#2E5448"/>
+        <stop offset="100%" stop-color="#19352D"/>
       </linearGradient>
+      <radialGradient id="amberEye" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#FDE68A"/>
+        <stop offset="45%" stop-color="#F59E0B"/>
+        <stop offset="100%" stop-color="#B45309"/>
+      </radialGradient>
     </defs>
-    <circle cx="120" cy="120" r="108" fill="#071811" stroke="#10B981" stroke-width="4"/>
-    <polygon points="84,22 120,68 156,22" fill="#0B3B2B" stroke="#20E3B2" stroke-width="3"/>
-    <polygon points="98,22 120,50 142,22" fill="#10B981"/>
-    <polygon points="108,22 120,36 132,22" fill="#F5B041"/>
-    <path d="M24,84 Q66,46 112,92 M216,84 Q174,46 128,92" fill="none" stroke="#C69C6D" stroke-width="10" stroke-linecap="round"/>
-    <circle cx="66" cy="108" r="28" fill="#071811" stroke="#10B981" stroke-width="5"/>
-    <circle cx="66" cy="108" r="20" fill="url(#uGold)"/>
-    <circle cx="69" cy="109" r="10" fill="#071811"/>
-    <circle cx="58" cy="100" r="5" fill="#FFFFFF"/>
-    <circle cx="174" cy="108" r="28" fill="#071811" stroke="#10B981" stroke-width="5"/>
-    <circle cx="174" cy="108" r="20" fill="url(#uGold)"/>
-    <circle cx="171" cy="109" r="10" fill="#071811"/>
-    <circle cx="166" cy="100" r="5" fill="#FFFFFF"/>
-    <path d="M18,154 C54,142 94,116 120,116 C146,116 186,142 222,154 C186,162 140,144 120,166 C100,144 54,162 18,154 Z" fill="#C69C6D" stroke="#071811" stroke-width="4"/>
-    <path d="M26,158 C66,150 100,152 120,172 C140,152 174,150 214,158 C184,182 148,192 120,196 C92,192 56,182 26,158 Z" fill="#9C7349" stroke="#071811" stroke-width="3.5"/>
-    <polygon points="94,198 120,226 146,198" fill="#FF6B57"/>
-    <polygon points="106,208 120,226 134,208" fill="#F5B041"/>
+    <rect width="128" height="128" rx="28" fill="url(#bgGlow)" stroke="#10B981" stroke-width="2.5" stroke-opacity="0.45"/>
+    <path d="M18 22 L30 14 L42 22 M86 22 L98 14 L110 22" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+    <path d="M64 16 C37 16 24 36 24 64 C24 90 36 112 64 112 C92 112 104 90 104 64 C104 36 91 16 64 16 Z" fill="url(#plumage)" stroke="#6EE7B7" stroke-width="2" stroke-opacity="0.5"/>
+    <path d="M36 24 L26 12 L45 20 Z M92 24 L102 12 L83 20 Z" fill="#3B695B" stroke="#6EE7B7" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M32 39 Q48 28 64 41 Q80 28 96 39" fill="none" stroke="#A7F3D0" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <path d="M56 24 L64 17 L72 24 L64 31 Z" fill="#F59E0B" opacity="0.9"/>
+    <circle cx="46" cy="54" r="15.5" fill="#041210" stroke="#F59E0B" stroke-width="2.5"/>
+    <circle cx="82" cy="54" r="15.5" fill="#041210" stroke="#F59E0B" stroke-width="2.5"/>
+    <circle cx="46" cy="54" r="12" fill="url(#amberEye)"/>
+    <circle cx="82" cy="54" r="12" fill="url(#amberEye)"/>
+    <circle cx="46" cy="54" r="6.5" fill="#051815"/>
+    <circle cx="82" cy="54" r="6.5" fill="#051815"/>
+    <circle cx="42.5" cy="50.5" r="2.8" fill="#FFFFFF"/>
+    <circle cx="78.5" cy="50.5" r="2.8" fill="#FFFFFF"/>
+    <circle cx="49.5" cy="57.5" r="1.3" fill="#FDE68A" opacity="0.9"/>
+    <circle cx="85.5" cy="57.5" r="1.3" fill="#FDE68A" opacity="0.9"/>
+    <path d="M58 62 L64 56 L70 62 L64 73 Z" fill="#F59E0B" stroke="#041210" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M31 76 L64 96 L97 76 L91 101 L64 111 L37 101 Z" fill="#0A221D" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M40 81 L50 87 L45 96 Z M88 81 L78 87 L83 96 Z" fill="#F43F5E"/>
+    <path d="M53 89 L64 96 L75 89 L64 105 Z" fill="#F59E0B"/>
+    <path d="M46 101 L55 106 M82 101 L73 106" stroke="#6EE7B7" stroke-width="2.2" stroke-linecap="round"/>
   </svg>`
 };
 
@@ -1358,46 +1372,47 @@ export function CestariaGrafismoSVG({
 }
 
 export const AVAILABLE_MENU_ICONS: { name: string; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { name: 'Percent', label: 'Porcentagem / Rateio', Icon: Percent },
-  { name: 'Calendar', label: 'Calendário / Escalas', Icon: Calendar },
-  { name: 'CheckSquare', label: 'Tarefas / Agenda', Icon: CheckSquare },
-  { name: 'Utensils', label: 'Restaurante / Salão', Icon: Utensils },
-  { name: 'Globe', label: 'Portais / Web', Icon: Globe },
+  { name: 'LayoutGrid', label: 'Início / Painel Geral', Icon: LayoutGrid },
+  { name: 'Utensils', label: 'Restaurante / PDV & Salão', Icon: Utensils },
+  { name: 'ClipboardCheck', label: 'Checklist / Rotinas', Icon: ClipboardCheck },
   { name: 'MessageSquare', label: 'Chat / WhatsApp', Icon: MessageSquare },
+  { name: 'Clock', label: 'Relógio / Escalas e Turnos', Icon: Clock },
+  { name: 'Calendar', label: 'Calendário / Agenda', Icon: Calendar },
+  { name: 'Store', label: 'Salão / Reservas & Mesas', Icon: Store },
+  { name: 'Globe', label: 'Portais / Web', Icon: Globe },
   { name: 'Wallet', label: 'Carteira / Caixa', Icon: Wallet },
-  { name: 'Package', label: 'Pacote / Estoque', Icon: Package },
-  { name: 'ShoppingCart', label: 'Carrinho / Compras', Icon: ShoppingCart },
+  { name: 'Boxes', label: 'Estoque / Almoxarifado', Icon: Boxes },
   { name: 'PieChart', label: 'Gráfico / CMV', Icon: PieChart },
-  { name: 'Users', label: 'Equipe / Pessoas', Icon: Users },
-  { name: 'UserPlus', label: 'Recrutamento / Seleção', Icon: UserPlus },
-  { name: 'ShieldCheck', label: 'Segurança / RH', Icon: ShieldCheck },
+  { name: 'Briefcase', label: 'Maleta / RH & Vagas', Icon: Briefcase },
+  { name: 'UserPlus', label: 'Cadastros / Pessoas', Icon: UserPlus },
+  { name: 'KeyRound', label: 'Chave / Acessos', Icon: KeyRound },
+  { name: 'Users', label: 'Equipe / Colaboradores', Icon: Users },
   { name: 'Building2', label: 'Prédio / Unidades', Icon: Building2 },
   { name: 'Layers', label: 'Camadas / Setores', Icon: Layers },
-  { name: 'ClipboardCheck', label: 'Checklist / Auditoria', Icon: ClipboardCheck },
+  { name: 'BadgeCheck', label: 'Selo / Cargos & Funções', Icon: BadgeCheck },
+  { name: 'Settings', label: 'Engrenagem / Ajustes', Icon: Settings },
+  { name: 'Percent', label: 'Porcentagem / Rateio', Icon: Percent },
+  { name: 'CheckSquare', label: 'Tarefas / Concluído', Icon: CheckSquare },
+  { name: 'Package', label: 'Pacote / Insumos', Icon: Package },
+  { name: 'ShoppingCart', label: 'Carrinho / Compras', Icon: ShoppingCart },
+  { name: 'ShieldCheck', label: 'Escudo / Governança', Icon: ShieldCheck },
   { name: 'Bell', label: 'Sino / Alertas', Icon: Bell },
   { name: 'FileSearch', label: 'Busca / Logs', Icon: FileSearch },
-  { name: 'Settings', label: 'Engrenagem / Config', Icon: Settings },
   { name: 'Network', label: 'Rede / Multi-Empresa', Icon: Network },
   { name: 'Sparkles', label: 'Estrelas / Talentos', Icon: Sparkles },
-  { name: 'Briefcase', label: 'Maleta / Negócios', Icon: Briefcase },
   { name: 'Truck', label: 'Caminhão / Entregas', Icon: Truck },
   { name: 'CreditCard', label: 'Cartão / Pagamentos', Icon: CreditCard },
   { name: 'BarChart3', label: 'Indicadores / Metas', Icon: BarChart3 },
   { name: 'Award', label: 'Premiação / Qualidade', Icon: Award },
-  { name: 'Clock', label: 'Relógio / Ponto', Icon: Clock },
-  { name: 'Store', label: 'Loja / Filial', Icon: Store },
   { name: 'Receipt', label: 'Cupom / Fiscal', Icon: Receipt },
   { name: 'Landmark', label: 'Banco / Tesouraria', Icon: Landmark },
   { name: 'Headphones', label: 'Atendimento / Suporte', Icon: Headphones },
   { name: 'Wrench', label: 'Manutenção / Ajustes', Icon: Wrench },
   { name: 'FolderKanban', label: 'Projetos / Quadro', Icon: FolderKanban },
-  { name: 'Boxes', label: 'Lotes / Almoxarifado', Icon: Boxes },
   { name: 'Coins', label: 'Moedas / Comissões', Icon: Coins },
-  { name: 'BadgeCheck', label: 'Aprovação / Qualidade', Icon: BadgeCheck },
   { name: 'TrendingUp', label: 'Crescimento / Vendas', Icon: TrendingUp },
   { name: 'MapPin', label: 'Localização / Região', Icon: MapPin },
   { name: 'FileText', label: 'Documentos / Contratos', Icon: FileText },
-  { name: 'KeyRound', label: 'Chave / Acessos', Icon: KeyRound },
   { name: 'Server', label: 'Servidor / VPS', Icon: Server }
 ];
 
@@ -1428,6 +1443,8 @@ export function TabIconSVG({
 
   const renderBaseIcon = () => {
     switch (tab) {
+      case 'home':
+        return <LayoutGrid className={className} />;
       case 'empresas':
         return <Network className={className} />;
       case 'freelancers':
@@ -1435,13 +1452,13 @@ export function TabIconSVG({
       case 'rateio':
         return <Percent className={className} />;
       case 'escalas':
-        return <Calendar className={className} />;
+        return <Clock className={className} />;
       case 'agenda':
-        return <CheckSquare className={className} />;
+        return <Calendar className={className} />;
       case 'pdv':
-        return <Receipt className={className} />;
-      case 'reservas':
         return <Utensils className={className} />;
+      case 'reservas':
+        return <Store className={className} />;
       case 'portais':
         return <Globe className={className} />;
       case 'chat':
@@ -1449,19 +1466,21 @@ export function TabIconSVG({
       case 'caixa':
         return <Wallet className={className} />;
       case 'estoque':
-        return <Package className={className} />;
+        return <Boxes className={className} />;
       case 'compras':
         return <ShoppingCart className={className} />;
       case 'cmv':
         return <PieChart className={className} />;
       case 'cadastros':
-        return <Users className={className} />;
+        return <UserPlus className={className} />;
+      case 'cargos':
+        return <BadgeCheck className={className} />;
       case 'equipe':
         return <Users className={className} />;
       case 'selecao':
         return <UserPlus className={className} />;
       case 'rh':
-        return <ShieldCheck className={className} />;
+        return <Briefcase className={className} />;
       case 'unidades':
         return <Building2 className={className} />;
       case 'setores':
@@ -1481,7 +1500,7 @@ export function TabIconSVG({
       case 'config':
         return <Settings className={className} />;
       default:
-        return <Settings className={className} />;
+        return <LayoutGrid className={className} />;
     }
   };
 
@@ -6774,7 +6793,7 @@ export function UrutauValidatedCityStateSelector({
   );
 }
 
-export const DEFAULT_ADMIN_MASTER_BRIGHTNESS = 38;
+export const DEFAULT_ADMIN_MASTER_BRIGHTNESS = 45;
 
 export const BACKGROUND_BRIGHTNESS_PRESETS: Array<{
   value: number;
@@ -6783,34 +6802,22 @@ export const BACKGROUND_BRIGHTNESS_PRESETS: Array<{
   desc: string;
 }> = [
   {
-    value: 8,
+    value: 10,
     label: 'Igapó Profundo',
-    shortLabel: 'Escuro',
-    desc: 'Noite amazônica profunda em tom petróleo-ardósia frio para ambientes com pouca luz'
+    shortLabel: 'Igapó',
+    desc: 'Penumbra noturna amazônica em tom petróleo-esmeralda profundo para ambientes com pouca luz'
   },
   {
-    value: 38,
+    value: 45,
     label: 'Noite Amazônica Conforto',
     shortLabel: 'Conforto',
-    desc: 'Fundo noturno esfriado (verde-azulado dessaturado) para uso prolongado sem cansar a vista'
-  },
-  {
-    value: 60,
-    label: 'Luar na Copa',
-    shortLabel: 'Iluminado',
-    desc: 'Penumbra azul-esverdeada suave com contraste elevado e descanso visual'
+    desc: 'Equilíbrio noturno esmeralda-azulado dessaturado para uso prolongado sem cansar a vista'
   },
   {
     value: 85,
-    label: 'Neblina da Manhã',
-    shortLabel: 'Claro Suave',
-    desc: 'Modo claro frio acetinado que não ofusca a leitura'
-  },
-  {
-    value: 100,
-    label: 'Claro Diurno',
-    shortLabel: 'Claro Total',
-    desc: 'Máxima luminosidade para salão ou ambiente aberto'
+    label: 'Luar na Copa',
+    shortLabel: 'Luar Noturno',
+    desc: 'Penumbra noturna iluminada pelo luar na copa da floresta com alto contraste de leitura'
   }
 ];
 
@@ -6825,11 +6832,9 @@ export function clampBrightness(
 
 export function describeBrightnessLevel(val: number): string {
   const b = clampBrightness(val);
-  if (b <= 15) return 'Igapó Profundo';
-  if (b <= 45) return 'Noite Amazônica Conforto';
-  if (b <= 72) return 'Luar na Copa';
-  if (b <= 90) return 'Neblina da Manhã';
-  return 'Claro Diurno';
+  if (b <= 25) return 'Igapó Profundo';
+  if (b <= 68) return 'Noite Amazônica Conforto';
+  return 'Luar na Copa';
 }
 
 function mixRgbHex(
@@ -6850,49 +6855,21 @@ export function applyBackgroundBrightnessToDom(rawBrightness: number): void {
   if (typeof document === 'undefined') return;
   const b = clampBrightness(rawBrightness);
   const root = document.documentElement;
+  const t = b / 100;
 
-  let canvasHex = '#0D171D';
-  let surfaceHex = '#122027';
-  let elevatedHex = '#182A33';
-  let recessedHex = '#091116';
-  let inputFocusHex = '#0E1B22';
-  let sidebarHex = '#0B141A';
-  let borderSubtle = 'rgba(148, 184, 198, 0.15)';
-  let borderStrong = 'rgba(56, 189, 178, 0.23)';
-  let textPrimary = '#F1F5F9';
-  let textSecondary = '#CBD5E1';
-  let textMuted = '#8899A8';
-  const isLightMode = b >= 73;
+  const canvasHex = mixRgbHex([6, 13, 16], [16, 30, 36], t);
+  const surfaceHex = mixRgbHex([10, 20, 25], [22, 40, 48], t);
+  const elevatedHex = mixRgbHex([15, 28, 35], [30, 52, 62], t);
+  const recessedHex = mixRgbHex([4, 9, 12], [12, 22, 27], t);
+  const inputFocusHex = mixRgbHex([8, 17, 22], [18, 33, 40], t);
+  const sidebarHex = mixRgbHex([5, 11, 15], [14, 26, 32], t);
+  const borderSubtle = `rgba(148, 184, 198, ${(0.12 + t * 0.09).toFixed(3)})`;
+  const borderStrong = `rgba(56, 189, 178, ${(0.19 + t * 0.11).toFixed(3)})`;
+  const textPrimary = '#F1F5F9';
+  const textSecondary = t >= 0.35 ? '#CBD5E1' : '#B6C5D4';
+  const textMuted = t >= 0.35 ? '#8899A8' : '#738696';
 
-  if (!isLightMode) {
-    const t = b / 72;
-    canvasHex = mixRgbHex([7, 13, 17], [18, 32, 39], t);
-    surfaceHex = mixRgbHex([11, 20, 26], [24, 42, 51], t);
-    elevatedHex = mixRgbHex([16, 28, 36], [32, 54, 65], t);
-    recessedHex = mixRgbHex([5, 10, 14], [13, 24, 30], t);
-    inputFocusHex = mixRgbHex([9, 17, 23], [19, 35, 43], t);
-    sidebarHex = mixRgbHex([6, 12, 16], [15, 27, 34], t);
-    borderSubtle = `rgba(148, 184, 198, ${(0.11 + t * 0.08).toFixed(3)})`;
-    borderStrong = `rgba(56, 189, 178, ${(0.18 + t * 0.10).toFixed(3)})`;
-    textPrimary = '#F1F5F9';
-    textSecondary = t >= 0.35 ? '#CBD5E1' : '#B6C5D4';
-    textMuted = t >= 0.35 ? '#8899A8' : '#738696';
-    document.body.classList.remove('urutau-theme-claro');
-  } else {
-    const t = (b - 73) / 27;
-    canvasHex = mixRgbHex([226, 235, 238], [243, 247, 249], t);
-    surfaceHex = mixRgbHex([238, 244, 246], [255, 255, 255], t);
-    elevatedHex = mixRgbHex([230, 239, 242], [247, 250, 252], t);
-    recessedHex = mixRgbHex([242, 247, 249], [255, 255, 255], t);
-    inputFocusHex = '#FFFFFF';
-    sidebarHex = mixRgbHex([232, 240, 243], [249, 252, 253], t);
-    borderSubtle = `rgba(15, 52, 67, ${(0.13 - t * 0.03).toFixed(3)})`;
-    borderStrong = `rgba(15, 52, 67, ${(0.21 - t * 0.04).toFixed(3)})`;
-    textPrimary = '#0F1E26';
-    textSecondary = '#2B424F';
-    textMuted = '#566F7D';
-    document.body.classList.add('urutau-theme-claro');
-  }
+  document.body.classList.remove('urutau-theme-claro');
 
   root.style.setProperty('--urutau-bg-canvas', canvasHex);
   root.style.setProperty('--urutau-bg-surface', surfaceHex);
@@ -6940,23 +6917,23 @@ export function BackgroundBrightnessControlPanel({
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-0.5 min-w-0">
           <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400">
-            {safeVal >= 73 ? <Sun className="w-4 h-4 shrink-0 text-amber-400" /> : <Moon className="w-4 h-4 shrink-0 text-emerald-400" />}
-            <span>Brilho do Fundo do Sistema</span>
+            <Moon className="w-4 h-4 shrink-0 text-emerald-400" />
+            <span>Luminosidade Noturna da Floresta</span>
           </div>
           <p className="text-[11px] text-slate-400 leading-snug">
             {isAdminMaster ? (
               <>
-                Você está como <strong className="text-slate-100">Admin Master</strong>: o nível escolhido aqui define o{' '}
-                <strong className="text-emerald-400">padrão automático de todos os usuários</strong> que não personalizaram o próprio brilho.
+                Você está como <strong className="text-slate-100">Admin Master</strong>: o tom noturno escolhido aqui define o{' '}
+                <strong className="text-emerald-400">padrão automático de todos os usuários</strong>.
               </>
             ) : usingMasterDefault ? (
               <>
-                Usando o <strong className="text-emerald-400">padrão do Admin Master ({safeMaster}%)</strong>. Ajuste abaixo se quiser escolher um brilho exclusivo para{' '}
+                Usando o <strong className="text-emerald-400">padrão do Admin Master ({safeMaster}%)</strong>. Ajuste abaixo se quiser personalizar para{' '}
                 <strong className="text-slate-100">{userName || 'seu usuário'}</strong>.
               </>
             ) : (
               <>
-                Brilho personalizado ativo para <strong className="text-slate-100">{userName || 'seu usuário'}</strong> ({safeVal}%). O padrão atual do Admin Master é{' '}
+                Luminosidade noturna personalizada ativa para <strong className="text-slate-100">{userName || 'seu usuário'}</strong> ({safeVal}%). O padrão atual do Admin Master é{' '}
                 <strong className="text-slate-200">{safeMaster}%</strong>.
               </>
             )}
@@ -6972,7 +6949,7 @@ export function BackgroundBrightnessControlPanel({
               type="button"
               onClick={() => onChangeBrightness(null)}
               className="px-2.5 py-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
-              title="Voltar a seguir automaticamente o brilho definido pelo Admin Master"
+              title="Voltar a seguir automaticamente o padrão definido pelo Admin Master"
             >
               <RotateCcw className="w-3 h-3 shrink-0" />
               <span>Usar Padrão Admin ({safeMaster}%)</span>
@@ -6983,7 +6960,7 @@ export function BackgroundBrightnessControlPanel({
 
       <div className="space-y-1.5">
         <div className="flex items-center gap-3">
-          <span className="text-[10px] font-mono uppercase text-slate-400 shrink-0">Escuro</span>
+          <span className="text-[10px] font-mono uppercase text-slate-400 shrink-0">Penumbra</span>
           <input
             type="range"
             min={0}
@@ -6992,15 +6969,15 @@ export function BackgroundBrightnessControlPanel({
             value={safeVal}
             onChange={(e) => onChangeBrightness(clampBrightness(e.target.value))}
             className="w-full accent-[#10B981] h-2 rounded-lg cursor-pointer"
-            aria-label="Ajustar brilho do fundo"
+            aria-label="Ajustar luminosidade noturna do fundo"
           />
-          <span className="text-[10px] font-mono uppercase text-slate-400 shrink-0">Claro</span>
+          <span className="text-[10px] font-mono uppercase text-slate-400 shrink-0">Luar na Copa</span>
         </div>
       </div>
 
-      <div className={`grid ${compact ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-5'} gap-2`}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {BACKGROUND_BRIGHTNESS_PRESETS.map((preset) => {
-          const isSelected = Math.abs(safeVal - preset.value) <= 3;
+          const isSelected = Math.abs(safeVal - preset.value) <= 6;
           return (
             <button
               key={preset.value}

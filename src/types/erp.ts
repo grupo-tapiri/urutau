@@ -161,34 +161,34 @@ export const MENU_SYMBOL_COLOR_PALETTE = [
 ];
 
 export const DEFAULT_TAB_META: Record<TabId, TabMeta> = {
-  home: { id: 'home', label: 'Início', categoriaId: 'salao_atendimento', descricaoCurta: 'Tela inicial limpa', iconName: 'Home', iconColor: '#10B981' },
-  empresas: { id: 'empresas', label: 'Empresas', categoriaId: 'pessoas_equipe', descricaoCurta: '', iconName: 'Network', iconColor: '#10B981' },
-  freelancers: { id: 'freelancers', label: 'Freelancers', categoriaId: 'pessoas_equipe', descricaoCurta: '', iconName: 'Sparkles', iconColor: '#F59E0B' },
-  cadastros: { id: 'cadastros', label: 'Cadastros', categoriaId: 'pessoas_equipe', descricaoCurta: 'PF/PJ, Clientes, Fornecedores e Equipe', iconName: 'Users', iconColor: '#8B5CF6' },
-  cargos: { id: 'cargos', label: 'Cargos', categoriaId: 'pessoas_equipe', descricaoCurta: 'Cadastro de Cargos e Vínculos N:N', iconName: 'Briefcase', iconColor: '#F59E0B' },
+  home: { id: 'home', label: 'Início', categoriaId: 'salao_atendimento', descricaoCurta: 'Visão geral, indicadores e alertas', iconName: 'LayoutGrid', iconColor: '#10B981' },
+  empresas: { id: 'empresas', label: 'Empresas', categoriaId: 'estrutura_qualidade', descricaoCurta: '', iconName: 'Network', iconColor: '#10B981' },
+  freelancers: { id: 'freelancers', label: 'Freelancers', categoriaId: 'rh_selecao', descricaoCurta: '', iconName: 'Sparkles', iconColor: '#F59E0B' },
+  cadastros: { id: 'cadastros', label: 'Cadastros', categoriaId: 'rh_selecao', descricaoCurta: 'PF/PJ, Clientes, Fornecedores e Equipe', iconName: 'UserPlus', iconColor: '#8B5CF6' },
+  cargos: { id: 'cargos', label: 'Cargos', categoriaId: 'estrutura_qualidade', descricaoCurta: 'Cadastro de Cargos e Vínculos N:N', iconName: 'BadgeCheck', iconColor: '#F59E0B' },
   rateio: { id: 'rateio', label: 'Rateio (Área do Financeiro)', categoriaId: 'financeiro_caixa', descricaoCurta: 'Subárea do Financeiro para divisão de comissões', iconName: 'Percent', iconColor: '#F59E0B' },
-  escalas: { id: 'escalas', label: 'Escalas', categoriaId: 'operacao_escalas', descricaoCurta: 'Matriz semanal e reforços', iconName: 'Calendar', iconColor: '#38BDF8' },
-  agenda: { id: 'agenda', label: 'Agenda', categoriaId: 'operacao_escalas', descricaoCurta: 'Calendário operacional', iconName: 'CheckSquare', iconColor: '#22C55E' },
+  escalas: { id: 'escalas', label: 'Escalas', categoriaId: 'operacao_escalas', descricaoCurta: 'Matriz semanal e turnos da operação', iconName: 'Clock', iconColor: '#38BDF8' },
+  agenda: { id: 'agenda', label: 'Agenda', categoriaId: 'operacao_escalas', descricaoCurta: 'Calendário operacional e tarefas', iconName: 'Calendar', iconColor: '#22C55E' },
   pdv: { id: 'pdv', label: 'PDV & Comandas', categoriaId: 'salao_atendimento', descricaoCurta: 'Mesas, balcão, delivery, impressão e modo Wi-Fi local', iconName: 'Utensils', iconColor: '#10B981' },
-  reservas: { id: 'reservas', label: 'Reservas', categoriaId: 'salao_atendimento', descricaoCurta: 'Mapa de mesas e fila', iconName: 'Utensils', iconColor: '#F97316' },
-  portais: { id: 'portais', label: 'Portais', categoriaId: 'estoque_suprimentos', descricaoCurta: 'Sistemas externos integrados', iconName: 'Globe', iconColor: '#06B6D4' },
+  reservas: { id: 'reservas', label: 'Reservas', categoriaId: 'operacao_escalas', descricaoCurta: 'Mapa de mesas, reservas e fila', iconName: 'Store', iconColor: '#EC4899' },
+  portais: { id: 'portais', label: 'Portais', categoriaId: 'operacao_escalas', descricaoCurta: 'Sistemas externos integrados', iconName: 'Globe', iconColor: '#06B6D4' },
   chat: { id: 'chat', label: 'WhatsApp', categoriaId: 'salao_atendimento', descricaoCurta: 'Atendimento e comunidade', iconName: 'MessageSquare', iconColor: '#10B981' },
   caixa: { id: 'caixa', label: 'Caixa', categoriaId: 'financeiro_caixa', descricaoCurta: 'Financeiro, entradas, saídas, pagamentos de RH e rateio', iconName: 'Wallet', iconColor: '#22C55E' },
-  estoque: { id: 'estoque', label: 'Estoque', categoriaId: 'estoque_suprimentos', descricaoCurta: 'Insumos, alertas e reposição', iconName: 'Package', iconColor: '#F59E0B' },
-  compras: { id: 'compras', label: 'Compras', categoriaId: 'estoque_suprimentos', descricaoCurta: '', iconName: 'ShoppingCart', iconColor: '#F59E0B' },
+  estoque: { id: 'estoque', label: 'Estoque', categoriaId: 'financeiro_caixa', descricaoCurta: 'Insumos, alertas e reposição', iconName: 'Boxes', iconColor: '#F59E0B' },
+  compras: { id: 'compras', label: 'Compras', categoriaId: 'financeiro_caixa', descricaoCurta: '', iconName: 'ShoppingCart', iconColor: '#F59E0B' },
   cmv: { id: 'cmv', label: 'CMV', categoriaId: 'financeiro_caixa', descricaoCurta: 'Custo de mercadoria vendida', iconName: 'PieChart', iconColor: '#EC4899' },
-  equipe: { id: 'equipe', label: 'Equipe', categoriaId: 'pessoas_equipe', descricaoCurta: 'Colaboradores ativos e funções', iconName: 'Users', iconColor: '#38BDF8' },
+  equipe: { id: 'equipe', label: 'Equipe', categoriaId: 'estrutura_qualidade', descricaoCurta: 'Colaboradores ativos e funções', iconName: 'Users', iconColor: '#38BDF8' },
   selecao: { id: 'selecao', label: 'Seleção', categoriaId: 'rh_selecao', descricaoCurta: '', iconName: 'UserPlus', iconColor: '#F59E0B' },
-  rh: { id: 'rh', label: 'RH', categoriaId: 'rh_selecao', descricaoCurta: 'Recursos de RH, Folha, Vagas e Seleção', iconName: 'ShieldCheck', iconColor: '#10B981' },
+  rh: { id: 'rh', label: 'RH', categoriaId: 'rh_selecao', descricaoCurta: 'Recursos de RH, Folha, Vagas e Seleção', iconName: 'Briefcase', iconColor: '#10B981' },
   unidades: { id: 'unidades', label: 'Unidades', categoriaId: 'estrutura_qualidade', descricaoCurta: 'Lojas e filiais operacionais', iconName: 'Building2', iconColor: '#F59E0B' },
   setores: { id: 'setores', label: 'Setores', categoriaId: 'estrutura_qualidade', descricaoCurta: 'Áreas de atendimento e produção', iconName: 'Layers', iconColor: '#A855F7' },
-  checklists: { id: 'checklists', label: 'Checklists', categoriaId: 'estrutura_qualidade', descricaoCurta: 'Rotinas de abertura e fechamento', iconName: 'ClipboardCheck', iconColor: '#22C55E' },
-  modulos: { id: 'modulos', label: 'Módulos', categoriaId: 'governanca_sistema', descricaoCurta: 'Arquitetura Modular & Isolamento Anti-Queda', iconName: 'Boxes', iconColor: '#10B981' },
-  notificacoes: { id: 'notificacoes', label: 'Alertas', categoriaId: 'governanca_sistema', descricaoCurta: 'Notificações em tempo real', iconName: 'Bell', iconColor: '#EAB308' },
-  auditoria: { id: 'auditoria', label: 'Logs', categoriaId: 'governanca_sistema', descricaoCurta: 'Trilha de segurança e ações', iconName: 'FileSearch', iconColor: '#06B6D4' },
-  permissoes: { id: 'permissoes', label: 'Acessos', categoriaId: 'governanca_sistema', descricaoCurta: 'Alçadas de subordinados e acessos', iconName: 'KeyRound', iconColor: '#F43F5E' },
-  config: { id: 'config', label: 'Ajustes', categoriaId: 'governanca_sistema', descricaoCurta: 'Logo e cores da empresa', iconName: 'Settings', iconColor: '#10B981' },
-  servidor_ia: { id: 'servidor_ia', label: 'Servidor', categoriaId: 'governanca_sistema', descricaoCurta: 'Exclusivo Super Admin: VPS, OTA, nyctibi.us e IA', iconName: 'Server', iconColor: '#F59E0B' }
+  checklists: { id: 'checklists', label: 'Checklists', categoriaId: 'salao_atendimento', descricaoCurta: 'Rotinas de abertura e fechamento', iconName: 'ClipboardCheck', iconColor: '#22C55E' },
+  modulos: { id: 'modulos', label: 'Módulos', categoriaId: 'governanca_sistema', descricaoCurta: '', iconName: 'Boxes', iconColor: '#10B981' },
+  notificacoes: { id: 'notificacoes', label: 'Alertas', categoriaId: 'salao_atendimento', descricaoCurta: 'Incorporado ao menu Início', iconName: 'Bell', iconColor: '#EAB308' },
+  auditoria: { id: 'auditoria', label: 'Logs', categoriaId: 'governanca_sistema', descricaoCurta: 'Incorporado ao menu Ajustes', iconName: 'FileSearch', iconColor: '#06B6D4' },
+  permissoes: { id: 'permissoes', label: 'Acessos', categoriaId: 'rh_selecao', descricaoCurta: 'Alçadas de subordinados e acessos', iconName: 'KeyRound', iconColor: '#F43F5E' },
+  config: { id: 'config', label: 'Ajustes', categoriaId: 'governanca_sistema', descricaoCurta: 'Identidade, menus, logs, auditoria e backup', iconName: 'Settings', iconColor: '#10B981' },
+  servidor_ia: { id: 'servidor_ia', label: 'Servidor', categoriaId: 'governanca_sistema', descricaoCurta: '', iconName: 'Server', iconColor: '#F59E0B' }
 };
 
 export type EscopoColaboradores = 'todos' | 'subordinados' | 'pessoal';
@@ -211,49 +211,37 @@ export const DEFAULT_CATEGORIES: NavCategory[] = [
     id: 'salao_atendimento',
     titulo: 'Salão',
     corSimbolo: '#10B981',
-    abas: ['home', 'pdv', 'reservas', 'chat']
+    abas: ['home', 'pdv', 'checklists', 'chat']
   },
   {
     id: 'operacao_escalas',
     titulo: 'Operação',
     corSimbolo: '#F59E0B',
-    abas: ['escalas', 'agenda']
+    abas: ['escalas', 'agenda', 'reservas', 'portais']
   },
   {
     id: 'financeiro_caixa',
     titulo: 'Financeiro',
     corSimbolo: '#22C55E',
-    abas: ['caixa', 'cmv']
-  },
-  {
-    id: 'estoque_suprimentos',
-    titulo: 'Estoque',
-    corSimbolo: '#06B6D4',
-    abas: ['estoque', 'portais']
-  },
-  {
-    id: 'pessoas_equipe',
-    titulo: 'Equipe',
-    corSimbolo: '#8B5CF6',
-    abas: ['cadastros', 'cargos', 'equipe']
+    abas: ['caixa', 'estoque', 'cmv']
   },
   {
     id: 'rh_selecao',
     titulo: 'RH & Vagas',
     corSimbolo: '#EC4899',
-    abas: ['rh']
+    abas: ['rh', 'cadastros', 'permissoes']
   },
   {
     id: 'estrutura_qualidade',
     titulo: 'Estrutura',
     corSimbolo: '#38BDF8',
-    abas: ['unidades', 'setores', 'checklists']
+    abas: ['equipe', 'unidades', 'setores', 'cargos']
   },
   {
     id: 'governanca_sistema',
     titulo: 'Admin',
     corSimbolo: '#F43F5E',
-    abas: ['modulos', 'notificacoes', 'auditoria', 'permissoes', 'config', 'servidor_ia']
+    abas: ['config']
   }
 ];
 

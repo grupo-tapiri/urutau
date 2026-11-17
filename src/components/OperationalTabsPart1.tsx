@@ -2014,109 +2014,105 @@ export function AgendaTab({
 
   return (
     <div className="space-y-6 w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <div className="lg:col-span-2">
-          <UrutauDateMultiView
-            title="Agenda & Cronograma de Tarefas"
-            items={(data.agenda || []).filter((ev: any) => {
-              if (filtroStatusAgenda === 'pendentes' && ev.concluido) return false;
-              if (filtroStatusAgenda === 'concluidas' && !ev.concluido) return false;
-              if (filtroRespAgenda !== '0' && String(ev.usuario_id) !== filtroRespAgenda) return false;
-              return true;
-            })}
-            getDateISO={(ev: any) => ev.data}
-            getTitle={(ev: any) => `${ev.hora ? `${ev.hora} — ` : ''}${ev.titulo}`}
-            getSubtitle={(ev: any) => {
-              const resp = data.usuarios.find((u) => Number(u.id) === Number(ev.usuario_id));
-              return `${ev.descricao || 'Sem descrição'}${resp ? ` • Resp: ${resp.nome}` : ''}`;
-            }}
-            getBadge={(ev: any) => ({
-              text: ev.concluido ? 'CONCLUÍDA' : 'PENDENTE',
-              colorClass: ev.concluido ? 'text-emerald-400' : 'text-amber-400'
-            })}
-            getRightMeta={(ev: any) => ev.tipo || 'Operacional'}
-            initialDateISO={dataSelecionada}
-            onSelectedDateChange={(iso) => setDataSelecionada(iso)}
-            onEditItem={(ev: any) => handleOpenEvent(ev)}
-            onCreateAtDate={(iso: string) => {
-              setDataSelecionada(iso);
-              setForm({
-                id: null,
-                titulo: '',
-                data: iso,
-                hora: '19:00',
-                tipo: 'Operacional',
-                descricao: '',
-                unidade_id: data.unidades[0]?.id || 1,
-                setor_id: data.setores[0]?.id || 1,
-                usuario_id: data.usuarios[0]?.id || 1,
-                concluido: false
-              });
-              setModalOpen(true);
-            }}
-            createButtonLabel="Nova Tarefa"
-            criteriaFilters={[
-              {
-                id: 'status',
-                label: 'Status',
-                value: filtroStatusAgenda,
-                onChange: setFiltroStatusAgenda,
-                options: [
-                  { value: 'todos', label: 'Todas' },
-                  { value: 'pendentes', label: 'Pendentes' },
-                  { value: 'concluidas', label: 'Concluídas' }
-                ]
-              },
-              {
-                id: 'resp',
-                label: 'Responsável',
-                value: filtroRespAgenda,
-                onChange: setFiltroRespAgenda,
-                options: [
-                  { value: '0', label: 'Todos' },
-                  ...data.usuarios.map((u) => ({ value: String(u.id), label: u.nome }))
-                ]
-              }
-            ]}
-          />
-        </div>
+      <div className="w-full">
+        <UrutauDateMultiView
+          title="Agenda & Cronograma de Tarefas"
+          items={(data.agenda || []).filter((ev: any) => {
+            if (filtroStatusAgenda === 'pendentes' && ev.concluido) return false;
+            if (filtroStatusAgenda === 'concluidas' && !ev.concluido) return false;
+            if (filtroRespAgenda !== '0' && String(ev.usuario_id) !== filtroRespAgenda) return false;
+            return true;
+          })}
+          getDateISO={(ev: any) => ev.data}
+          getTitle={(ev: any) => `${ev.hora ? `${ev.hora} — ` : ''}${ev.titulo}`}
+          getSubtitle={(ev: any) => {
+            const resp = data.usuarios.find((u) => Number(u.id) === Number(ev.usuario_id));
+            return `${ev.descricao || 'Sem descrição'}${resp ? ` • Resp: ${resp.nome}` : ''}`;
+          }}
+          getBadge={(ev: any) => ({
+            text: ev.concluido ? 'CONCLUÍDA' : 'PENDENTE',
+            colorClass: ev.concluido ? 'text-emerald-400' : 'text-amber-400'
+          })}
+          getRightMeta={(ev: any) => ev.tipo || 'Operacional'}
+          initialDateISO={dataSelecionada}
+          onSelectedDateChange={(iso) => setDataSelecionada(iso)}
+          onEditItem={(ev: any) => handleOpenEvent(ev)}
+          onCreateAtDate={(iso: string) => {
+            setDataSelecionada(iso);
+            setForm({
+              id: null,
+              titulo: '',
+              data: iso,
+              hora: '19:00',
+              tipo: 'Operacional',
+              descricao: '',
+              unidade_id: data.unidades[0]?.id || 1,
+              setor_id: data.setores[0]?.id || 1,
+              usuario_id: data.usuarios[0]?.id || 1,
+              concluido: false
+            });
+            setModalOpen(true);
+          }}
+          createButtonLabel="Nova Tarefa"
+          criteriaFilters={[
+            {
+              id: 'status',
+              label: 'Status',
+              value: filtroStatusAgenda,
+              onChange: setFiltroStatusAgenda,
+              options: [
+                { value: 'todos', label: 'Todas' },
+                { value: 'pendentes', label: 'Pendentes' },
+                { value: 'concluidas', label: 'Concluídas' }
+              ]
+            },
+            {
+              id: 'resp',
+              label: 'Responsável',
+              value: filtroRespAgenda,
+              onChange: setFiltroRespAgenda,
+              options: [
+                { value: '0', label: 'Todos' },
+                ...data.usuarios.map((u) => ({ value: String(u.id), label: u.nome }))
+              ]
+            }
+          ]}
+        />
+      </div>
 
-        
-        <div className="bg-[#11151E] border border-slate-800/90 rounded-lg overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-200">
-              Resumo da Escala ({dataSelecionada})
-            </h3>
-            <span className="text-xs font-mono text-amber-400">
-              {DIAS_SEMANA[diaSemana]?.curto}
-            </span>
-          </div>
-          <div className="divide-y divide-slate-800/60">
-            {resumoEscalaDoDia.map((r) => (
-              <div key={r.usuario.id} className="px-4 py-3 flex items-center justify-between text-xs">
-                <div>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onNavigateDeepLink({ tab: 'equipe', entityId: r.usuario.id, action: 'edit' })
-                    }
-                    className="font-medium text-slate-200 hover:text-amber-400"
-                  >
-                    {r.usuario.nome}
-                  </button>
-                  <div className="text-[11px] text-slate-400">{r.usuario.cargo}</div>
-                </div>
-                <span
-                  className={`font-mono text-[11px] ${
-                    r.ativo ? 'text-emerald-400 font-semibold' : 'text-slate-500'
-                  }`}
+      <div className="w-full bg-[#11151E] border border-slate-800/90 rounded-lg overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-200">
+            Resumo da Escala do Dia ({dataSelecionada})
+          </h3>
+          <span className="text-xs font-mono text-amber-400">
+            {DIAS_SEMANA[diaSemana]?.curto}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-800/60">
+          {resumoEscalaDoDia.map((r) => (
+            <div key={r.usuario.id} className="px-4 py-3 flex items-center justify-between text-xs">
+              <div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onNavigateDeepLink({ tab: 'equipe', entityId: r.usuario.id, action: 'edit' })
+                  }
+                  className="font-medium text-slate-200 hover:text-amber-400"
                 >
-                  {r.status}
-                </span>
+                  {r.usuario.nome}
+                </button>
+                <div className="text-[11px] text-slate-400">{r.usuario.cargo}</div>
               </div>
-            ))}
-          </div>
+              <span
+                className={`font-mono text-[11px] ${
+                  r.ativo ? 'text-emerald-400 font-semibold' : 'text-slate-500'
+                }`}
+              >
+                {r.status}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 

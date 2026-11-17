@@ -339,19 +339,6 @@ textarea::placeholder {
   color: #6EE7B7;
 }
 
-body.urutau-theme-claro .tapiri-sidebar-edge-arrow,
-body.urutau-theme-claro .tapiri-sidebar-protrusion {
-  color: #059669;
-  border-color: rgba(5, 150, 105, 0.45);
-  box-shadow: 3px 0 12px rgba(15, 23, 42, 0.12);
-}
-
-body.urutau-theme-claro .tapiri-sidebar-edge-arrow:hover,
-body.urutau-theme-claro .tapiri-sidebar-protrusion:hover {
-  color: #047857;
-  border-color: rgba(5, 150, 105, 0.75);
-}
-
 .tapiri-orb-turquoise {
   width: 6px;
   height: 6px;
@@ -470,103 +457,6 @@ body.urutau-theme-claro .tapiri-sidebar-protrusion:hover {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.4);
-}
-
-body.urutau-theme-claro {
-  background-color: var(--urutau-bg-canvas) !important;
-  color: #0F172A !important;
-}
-
-body.urutau-theme-claro .bg-\[\#11151E\],
-body.urutau-theme-claro .bg-\[\#141A24\],
-body.urutau-theme-claro .bg-\[\#131B26\],
-body.urutau-theme-claro .bg-\[\#131B24\],
-body.urutau-theme-claro .bg-\[\#131924\],
-body.urutau-theme-claro .bg-\[\#0F131A\],
-body.urutau-theme-claro .bg-\[\#0F141D\],
-body.urutau-theme-claro .bg-\[\#0B1217\],
-body.urutau-theme-claro .bg-\[\#0F171E\],
-body.urutau-theme-claro .bg-\[\#071712\],
-body.urutau-theme-claro .bg-\[\#061A1C\],
-body.urutau-theme-claro .bg-\[\#061A1C\]\/95,
-body.urutau-theme-claro .bg-slate-900,
-body.urutau-theme-claro .bg-slate-900\/95,
-body.urutau-theme-claro .bg-slate-900\/90,
-body.urutau-theme-claro .bg-slate-900\/80 {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
-}
-
-body.urutau-theme-claro .text-white:not(.bg-emerald-500):not(.bg-emerald-600):not(.bg-rose-500):not(.bg-rose-600):not(.bg-blue-500):not(.bg-blue-600):not(.bg-purple-500):not(.bg-purple-600):not(.bg-amber-600):not(.bg-indigo-600):not(.bg-cyan-600),
-body.urutau-theme-claro .text-slate-100:not(.bg-emerald-500):not(.bg-emerald-600):not(.bg-rose-500):not(.bg-rose-600):not(.bg-blue-500):not(.bg-blue-600),
-body.urutau-theme-claro .text-slate-200,
-body.urutau-theme-claro .text-\[\#F8FAFC\] {
-  color: #0F172A !important;
-}
-
-body.urutau-theme-claro .bg-emerald-500.text-white,
-body.urutau-theme-claro .bg-emerald-600.text-white,
-body.urutau-theme-claro .bg-rose-500.text-white,
-body.urutau-theme-claro .bg-rose-600.text-white,
-body.urutau-theme-claro .bg-blue-500.text-white,
-body.urutau-theme-claro .bg-blue-600.text-white,
-body.urutau-theme-claro .bg-purple-500.text-white,
-body.urutau-theme-claro .bg-purple-600.text-white,
-body.urutau-theme-claro .bg-emerald-600 .text-white,
-body.urutau-theme-claro .bg-rose-600 .text-white,
-body.urutau-theme-claro .bg-blue-600 .text-white,
-body.urutau-theme-claro .bg-purple-600 .text-white,
-body.urutau-theme-claro .bg-rose-500 .text-white {
-  color: #FFFFFF !important;
-}
-
-body.urutau-theme-claro .text-slate-300,
-body.urutau-theme-claro .text-slate-400 {
-  color: #334155 !important;
-}
-
-body.urutau-theme-claro .text-emerald-300,
-body.urutau-theme-claro .text-emerald-200 {
-  color: #047857 !important;
-}
-
-body.urutau-theme-claro .text-amber-300,
-body.urutau-theme-claro .text-amber-200,
-body.urutau-theme-claro .text-amber-100\/90 {
-  color: #B45309 !important;
-}
-
-body.urutau-theme-claro .text-rose-300,
-body.urutau-theme-claro .text-rose-200 {
-  color: #BE123C !important;
-}
-
-body.urutau-theme-claro .amazonia-tab-active {
-  background: rgba(16, 185, 129, 0.14);
-  color: #065F46 !important;
-  border-color: rgba(16, 185, 129, 0.35);
-}
-
-body.urutau-theme-claro .amazonia-tab-inactive:hover {
-  color: #0F172A !important;
-  background-color: rgba(15, 23, 42, 0.05);
-}
-
-body.urutau-theme-claro .btn-metallic-gold {
-  color: #92400E !important;
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.38);
-}
-
-body.urutau-theme-claro .btn-turquoise-pill {
-  color: #065F46 !important;
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(16, 185, 129, 0.38);
-}
-
-body.urutau-theme-claro .btn-urucum {
-  color: #BE123C !important;
-  background: rgba(244, 63, 94, 0.12);
-  border-color: rgba(244, 63, 94, 0.32);
 }
 
 .urutau-clean-mode h2 + p.max-w-2xl,

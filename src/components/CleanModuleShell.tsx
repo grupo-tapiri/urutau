@@ -96,18 +96,18 @@ export interface ModuleCleanGuide {
 export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
   home: {
     title: 'Início • Dashboard Operacional',
-    subtitle: 'Resumo executivo do dia, indicadores em tempo real e atalhos rápidos',
-    whatItDoes: 'Reúne os principais números de caixa, salão, reservas, estoque e equipe em uma visão limpa e direta.',
+    subtitle: 'Resumo executivo do dia, indicadores em tempo real, atalhos e central de alertas',
+    whatItDoes: 'Reúne os principais números de caixa, salão, reservas, estoque, atalhos e alertas operacionais em uma visão limpa e direta.',
     steps: [
       'Acompanhe o saldo do caixa, reservas do dia e alertas de estoque na etapa "1. Visão Geral".',
       'Acesse qualquer área do sistema com 1 toque na etapa "2. Atalhos Rápidos".',
-      'Consulte as últimas movimentações e alertas na etapa "3. Atividade Recente".'
+      'Gerencie alertas, lembretes e atividades recentes na etapa "3. Alertas & Atividades".'
     ],
     mode: 'dom_stages',
     subTabs: [
       { id: 'stage_1', slug: 'visao-geral', label: '1. Visão Geral', shortDesc: 'Indicadores do dia, caixa, reservas e estoque' },
       { id: 'stage_2', slug: 'atalhos-setor', label: '2. Atalhos Rápidos', shortDesc: 'Acesso direto aos módulos operacionais' },
-      { id: 'stage_3', slug: 'atividade-alertas', label: '3. Atividade Recente', shortDesc: 'Últimos registros e alertas do sistema' }
+      { id: 'stage_3', slug: 'alertas-lembretes', label: '3. Alertas & Atividades', shortDesc: 'Central de alertas, lembretes e últimos registros' }
     ]
   },
   pdv: {
@@ -467,45 +467,37 @@ export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
     ]
   },
   config: {
-    title: 'Aparência e Configurações',
-    subtitle: 'Cores da sua marca, logotipo, brilho da tela, sons e organização do menu',
-    whatItDoes: 'Personaliza o visual do sistema com o nome, logotipo e cores da sua empresa.',
+    title: 'Ajustes, Menus, Logs e Governança',
+    subtitle: 'Identidade da marca, hub de edição dos menus, trilha de logs de auditoria e restauração de backup',
+    whatItDoes: 'Personaliza cores, logotipo, brilho noturno e menus da empresa, além de centralizar os logs de auditoria, desarquivamento e cópias de segurança.',
     steps: [
-      'Ajuste cores, brilho e logotipo da empresa na etapa "1. Visual e Marca".',
-      'Organize a ordem do menu ou sons do sistema na etapa "2. Menu e Preferências".'
+      'Ajuste cores, brilho noturno, logotipo e edite menus e separadores na etapa "1. Identidade, Cores e Menus".',
+      'Consulte a trilha de auditoria, desarquive registros e gerencie backups na etapa "2. Logs, Auditoria e Governança".'
     ],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'visual-marca', label: '1. Visual e Marca', shortDesc: 'Cores, brilho de fundo e imagens' },
-      { id: 'stage_2', slug: 'menu-preferencias', label: '2. Menu e Preferências', shortDesc: 'Ordem das abas, sons e tempo de tela' }
+      { id: 'stage_1', slug: 'visual-marca', label: '1. Identidade, Cores e Menus', shortDesc: 'Cores, luminosidade noturna, marca e hub de menus' },
+      { id: 'stage_2', slug: 'logs-auditoria', label: '2. Logs, Auditoria e Governança', shortDesc: 'Trilha de segurança, desarquivamento e backups' }
     ]
   },
   servidor_ia: {
-    title: 'Servidor VPS e Segurança',
-    subtitle: 'Atualização em 1 clique, domínio oficial, backups e blindagem Zero-Trust',
-    whatItDoes: 'Painel exclusivo do Super Admin para atualizar a VPS, gerenciar backups e monitorar a segurança.',
-    steps: [
-      'Atualize sua VPS sem perder dados na etapa "1. Atualizar Sistema (OTA)".',
-      'Verifique a blindagem Zero-Trust e faça backups testados na etapa "2. Blindagem e Backups".'
-    ],
+    title: 'Governança e Segurança',
+    subtitle: 'Blindagem Zero-Trust e restauração de backups',
+    whatItDoes: 'Gerencia cópias de segurança e blindagem do banco de dados.',
+    steps: ['Acesse em Ajustes > Logs, Auditoria e Governança.'],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'atualizar-ota', label: '1. Atualizar Sistema (OTA)', shortDesc: 'Sincronizar VPS em 1 clique' },
-      { id: 'stage_2', slug: 'blindagem-backups', label: '2. Blindagem e Backups', shortDesc: 'Auditoria Zero-Trust e cópias seguras' }
+      { id: 'stage_1', slug: 'blindagem-backups', label: '1. Blindagem e Backups', shortDesc: 'Auditoria Zero-Trust e cópias seguras' }
     ]
   },
   modulos: {
-    title: 'Central de Módulos e Recursos',
-    subtitle: 'Diretório completo de menus e submenus operacionais da empresa',
-    whatItDoes: 'Centraliza todos os módulos e submenus do sistema para navegação rápida por área.',
-    steps: [
-      'Navegue ou pesquise qualquer módulo e suas sub-abas na etapa "1. Mapa de Módulos e Submenus".',
-      'Acesse os atalhos prontos por setor ou função na etapa "2. Atalhos por Setor".'
-    ],
+    title: 'Atalhos Operacionais',
+    subtitle: 'Navegação direta pelos módulos da empresa',
+    whatItDoes: 'Acesse qualquer módulo diretamente pelo menu lateral.',
+    steps: ['Selecione o módulo desejado no menu lateral.'],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'mapa-links', label: '1. Mapa de Módulos e Submenus', shortDesc: 'Todos os menus e sub-abas do sistema' },
-      { id: 'stage_2', slug: 'atalhos-setor', label: '2. Atalhos por Setor', shortDesc: 'Acesso rápido para equipe e gestores' }
+      { id: 'stage_1', slug: 'mapa-links', label: '1. Módulos', shortDesc: 'Menus do sistema' }
     ]
   }
 };
@@ -602,6 +594,8 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
     } catch {}
   };
 
+  const showTopSubTabs = (activeTab === 'home' || activeTab === 'config') && guide.subTabs.length > 1;
+
   useEffect(() => {
     const root = contentContainerRef.current;
     if (!root) return;
@@ -610,7 +604,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
       const moduleWrapper = root.firstElementChild as HTMLElement | null;
       if (!moduleWrapper) return;
 
-      if (guide.mode === 'internal_buttons') {
+      if (!showTopSubTabs || guide.mode === 'internal_buttons') {
         const allChildren = Array.from(moduleWrapper.children) as HTMLElement[];
         allChildren.forEach((el) => {
           el.style.removeProperty('display');
@@ -640,75 +634,11 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
         return;
       }
 
-      let directBlocks = Array.from(moduleWrapper.children).filter((el) => {
-        const htmlEl = el as HTMLElement;
-        const tag = htmlEl.tagName.toLowerCase();
-        if (tag === 'style' || tag === 'script') return false;
-        const pos = window.getComputedStyle(htmlEl).position;
-        if (pos === 'fixed') return false;
-        return true;
-      }) as HTMLElement[];
-
-      if (directBlocks.length === 1 && directBlocks[0].children.length >= 2) {
-        const innerCandidates = Array.from(directBlocks[0].children).filter((el) => {
-          const htmlEl = el as HTMLElement;
-          const pos = window.getComputedStyle(htmlEl).position;
-          return pos !== 'fixed';
-        }) as HTMLElement[];
-        if (innerCandidates.length >= 2) {
-          directBlocks = innerCandidates;
-        }
-      }
-
-      const subTabsCount = guide.subTabs.length;
-      setDetectedSectionCount(directBlocks.length);
-
-      if (showAllStages || directBlocks.length <= 1 || subTabsCount <= 1) {
-        directBlocks.forEach((block) => {
-          block.style.removeProperty('display');
-        });
-        return;
-      }
-
-      const firstBlock = directBlocks[0];
-      const firstBlockIsCompactActionBar =
-        directBlocks.length >= 2 &&
-        firstBlock.querySelectorAll('table, form, textarea, canvas').length === 0 &&
-        firstBlock.offsetHeight > 0 &&
-        firstBlock.offsetHeight < 185;
-
-      const stageableBlocks = firstBlockIsCompactActionBar
-        ? directBlocks.slice(1)
-        : directBlocks;
-
-      if (firstBlockIsCompactActionBar) {
-        firstBlock.style.removeProperty('display');
-      }
-
-      if (stageableBlocks.length <= 1) {
-        stageableBlocks.forEach((b) => b.style.removeProperty('display'));
-        return;
-      }
-
-      const totalBlocks = stageableBlocks.length;
-      const effectiveTabs = Math.min(subTabsCount, totalBlocks);
-      const clampedStage = Math.min(selectedStageIndex, effectiveTabs - 1);
-
-      stageableBlocks.forEach((block, idx) => {
-        const belongsToStage =
-          totalBlocks <= effectiveTabs
-            ? idx
-            : Math.min(
-                effectiveTabs - 1,
-                Math.floor((idx / totalBlocks) * effectiveTabs)
-              );
-
-        if (belongsToStage === clampedStage) {
-          block.style.removeProperty('display');
-        } else {
-          block.style.display = 'none';
-        }
+      const allChildren = Array.from(moduleWrapper.children) as HTMLElement[];
+      allChildren.forEach((el) => {
+        el.style.removeProperty('display');
       });
+      setDetectedSectionCount(1);
     };
 
     applyProgressivePartitioning();
@@ -719,7 +649,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
 
     observer.observe(root, { childList: true, subtree: false });
     return () => observer.disconnect();
-  }, [activeTab, selectedStageIndex, showAllStages, guide.mode, guide.subTabs.length]);
+  }, [activeTab, selectedStageIndex, showAllStages, showTopSubTabs, guide.mode, guide.subTabs.length]);
 
   const activeSubTabMeta = guide.subTabs[selectedStageIndex] || guide.subTabs[0];
 
@@ -759,7 +689,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                 </span>
                 <span className="hidden md:inline-block text-slate-500">·</span>
                 <span className="hidden md:inline-block text-xs text-slate-300 truncate max-w-md">
-                  {activeSubTabMeta ? activeSubTabMeta.shortDesc : guide.subtitle}
+                  {showTopSubTabs && activeSubTabMeta ? activeSubTabMeta.shortDesc : guide.subtitle}
                 </span>
               </div>
             </div>
@@ -786,7 +716,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
             </div>
           </div>
 
-          {guide.subTabs.length > 1 && (
+          {showTopSubTabs && (
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-1.5 p-1.5 rounded-lg bg-[#081115] border border-white/[0.07] w-full max-w-full">
               {guide.subTabs.map((sub, idx) => {
                 const isSelected = !showAllStages && selectedStageIndex === idx;
@@ -919,249 +849,6 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
   );
 };
 
-interface ModulosDirectoryHubProps {
-  companySubdomain: string;
-  companyName: string;
-  categories: NavCategory[];
-  tabOverrides?: Record<string, CustomTabOverride>;
-  onNavigateModuleSubTab: (tabId: TabId, subTabSlug?: string) => void;
-}
-
-export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
-  companyName,
-  categories,
-  tabOverrides,
-  onNavigateModuleSubTab
-}) => {
-  const [search, setSearch] = useState('');
-
-  const allOrderedTabs = useMemo(() => {
-    const sourceCats = categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES;
-    const seen = new Set<TabId>();
-    const list: { tabId: TabId; groupTitle: string }[] = [];
-    sourceCats.forEach((cat) => {
-      cat.abas.forEach((tId) => {
-        if (!seen.has(tId)) {
-          seen.add(tId);
-          list.push({ tabId: tId, groupTitle: cat.titulo });
-        }
-      });
-    });
-    (Object.keys(MODULE_CLEAN_GUIDES) as TabId[]).forEach((tId) => {
-      if (!seen.has(tId)) {
-        seen.add(tId);
-        list.push({ tabId: tId, groupTitle: 'Outros Módulos' });
-      }
-    });
-    return list;
-  }, [categories]);
-
-  const filteredModules = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return allOrderedTabs;
-    return allOrderedTabs.filter(({ tabId, groupTitle }) => {
-      const guide = MODULE_CLEAN_GUIDES[tabId];
-      const meta = DEFAULT_TAB_META[tabId];
-      const customLabel = tabOverrides?.[tabId]?.label || '';
-      const target = [
-        tabId,
-        groupTitle,
-        customLabel,
-        meta?.label || '',
-        guide?.title || '',
-        guide?.subtitle || '',
-        ...(guide?.subTabs || []).map((s) => `${s.label} ${s.slug} ${s.shortDesc}`)
-      ]
-        .join(' ')
-        .toLowerCase();
-      return target.includes(q);
-    });
-  }, [allOrderedTabs, search, tabOverrides]);
-
-  return (
-    <div className="space-y-6 w-full">
-      <div data-clean-stage="0" className="space-y-4">
-        <div className="bg-[#0F2128] border border-[#10B981]/35 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="text-sm font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#10B981]" />
-              <span>Catálogo Completo de Módulos e Recursos ({companyName || 'Empresa Ativa'})</span>
-            </div>
-            <p className="text-xs text-slate-300">
-              Cada cartão e botão acompanha automaticamente a cor personalizada do respectivo menu lateral.
-            </p>
-          </div>
-
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar menu ou funcionalidade..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#081115] border border-white/15 text-xs text-white"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredModules.map(({ tabId, groupTitle }) => {
-            const guide = MODULE_CLEAN_GUIDES[tabId];
-            if (!guide) return null;
-            const theme = getMenuColorTheme(tabId, tabOverrides);
-            return (
-              <div
-                key={tabId}
-                className="bg-[#112229] border rounded-xl p-4 flex flex-col justify-between gap-3 transition-all"
-                style={theme.cardBoxStyle}
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span
-                        className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded font-bold border"
-                        style={theme.badgeStyle}
-                      >
-                        {groupTitle}
-                      </span>
-                      <h3 className="text-sm font-bold text-white mt-1.5 flex items-center gap-1.5">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: theme.hex }}
-                        />
-                        <span>{theme.label || guide.title}</span>
-                      </h3>
-                      <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2">{guide.subtitle}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onNavigateModuleSubTab(tabId, guide.subTabs[0]?.slug)}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-black inline-flex items-center gap-1 cursor-pointer shrink-0 transition-transform active:scale-95"
-                      style={theme.solidBtnStyle}
-                    >
-                      <span>Abrir</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-1.5 pt-1">
-                    <div className="text-[10px] font-mono uppercase text-slate-400">
-                      Submenus ({guide.subTabs.length}):
-                    </div>
-                    {guide.subTabs.map((sub) => (
-                      <div
-                        key={sub.id}
-                        className="p-2 rounded-lg bg-[#081115]/90 border flex items-center justify-between gap-2"
-                        style={{ borderColor: `rgba(${theme.rgb}, 0.22)` }}
-                      >
-                        <div className="min-w-0">
-                          <div className="text-xs font-semibold text-slate-100 truncate">
-                            {sub.label}
-                          </div>
-                          <div className="text-[10px] text-slate-400 truncate">
-                            {sub.shortDesc}
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => onNavigateModuleSubTab(tabId, sub.slug)}
-                          className="px-2.5 py-1 rounded border text-[10px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer transition-colors shrink-0"
-                          style={theme.softBtnStyle}
-                        >
-                          <span>Ir</span>
-                          <ChevronRight className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div data-clean-stage="1" className="bg-[#112229] border border-white/10 rounded-xl p-4 sm:p-5 space-y-4">
-        <h3 className="text-sm font-bold text-white">
-          Atalhos Rápidos por Perfil de Operação
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {[
-            {
-              perfil: 'Atendimento de Salão e Garçons',
-              tab: 'pdv' as TabId,
-              sub: 'mesas-comandas',
-              desc: 'Abre direto no Mapa de Mesas e Comandas'
-            },
-            {
-              perfil: 'Mapa de Reservas e Ocupação',
-              tab: 'reservas' as TabId,
-              sub: 'mapa-salao',
-              desc: 'Abre direto no Mapa do Salão e Reservas'
-            },
-            {
-              perfil: 'Fechamento de Caixa e Turno',
-              tab: 'caixa' as TabId,
-              sub: 'fluxo-turno',
-              desc: 'Abre direto na Tesouraria e Fechamento Cego'
-            },
-            {
-              perfil: 'Divisão de Gorjetas (Rateio 10%)',
-              tab: 'rateio' as TabId,
-              sub: 'comissoes',
-              desc: 'Abre direto no Rateio de Comissões do Turno'
-            },
-            {
-              perfil: 'Cadastros Unificados (PF / PJ / Equipe)',
-              tab: 'cadastros' as TabId,
-              sub: 'base-geral',
-              desc: 'Abre direto na Base Geral Unificada'
-            },
-            {
-              perfil: 'Central de Logs de Erros e Falhas',
-              tab: 'auditoria' as TabId,
-              sub: 'erros-falhas',
-              desc: 'Abre direto no Diagnóstico de Erros do Sistema'
-            }
-          ].map((item) => {
-            const k = `preset-${item.tab}-${item.sub}`;
-            const theme = getMenuColorTheme(item.tab, tabOverrides);
-            return (
-              <div
-                key={k}
-                className="p-3.5 rounded-xl bg-[#081115] border flex flex-col justify-between gap-3"
-                style={theme.cardBoxStyle}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-bold text-white">{item.perfil}</div>
-                    <span
-                      className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border"
-                      style={theme.badgeStyle}
-                    >
-                      {theme.label}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-slate-300">{item.desc}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onNavigateModuleSubTab(item.tab, item.sub)}
-                  className="w-full py-2 px-3 rounded-lg text-xs font-black inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                  style={theme.solidBtnStyle}
-                >
-                  <span>Abrir {theme.label}</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const HomeDashboardHub: React.FC<{
   data: any;
   currentUser: any;
@@ -1169,7 +856,8 @@ export const HomeDashboardHub: React.FC<{
   companySubdomain: string;
   tabOverrides?: Record<string, CustomTabOverride>;
   onNavigateTab: (tab: TabId, subTabSlug?: string) => void;
-}> = ({ data, currentUser, companyName, tabOverrides, onNavigateTab }) => {
+  alertasPanel?: React.ReactNode;
+}> = ({ data, currentUser, companyName, tabOverrides, onNavigateTab, alertasPanel }) => {
   const resumo = useMemo(() => {
     const caixaLista = Array.isArray(data?.caixa) ? data.caixa : [];
     let entradas = 0;
@@ -1651,11 +1339,11 @@ export const HomeDashboardHub: React.FC<{
             </div>
             <button
               type="button"
-              onClick={() => onNavigateTab('auditoria', 'erros-falhas')}
+              onClick={() => onNavigateTab('home', 'alertas-lembretes')}
               className="w-full py-2 px-3 rounded-lg border text-xs font-bold cursor-pointer transition-all"
               style={auditoriaTheme.softBtnStyle}
             >
-              {auditoriaTheme.label} ({resumo.alertasCount} alertas)
+              Alertas & Lembretes ({resumo.alertasCount} alertas)
             </button>
           </div>
         </div>
@@ -1665,43 +1353,43 @@ export const HomeDashboardHub: React.FC<{
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
-              grupo: '1. Atendimento, Salão e Vendas',
+              grupo: '1. Salão, Atendimento e Operação',
               anchorTab: 'pdv' as TabId,
               itens: [
                 { tab: 'pdv' as TabId, sub: 'mesas-comandas', titulo: 'PDV, Mesas e Comandas', desc: 'Pedidos no salão, balcão, delivery e impressão térmica' },
-                { tab: 'reservas' as TabId, sub: 'mapa-salao', titulo: 'Reservas e Mapa do Salão', desc: 'Ocupação ao vivo das mesas e agendamentos de clientes' },
+                { tab: 'checklists' as TabId, sub: 'executar', titulo: 'Checklists de Rotina', desc: 'Conferência de abertura, limpeza e fechamento' },
                 { tab: 'chat' as TabId, sub: 'conversas-ativas', titulo: 'Chat WhatsApp & Bot IA', desc: 'Atendimento automático e conversas em tempo real' },
+                { tab: 'reservas' as TabId, sub: 'mapa-salao', titulo: 'Reservas e Mapa do Salão', desc: 'Ocupação ao vivo das mesas e agendamentos de clientes' }
+              ]
+            },
+            {
+              grupo: '2. Financeiro, Caixa e Estoque',
+              anchorTab: 'caixa' as TabId,
+              itens: [
+                { tab: 'caixa' as TabId, sub: 'fluxo-turno', titulo: 'Caixa e Fechamento de Turno', desc: 'Entradas, saídas, sangrias e conferência de turno' },
+                { tab: 'estoque' as TabId, sub: 'posicao-estoque', titulo: 'Estoque e Kardex', desc: 'Controle de insumos, validade e movimentações' },
+                { tab: 'cmv' as TabId, sub: 'fichas-tecnicas', titulo: 'CMV e Fichas Técnicas', desc: 'Custo por prato, margem de lucro e engenharia de cardápio' },
                 { tab: 'portais' as TabId, sub: 'visor-portais', titulo: 'Portais de Delivery e Reservas', desc: 'Acesso simultâneo a portais externos integrados' }
               ]
             },
             {
-              grupo: '2. Financeiro, Compras e Estoque',
-              anchorTab: 'caixa' as TabId,
+              grupo: '3. RH, Cadastros e Escalas',
+              anchorTab: 'rh' as TabId,
               itens: [
-                { tab: 'caixa' as TabId, sub: 'fluxo-turno', titulo: 'Caixa e Fechamento de Turno', desc: 'Entradas, saídas, sangrias e conferência de turno' },
-                { tab: 'rateio' as TabId, sub: 'comissoes', titulo: 'Rateio de 10% (Gorjetas)', desc: 'Divisão justa por pontos, pesos e presença no turno' },
-                { tab: 'estoque' as TabId, sub: 'posicao-estoque', titulo: 'Estoque e Kardex', desc: 'Controle de insumos, validade e movimentações' },
-                { tab: 'cmv' as TabId, sub: 'fichas-tecnicas', titulo: 'CMV e Fichas Técnicas', desc: 'Custo por prato, margem de lucro e engenharia de cardápio' }
-              ]
-            },
-            {
-              grupo: '3. Equipe, Escalas e RH',
-              anchorTab: 'cadastros' as TabId,
-              itens: [
+                { tab: 'rh' as TabId, sub: 'folha-holerite', titulo: 'RH, Ponto GPS e Folha', desc: 'Ponto com cerca geográfica, holerites e seleção de vagas' },
                 { tab: 'cadastros' as TabId, sub: 'base-geral', titulo: 'Cadastros Unificados', desc: 'Colaboradores, gestores, freelancers, clientes e fornecedores' },
                 { tab: 'escalas' as TabId, sub: 'escala-semanal', titulo: 'Escalas e Folgas', desc: 'Grade semanal de turnos e cobertura de folgas' },
-                { tab: 'rh' as TabId, sub: 'folha-holerite', titulo: 'RH, Ponto GPS e Folha', desc: 'Ponto com cerca geográfica, holerites e NR-01' },
-                { tab: 'checklists' as TabId, sub: 'checklists-turno', titulo: 'Checklists de Rotina', desc: 'Conferência de abertura, limpeza e fechamento' }
+                { tab: 'agenda' as TabId, sub: 'calendario', titulo: 'Agenda Operacional', desc: 'Compromissos, tarefas e cronograma da equipe' }
               ]
             },
             {
-              grupo: '4. Governança, Módulos e Sistema',
-              anchorTab: 'auditoria' as TabId,
+              grupo: '4. Estrutura e Administração',
+              anchorTab: 'config' as TabId,
               itens: [
-                { tab: 'modulos' as TabId, sub: 'diretorio-links', titulo: 'Central de Módulos', desc: 'Catálogo completo de módulos e funcionalidades' },
-                { tab: 'auditoria' as TabId, sub: 'erros-falhas', titulo: 'Central de Logs de Erros e Desarquivar', desc: 'Diagnóstico de falhas, restauração de arquivados e GPS' },
-                { tab: 'permissoes' as TabId, sub: 'matriz-acessos', titulo: 'Permissões de Acesso', desc: 'Controle do que cada colaborador pode ver ou editar' },
-                { tab: 'config' as TabId, sub: 'marca-cores', titulo: 'Aparência, Menus e Brilho', desc: 'Personalização de cores, logo e organização dos menus' }
+                { tab: 'equipe' as TabId, sub: 'quadro-equipe', titulo: 'Equipe e Colaboradores', desc: 'Quadro ativo de colaboradores e funções' },
+                { tab: 'unidades' as TabId, sub: 'unidades', titulo: 'Unidades e Setores', desc: 'Lojas, filiais, setores e cargos operacionais' },
+                { tab: 'permissoes' as TabId, sub: 'matriz-acessos', titulo: 'Acessos e Permissões', desc: 'Controle do que cada colaborador pode ver ou editar' },
+                { tab: 'config' as TabId, sub: 'visual-marca', titulo: 'Ajustes, Menus e Logs', desc: 'Personalização de cores, menus, auditoria e backup' }
               ]
             }
           ].map((bloco) => {
@@ -1755,7 +1443,8 @@ export const HomeDashboardHub: React.FC<{
         </div>
       </div>
 
-      <div data-clean-stage="2" className="space-y-4">
+      <div data-clean-stage="2" className="space-y-6">
+        {alertasPanel}
         <div
           className="bg-[#112229] border rounded-xl p-4 sm:p-5 space-y-3"
           style={auditoriaTheme.cardBoxStyle}
@@ -1771,11 +1460,11 @@ export const HomeDashboardHub: React.FC<{
             </div>
             <button
               type="button"
-              onClick={() => onNavigateTab('auditoria', 'erros-falhas')}
+              onClick={() => onNavigateTab('config', 'logs-auditoria')}
               className="px-3.5 py-2 rounded-lg border text-xs font-black cursor-pointer"
               style={auditoriaTheme.solidBtnStyle}
             >
-              Ver Todos em {auditoriaTheme.label}
+              Ver Logs Completos em Ajustes
             </button>
           </div>
 

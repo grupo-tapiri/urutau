@@ -5333,6 +5333,12 @@ export function ConfigTab({
     onUpdateCategories(updated);
   };
 
+  const handleColorGroup = (groupId: string, novaCor: string) => {
+    if (!onUpdateCategories) return;
+    const updated = categories.map((c) => (c.id === groupId ? { ...c, corSimbolo: novaCor } : c));
+    onUpdateCategories(updated);
+  };
+
   const handleMoveGroup = (idx: number, dir: -1 | 1) => {
     if (!onUpdateCategories) return;
     const targetIdx = idx + dir;
@@ -5346,19 +5352,32 @@ export function ConfigTab({
   const handleCreateGroup = () => {
     if (!novoGrupoNome.trim() || !onUpdateCategories) return;
     const slug = `grupo_${Date.now().toString().slice(-5)}`;
-    onUpdateCategories([...categories, { id: slug, titulo: novoGrupoNome.trim(), abas: [] }]);
+    onUpdateCategories([
+      ...categories,
+      { id: slug, titulo: novoGrupoNome.trim(), corSimbolo: '#10B981', abas: [] }
+    ]);
     setNovoGrupoNome('');
   };
 
-  const handleDeleteEmptyGroup = (groupId: string) => {
+  const handleDeleteGroup = (groupId: string) => {
     if (!onUpdateCategories) return;
-    const target = categories.find((c) => c.id === groupId);
-    if (!target) return;
-    if (target.abas.length > 0) {
-      showAlert('Grupo com Módulos', 'Mova os módulos deste grupo para outro grupo antes de removê-lo.');
+    if (categories.length <= 1) {
+      showAlert('Mínimo de 1 Separador', 'O menu precisa manter pelo menos 1 separador ativo.');
       return;
     }
-    onUpdateCategories(categories.filter((c) => c.id !== groupId));
+    const target = categories.find((c) => c.id === groupId);
+    if (!target) return;
+    const remaining = categories.filter((c) => c.id !== groupId);
+    if (target.abas.length > 0 && remaining.length > 0) {
+      remaining[0] = {
+        ...remaining[0],
+        abas: [...remaining[0].abas, ...target.abas.filter((t) => !remaining[0].abas.includes(t))]
+      };
+    }
+    onUpdateCategories(remaining);
+    if (filtroGrupoEditor === groupId) {
+      setFiltroGrupoEditor('todos');
+    }
   };
 
   const handleMoveTabToGroup = (tabId: TabId, destGroupId: string) => {
@@ -5892,25 +5911,31 @@ export function ConfigTab({
         )}
 
         {modoMenuIndividual === 'aparencia' && (
-          <div className="p-3 rounded-xl bg-[#071712] border border-[#10B981]/30 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="text-xs text-slate-200 min-w-0 flex-1">
-              <span className="font-bold text-[#10B981]">
-                 Personalização Direta no Próprio Menu Ativa:
-              </span>{' '}
-              Agora você pode <strong>arrastar e soltar (drag &amp; drop)</strong> qualquer item ou grupo diretamente no menu lateral/inferior para reordenar, e <strong>segurar pressionado sobre o texto</strong> de qualquer menu para editar o nome e trocar o ícone na hora!
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="p-3 rounded-xl bg-[#0B171D] border border-[#10B981]/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto flex-1">
               <button
                 type="button"
-                onClick={() => setSecaoAtiva(secaoAtiva === 'menus' ? 'marca' : 'menus')}
-                className="px-3 py-1.5 rounded-lg bg-[#0B0D11] hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                onClick={() => setSecaoAtiva('marca')}
+                className={`px-4 py-2.5 rounded-lg text-xs font-black inline-flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                  secaoAtiva === 'marca'
+                    ? 'bg-[#10B981] text-[#04120C] shadow-md'
+                    : 'bg-[#112229] text-slate-200 border border-white/10 hover:text-white'
+                }`}
               >
-                <Sliders className="w-3.5 h-3.5 text-amber-400" />
-                <span>
-                  {secaoAtiva === 'menus'
-                    ? 'Voltar para Logo & Cores'
-                    : 'Ver Painel Auxiliar de Grupos'}
-                </span>
+                <Sparkles className="w-4 h-4 shrink-0" />
+                <span>Identidade Visual, Cores & Luminosidade</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSecaoAtiva('menus')}
+                className={`px-4 py-2.5 rounded-lg text-xs font-black inline-flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                  secaoAtiva === 'menus'
+                    ? 'bg-amber-500 text-slate-950 shadow-md'
+                    : 'bg-[#112229] text-slate-200 border border-white/10 hover:text-white'
+                }`}
+              >
+                <Sliders className="w-4 h-4 shrink-0" />
+                <span>Hub de Edição dos Menus & Separadores</span>
               </button>
             </div>
           </div>
@@ -6963,10 +6988,10 @@ export function ConfigTab({
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-base font-bold text-slate-100">
-                  Organização de Grupos, Nomes e Ícones do Menu
+                  Hub de Edição dos Menus e Separadores
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Edite o ícone de qualquer função, renomeie abas, oculte o que não usar e agrupe facilmente os módulos como preferir.
+                  Crie, renomeie, mova ou exclua qualquer separador e personalize ícones, cores e nomes de cada menu.
                 </p>
               </div>
 
@@ -6977,27 +7002,7 @@ export function ConfigTab({
                   className="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-[#10B981]/90 text-[#04120C] font-bold text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                 >
                   <Check className="w-3.5 h-3.5 shrink-0" />
-                  <span>Salvar Menus & Aparência</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    onChangeMenuPosition?.(menuPosition === 'left' ? 'bottom' : 'left')
-                  }
-                  className="px-3.5 py-2 rounded-lg bg-[#0B0D11] hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold inline-flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
-                >
-                  {menuPosition === 'left' ? (
-                    <>
-                      <PanelBottom className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Mudar para Barra Horizontal Inferior</span>
-                    </>
-                  ) : (
-                    <>
-                      <PanelLeft className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Mudar para Barra Lateral Esquerda</span>
-                    </>
-                  )}
+                  <span>Salvar Menus & Separadores</span>
                 </button>
 
                 <button
@@ -7006,7 +7011,7 @@ export function ConfigTab({
                   className="px-3.5 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/35 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer w-full sm:w-auto"
                 >
                   <RotateCcw className="w-3.5 h-3.5 shrink-0" />
-                  <span>Restaurar Padrão</span>
+                  <span>Restaurar Ordem da Foto</span>
                 </button>
               </div>
             </div>
@@ -7018,12 +7023,11 @@ export function ConfigTab({
               </div>
             )}
 
-            
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-[#0B0D11] p-3.5 rounded-xl border border-slate-800">
               <div className="flex items-center gap-2">
                 <FolderPlus className="w-4 h-4 text-amber-400 shrink-0" />
                 <span className="text-xs font-bold text-slate-200">
-                  Criar Novo Grupo (Categoria) no Menu:
+                  Criar Novo Separador no Menu:
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2 flex-1 max-w-md min-w-0">
@@ -7031,7 +7035,13 @@ export function ConfigTab({
                   type="text"
                   value={novoGrupoNome}
                   onChange={(e) => setNovoGrupoNome(e.target.value)}
-                  placeholder="Ex: Comercial, Diretoria, Operação..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateGroup();
+                    }
+                  }}
+                  placeholder="Ex: Comercial, Diretoria, Cozinha..."
                   className="flex-1 min-w-0 px-3 py-2 text-xs"
                 />
                 <button
@@ -7039,12 +7049,11 @@ export function ConfigTab({
                   onClick={handleCreateGroup}
                   className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 cursor-pointer w-full sm:w-auto"
                 >
-                  Adicionar Grupo
+                  + Criar Separador
                 </button>
               </div>
             </div>
 
-            
             <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
@@ -7055,7 +7064,7 @@ export function ConfigTab({
                     : 'bg-[#0B0D11] text-slate-300 border border-slate-800'
                 }`}
               >
-                Todos os Grupos ({categories.length})
+                Todos os Separadores ({categories.length})
               </button>
               {categories.map((cat) => (
                 <button
@@ -7073,7 +7082,6 @@ export function ConfigTab({
               ))}
             </div>
 
-            
             <div className="space-y-4">
               {categories
                 .filter((cat) => filtroGrupoEditor === 'todos' || cat.id === filtroGrupoEditor)
@@ -7084,17 +7092,24 @@ export function ConfigTab({
                       key={cat.id}
                       className="p-4 rounded-xl bg-[#0B0D11] border border-slate-800 space-y-3"
                     >
-                      
                       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                        <div className="flex items-center gap-2 flex-1 min-w-[220px]">
-                          <span className="text-xs font-mono text-amber-400">
-                            GRUPO #{realCatIdx + 1}:
+                        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[220px]">
+                          <span className="text-xs font-mono text-amber-400 font-bold">
+                            SEPARADOR #{realCatIdx + 1}:
                           </span>
+                          <input
+                            type="color"
+                            value={cat.corSimbolo || '#10B981'}
+                            onChange={(e) => handleColorGroup(cat.id, e.target.value)}
+                            className="w-7 h-7 rounded cursor-pointer bg-transparent border border-slate-700 p-0.5 shrink-0"
+                            title="Cor do separador"
+                          />
                           <input
                             type="text"
                             value={cat.titulo}
                             onChange={(e) => handleRenameGroup(cat.id, e.target.value)}
                             className="px-3 py-1.5 text-xs font-bold max-w-xs"
+                            placeholder="Nome do separador"
                           />
                         </div>
 
@@ -7103,27 +7118,30 @@ export function ConfigTab({
                             type="button"
                             onClick={() => handleMoveGroup(realCatIdx, -1)}
                             disabled={realCatIdx === 0}
-                            className="p-1.5 rounded bg-[#131B24] hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
-                            title="Subir este grupo no menu"
+                            className="px-2 py-1.5 rounded bg-[#131B24] hover:bg-slate-800 text-slate-200 disabled:opacity-30 cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
+                            title="Subir este separador"
                           >
                             <ArrowUp className="w-3.5 h-3.5" />
+                            <span>Subir</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleMoveGroup(realCatIdx, 1)}
                             disabled={realCatIdx === categories.length - 1}
-                            className="p-1.5 rounded bg-[#131B24] hover:bg-slate-800 text-slate-300 disabled:opacity-30 cursor-pointer"
-                            title="Descer este grupo no menu"
+                            className="px-2 py-1.5 rounded bg-[#131B24] hover:bg-slate-800 text-slate-200 disabled:opacity-30 cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold"
+                            title="Descer este separador"
                           >
                             <ArrowDown className="w-3.5 h-3.5" />
+                            <span>Descer</span>
                           </button>
-                          {cat.abas.length === 0 && (
+                          {categories.length > 1 && (
                             <button
                               type="button"
-                              onClick={() => handleDeleteEmptyGroup(cat.id)}
-                              className="px-2.5 py-1 rounded bg-rose-500/15 text-rose-300 text-xs font-semibold cursor-pointer"
+                              onClick={() => handleDeleteGroup(cat.id)}
+                              className="px-2.5 py-1.5 rounded bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-[11px] font-bold cursor-pointer"
+                              title="Excluir este separador (os menus dele serão mantidos automaticamente)"
                             >
-                              Excluir Grupo Vazio
+                              Excluir Separador
                             </button>
                           )}
                         </div>

@@ -115,7 +115,7 @@ import { WhatsAppAiHub } from './components/WhatsAppAiHub';
 import { OfflineSyncCenter } from './components/OfflineSyncCenter';
 import { PdvHibridoTab } from './components/PdvHibridoTab';
 import { UrutauLandingPage } from './components/UrutauLandingPage';
-import { CleanModuleShell, HomeDashboardHub, MODULE_CLEAN_GUIDES, ModulosDirectoryHub } from './components/CleanModuleShell';
+import { CleanModuleShell, HomeDashboardHub, MODULE_CLEAN_GUIDES } from './components/CleanModuleShell';
 import {
   LaunchedPcProgram,
   UrutauPcProgramTakeoverScreen,
@@ -1350,11 +1350,15 @@ export default function App() {
               t !== 'compras' &&
               t !== 'empresas' &&
               t !== 'freelancers' &&
-              t !== 'selecao'
+              t !== 'selecao' &&
+              t !== 'modulos' &&
+              t !== 'notificacoes' &&
+              t !== 'auditoria' &&
+              t !== 'servidor_ia'
           )
         };
       })
-      .filter((c) => c.abas.length > 0);
+      .filter((c) => c.abas.length > 0 || rawCats.length === 1);
 
     if (cleaned.length === 0) return DEFAULT_CATEGORIES;
 
@@ -1380,10 +1384,10 @@ export default function App() {
     try {
       localStorage.removeItem('urutau_nav_categories_v2');
       localStorage.removeItem('urutau_nav_categories_v8');
+      localStorage.removeItem('urutau_nav_categories_v9');
       localStorage.removeItem('urutau_nav_categories_v10');
-      const saved =
-        localStorage.getItem('urutau_nav_categories_v11') ||
-        localStorage.getItem('urutau_nav_categories_v9');
+      localStorage.removeItem('urutau_nav_categories_v11');
+      const saved = localStorage.getItem('urutau_nav_categories_v12');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1412,13 +1416,12 @@ export default function App() {
       setCategories(cleanNext);
       if (isSuperAdminUser(currentUser)) {
         adminMasterCategoriesRef.current = cleanNext;
-        localStorage.setItem('urutau_nav_categories_v11', JSON.stringify(cleanNext));
-        localStorage.setItem('urutau_nav_categories_v9', JSON.stringify(cleanNext));
+        localStorage.setItem('urutau_nav_categories_v12', JSON.stringify(cleanNext));
         fetch('/api/erp/configs/salvar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chave: 'menu_categorias_personalizadas_v9',
+            chave: 'menu_categorias_personalizadas_v12',
             valor_json: cleanNext
           })
         }).catch(() => {});
@@ -1593,14 +1596,16 @@ export default function App() {
       setExpandAllCategories(true);
       localStorage.removeItem('urutau_nav_categories_v2');
       localStorage.removeItem('urutau_nav_categories_v8');
+      localStorage.removeItem('urutau_nav_categories_v9');
+      localStorage.removeItem('urutau_nav_categories_v11');
       localStorage.removeItem('urutau_tab_overrides_v1');
-      localStorage.setItem('urutau_nav_categories_v9', JSON.stringify(DEFAULT_CATEGORIES));
+      localStorage.setItem('urutau_nav_categories_v12', JSON.stringify(DEFAULT_CATEGORIES));
       localStorage.setItem('urutau_tab_overrides_v8', JSON.stringify({}));
       fetch('/api/erp/configs/salvar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chave: 'menu_categorias_personalizadas_v9',
+          chave: 'menu_categorias_personalizadas_v12',
           valor_json: DEFAULT_CATEGORIES
         })
       }).catch(() => {});
@@ -1772,9 +1777,17 @@ export default function App() {
 
   const handleInlineDeleteEmptyGroup = useCallback(
     (catId: string) => {
+      if (categories.length <= 1) return;
       const target = categories.find((c) => c.id === catId);
-      if (!target || target.abas.length > 0) return;
-      handleUpdateCategories(categories.filter((c) => c.id !== catId));
+      if (!target) return;
+      const remaining = categories.filter((c) => c.id !== catId);
+      if (target.abas.length > 0 && remaining.length > 0) {
+        remaining[0] = {
+          ...remaining[0],
+          abas: [...remaining[0].abas, ...target.abas.filter((t) => !remaining[0].abas.includes(t))]
+        };
+      }
+      handleUpdateCategories(remaining);
       setInlineEditingCatId(null);
     },
     [categories, handleUpdateCategories]
@@ -2471,16 +2484,12 @@ export default function App() {
         }
       }
 
-      const cfgCats =
-        json.configs?.find((c) => c.chave === 'menu_categorias_personalizadas_v9') ||
-        json.configs?.find((c) => c.chave === 'menu_categorias_personalizadas_v8');
+      const cfgCats = json.configs?.find((c) => c.chave === 'menu_categorias_personalizadas_v12');
       if (Array.isArray(cfgCats?.valor_json) && cfgCats.valor_json.length > 0) {
         adminMasterCategoriesRef.current = normalizeUnifiedCategories(cfgCats.valor_json);
       } else {
         try {
-          const localCatsRaw =
-            localStorage.getItem('urutau_nav_categories_v11') ||
-            localStorage.getItem('urutau_nav_categories_v9');
+          const localCatsRaw = localStorage.getItem('urutau_nav_categories_v12');
           const localCats = localCatsRaw ? JSON.parse(localCatsRaw) : null;
           adminMasterCategoriesRef.current =
             Array.isArray(localCats) && localCats.length > 0
@@ -2790,7 +2799,20 @@ export default function App() {
 
   const handleSelectTab = useCallback(
     (requestedTab: TabId, requestedSubSlug?: string) => {
-      const newTab: TabId = requestedTab === 'selecao' ? 'rh' : requestedTab;
+      let newTab: TabId = requestedTab === 'selecao' ? 'rh' : requestedTab;
+      let effectiveSubSlug = requestedSubSlug;
+
+      if (requestedTab === 'notificacoes') {
+        newTab = 'home';
+        effectiveSubSlug = 'alertas-lembretes';
+      } else if (requestedTab === 'auditoria') {
+        newTab = 'config';
+        effectiveSubSlug = 'logs-auditoria';
+      } else if (requestedTab === 'modulos' || requestedTab === 'servidor_ia') {
+        newTab = 'config';
+        effectiveSubSlug = 'visual-marca';
+      }
+
       if (isAdminExclusiveTab(newTab) && !isSuperAdminUser(currentUser)) {
         showAlert(
           'Acesso Restrito',
@@ -2805,7 +2827,7 @@ export default function App() {
       }
 
       const defaultSub =
-        requestedSubSlug || MODULE_CLEAN_GUIDES[newTab]?.subTabs?.[0]?.slug || null;
+        effectiveSubSlug || MODULE_CLEAN_GUIDES[newTab]?.subTabs?.[0]?.slug || null;
       setActiveSubTabSlug(defaultSub);
 
       try {
@@ -3915,6 +3937,69 @@ export default function App() {
                   Explorer & Apps PC
                 </button>
               )}
+
+              <div className="flex items-center gap-1 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomizeMenuMode((prev) => !prev);
+                    if (customizeMenuMode) {
+                      setInlineEditingCatId(null);
+                      setInlineEditingTabId(null);
+                      setShowNewGroupInline(false);
+                    }
+                  }}
+                  className={`flex-1 py-1 px-2 rounded-md border text-[10px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                    customizeMenuMode
+                      ? 'bg-amber-500/20 border-amber-400 text-amber-300'
+                      : 'bg-white/[0.03] hover:bg-white/[0.07] border-white/[0.08] text-slate-300 hover:text-white'
+                  }`}
+                  title="Ativar modo de edição rápida de separadores e menus"
+                >
+                  <Edit3 className="w-3 h-3 shrink-0" />
+                  <span>{customizeMenuMode ? 'Concluir Edição' : 'Editar Menus'}</span>
+                </button>
+                {customizeMenuMode && (
+                  <button
+                    type="button"
+                    onClick={() => setShowNewGroupInline((prev) => !prev)}
+                    className="py-1 px-2 rounded-md bg-[#10B981]/20 hover:bg-[#10B981]/30 border border-[#10B981]/40 text-[#6EE7B7] text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer shrink-0"
+                    title="Criar novo separador no menu"
+                  >
+                    <FolderPlus className="w-3 h-3 shrink-0" />
+                    <span>+ Separador</span>
+                  </button>
+                )}
+              </div>
+
+              {showNewGroupInline && (
+                <div className="p-2 rounded-lg bg-[#0B1217] border border-[#10B981]/40 space-y-1.5">
+                  <div className="text-[10px] font-bold text-[#6EE7B7]">Novo Separador:</div>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={inlineNewGroupName}
+                      onChange={(e) => setInlineNewGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleInlineCreateGroup();
+                        }
+                      }}
+                      placeholder="Nome do separador..."
+                      className="flex-1 min-w-0 px-2 py-1 text-xs rounded bg-[#070C10] border border-white/10 text-white"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleInlineCreateGroup}
+                      className="px-2 py-1 rounded bg-[#10B981] text-[#04120C] text-[10px] font-black cursor-pointer shrink-0"
+                    >
+                      Criar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {inlineEditingTabId && (
@@ -4191,11 +4276,12 @@ export default function App() {
                               >
                                 <ArrowDown className="w-3 h-3" />
                               </button>
-                              {cat.abas.length === 0 && (
+                              {categories.length > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => handleInlineDeleteEmptyGroup(cat.id)}
                                   className="p-1 rounded bg-rose-500/20 text-rose-300 cursor-pointer"
+                                  title="Excluir separador"
                                 >
                                   <Trash2 className="w-3 h-3" />
                                 </button>
@@ -4248,7 +4334,7 @@ export default function App() {
                           onTouchStart={(e) => startHoldOnCategory(cat.id, e)}
                           onTouchMove={handleTouchMoveDrag}
                           onTouchEnd={handleTouchEndDrag}
-                          className="w-full flex items-center justify-between px-2 py-1 border-b border-white/[0.06] text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none"
+                          className="group/cat w-full flex items-center justify-between px-2 py-1 border-b border-white/[0.06] text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none"
                           title={cleanCatTitle}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
@@ -4263,6 +4349,49 @@ export default function App() {
                                 ADMIN
                               </span>
                             )}
+                          </div>
+                          <div
+                            className={`flex items-center gap-0.5 shrink-0 transition-opacity ${
+                              customizeMenuMode ? 'opacity-100' : 'opacity-0 group-hover/cat:opacity-100'
+                            }`}
+                          >
+                            {customizeMenuMode && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveCategoryOrder(cat.id, -1);
+                                  }}
+                                  className="p-0.5 rounded hover:bg-white/10 text-slate-300 cursor-pointer"
+                                  title="Subir separador"
+                                >
+                                  <ArrowUp className="w-2.5 h-2.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveCategoryOrder(cat.id, 1);
+                                  }}
+                                  className="p-0.5 rounded hover:bg-white/10 text-slate-300 cursor-pointer"
+                                  title="Descer separador"
+                                >
+                                  <ArrowDown className="w-2.5 h-2.5" />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInlineEditingCatId(cat.id);
+                              }}
+                              className="p-0.5 rounded hover:bg-white/10 text-amber-400 cursor-pointer"
+                              title="Renomear, mover ou excluir separador"
+                            >
+                              <Edit3 className="w-2.5 h-2.5" />
+                            </button>
                           </div>
                         </div>
                       )}
@@ -4837,232 +4966,156 @@ export default function App() {
                     }
                     tabOverrides={tabOverrides}
                     onNavigateTab={(tId, sSlug) => handleSelectTab(tId, sSlug)}
-                  />
-                )}
-                {activeTab === 'modulos' && (
-                  <ModulosDirectoryHub
-                    companySubdomain={
-                      portalSubdominioInput ||
-                      empresaAtivaObj?.subdominio ||
-                      brandConfig.companyName ||
-                      empresaAtivaObj?.nome ||
-                      'empresa'
-                    }
-                    companyName={brandConfig.companyName || empresaAtivaObj?.nome || 'Empresa'}
-                    categories={categories}
-                    tabOverrides={tabOverrides}
-                    onNavigateModuleSubTab={(tId, sSlug) => handleSelectTab(tId, sSlug)}
+                    alertasPanel={<NotificacoesTab {...commonProps} sseEventHistory={sseEvents} />}
                   />
                 )}
                 {activeTab === 'empresas' && <EmpresasTab {...commonProps} />}
-              {activeTab === 'freelancers' && <FreelancersTab {...commonProps} />}
-              {activeTab === 'rateio' && <CaixaTab {...commonProps} initialSubArea="rateio" />}
-              {activeTab === 'escalas' && <EscalasTab {...commonProps} />}
-              {activeTab === 'agenda' && <AgendaTab {...commonProps} />}
-              {activeTab === 'pdv' && (
-                <PdvHibridoTab
-                  {...commonProps}
-                  currentUser={currentUser}
-                  deepLinkMesaCodigo={deepLinkMesaCodigo}
-                />
-              )}
-              {activeTab === 'reservas' && <ReservasTab {...commonProps} />}
-              {activeTab === 'portais' && <PortaisTab {...commonProps} />}
-              {activeTab === 'chat' && <WhatsAppAiHub {...commonProps} />}
-              {activeTab === 'caixa' && <CaixaTab {...commonProps} />}
-              {activeTab === 'estoque' && <EstoqueTab {...commonProps} />}
-              {activeTab === 'compras' && <ComprasTab {...commonProps} />}
-              {activeTab === 'cmv' && <CMVTab {...commonProps} />}
-              {activeTab === 'cadastros' && (
-                <CadastrosPessoasTab {...commonProps} currentUser={currentUser} />
-              )}
-              {activeTab === 'cargos' && <CargosTab {...commonProps} />}
-              {activeTab === 'equipe' && <EquipeTab {...commonProps} />}
-              {activeTab === 'selecao' && (
-                <RHTab {...commonProps} initialSubView="selecao" />
-              )}
-              {activeTab === 'rh' && (
-                <RHTab {...commonProps} initialSubView={rhInitialSubView} />
-              )}
-              {activeTab === 'unidades' && (
-                <UnidadesTab
-                  {...commonProps}
-                  securityGeofenceConfig={securityGeofenceConfig}
-                  onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
-                  userGpsLocation={userGpsLocation}
-                  onCalibrateGpsToCoords={handleCalibrateGpsToCoords}
-                />
-              )}
-              {activeTab === 'setores' && <SetoresTab {...commonProps} />}
-              {activeTab === 'checklists' && <ChecklistsTab {...commonProps} />}
-              {activeTab === 'notificacoes' && (
-                <NotificacoesTab {...commonProps} sseEventHistory={sseEvents} />
-              )}
-              {activeTab === 'auditoria' && (
-                <AuditLogsTab
-                  {...commonProps}
-                  currentUser={currentUser}
-                  securityGeofenceConfig={securityGeofenceConfig}
-                  onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
-                  userGpsLocation={userGpsLocation}
-                  onSimulateGpsPosition={handleSimulateGpsPosition}
-                  simulatedShiftMode={simulatedShiftMode}
-                  onChangeSimulatedShiftMode={setSimulatedShiftMode}
-                />
-              )}
-              {(activeTab === 'config' ||
-                activeTab === 'permissoes' ||
-                activeTab === 'servidor_ia') && (
-                <ConfigTab
-                  {...commonProps}
-                  modoMenuIndividual={
-                    activeTab === 'servidor_ia'
-                      ? 'servidor_ia'
-                      : activeTab === 'permissoes'
-                      ? 'permissoes'
-                      : 'aparencia'
-                  }
-                  inactivityLimitSec={inactivityLimitSec}
-                  onChangeInactivityLimit={(sec) => {
-                    setInactivityLimitSec(sec);
-                    setSecondsRemaining(sec);
-                  }}
-                  currentAccentHex={accentHex}
-                  onChangeAccentColor={applyAccentTheme}
-                  categories={categories}
-                  onUpdateCategories={handleUpdateCategories}
-                  tabOverrides={tabOverrides}
-                  onUpdateTabOverrides={handleUpdateTabOverrides}
-                  menuPosition={menuPosition}
-                  onChangeMenuPosition={(pos) => {
-                    setMenuPosition(pos);
-                    setSidebarCollapsed(false);
-                  }}
-                  brandConfig={brandConfig}
-                  onUpdateBrandConfig={handleUpdateBrandConfig}
-                  vpsUpdateCmd={vpsUpdateOneLineCmd}
-                  securityGeofenceConfig={securityGeofenceConfig}
-                  onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
-                  userGpsLocation={userGpsLocation}
-                  onSimulateGpsPosition={handleSimulateGpsPosition}
-                  simulatedShiftMode={simulatedShiftMode}
-                  onChangeSimulatedShiftMode={setSimulatedShiftMode}
-                  effectiveBrightness={effectiveBackgroundBrightness}
-                  adminMasterBrightness={adminMasterBrightness}
-                  userBrightnessOverride={userBrightnessOverride}
-                  onChangeBackgroundBrightness={handleUpdateBackgroundBrightness}
-                />
-              )}
+                {activeTab === 'freelancers' && <FreelancersTab {...commonProps} />}
+                {activeTab === 'rateio' && <CaixaTab {...commonProps} initialSubArea="rateio" />}
+                {activeTab === 'escalas' && <EscalasTab {...commonProps} />}
+                {activeTab === 'agenda' && <AgendaTab {...commonProps} />}
+                {activeTab === 'pdv' && (
+                  <PdvHibridoTab
+                    {...commonProps}
+                    currentUser={currentUser}
+                    deepLinkMesaCodigo={deepLinkMesaCodigo}
+                  />
+                )}
+                {activeTab === 'reservas' && <ReservasTab {...commonProps} />}
+                {activeTab === 'portais' && <PortaisTab {...commonProps} />}
+                {activeTab === 'chat' && <WhatsAppAiHub {...commonProps} />}
+                {activeTab === 'caixa' && <CaixaTab {...commonProps} />}
+                {activeTab === 'estoque' && <EstoqueTab {...commonProps} />}
+                {activeTab === 'compras' && <ComprasTab {...commonProps} />}
+                {activeTab === 'cmv' && <CMVTab {...commonProps} />}
+                {activeTab === 'cadastros' && (
+                  <CadastrosPessoasTab {...commonProps} currentUser={currentUser} />
+                )}
+                {activeTab === 'cargos' && <CargosTab {...commonProps} />}
+                {activeTab === 'equipe' && <EquipeTab {...commonProps} />}
+                {activeTab === 'selecao' && (
+                  <RHTab {...commonProps} initialSubView="selecao" />
+                )}
+                {activeTab === 'rh' && (
+                  <RHTab {...commonProps} initialSubView={rhInitialSubView} />
+                )}
+                {activeTab === 'unidades' && (
+                  <UnidadesTab
+                    {...commonProps}
+                    securityGeofenceConfig={securityGeofenceConfig}
+                    onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
+                    userGpsLocation={userGpsLocation}
+                    onCalibrateGpsToCoords={handleCalibrateGpsToCoords}
+                  />
+                )}
+                {activeTab === 'setores' && <SetoresTab {...commonProps} />}
+                {activeTab === 'checklists' && <ChecklistsTab {...commonProps} />}
+                {activeTab === 'notificacoes' && (
+                  <NotificacoesTab {...commonProps} sseEventHistory={sseEvents} />
+                )}
+                {activeTab === 'auditoria' && (
+                  <AuditLogsTab
+                    {...commonProps}
+                    currentUser={currentUser}
+                    securityGeofenceConfig={securityGeofenceConfig}
+                    onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
+                    userGpsLocation={userGpsLocation}
+                    onSimulateGpsPosition={handleSimulateGpsPosition}
+                    simulatedShiftMode={simulatedShiftMode}
+                    onChangeSimulatedShiftMode={setSimulatedShiftMode}
+                  />
+                )}
+                {activeTab === 'permissoes' && (
+                  <ConfigTab
+                    {...commonProps}
+                    modoMenuIndividual="permissoes"
+                    inactivityLimitSec={inactivityLimitSec}
+                    onChangeInactivityLimit={(sec) => {
+                      setInactivityLimitSec(sec);
+                      setSecondsRemaining(sec);
+                    }}
+                    currentAccentHex={accentHex}
+                    onChangeAccentColor={applyAccentTheme}
+                    categories={categories}
+                    onUpdateCategories={handleUpdateCategories}
+                    tabOverrides={tabOverrides}
+                    onUpdateTabOverrides={handleUpdateTabOverrides}
+                    menuPosition={menuPosition}
+                    onChangeMenuPosition={(pos) => {
+                      setMenuPosition(pos);
+                      setSidebarCollapsed(false);
+                    }}
+                    brandConfig={brandConfig}
+                    onUpdateBrandConfig={handleUpdateBrandConfig}
+                    vpsUpdateCmd={vpsUpdateOneLineCmd}
+                    securityGeofenceConfig={securityGeofenceConfig}
+                    onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
+                    userGpsLocation={userGpsLocation}
+                    onSimulateGpsPosition={handleSimulateGpsPosition}
+                    simulatedShiftMode={simulatedShiftMode}
+                    onChangeSimulatedShiftMode={setSimulatedShiftMode}
+                    effectiveBrightness={effectiveBackgroundBrightness}
+                    adminMasterBrightness={adminMasterBrightness}
+                    userBrightnessOverride={userBrightnessOverride}
+                    onChangeBackgroundBrightness={handleUpdateBackgroundBrightness}
+                  />
+                )}
+                {(activeTab === 'config' || activeTab === 'servidor_ia') && (
+                  <div className="space-y-6 w-full">
+                    <div data-clean-stage="0">
+                      <ConfigTab
+                        {...commonProps}
+                        modoMenuIndividual="aparencia"
+                        inactivityLimitSec={inactivityLimitSec}
+                        onChangeInactivityLimit={(sec) => {
+                          setInactivityLimitSec(sec);
+                          setSecondsRemaining(sec);
+                        }}
+                        currentAccentHex={accentHex}
+                        onChangeAccentColor={applyAccentTheme}
+                        categories={categories}
+                        onUpdateCategories={handleUpdateCategories}
+                        tabOverrides={tabOverrides}
+                        onUpdateTabOverrides={handleUpdateTabOverrides}
+                        menuPosition={menuPosition}
+                        onChangeMenuPosition={(pos) => {
+                          setMenuPosition(pos);
+                          setSidebarCollapsed(false);
+                        }}
+                        brandConfig={brandConfig}
+                        onUpdateBrandConfig={handleUpdateBrandConfig}
+                        vpsUpdateCmd={vpsUpdateOneLineCmd}
+                        securityGeofenceConfig={securityGeofenceConfig}
+                        onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
+                        userGpsLocation={userGpsLocation}
+                        onSimulateGpsPosition={handleSimulateGpsPosition}
+                        simulatedShiftMode={simulatedShiftMode}
+                        onChangeSimulatedShiftMode={setSimulatedShiftMode}
+                        effectiveBrightness={effectiveBackgroundBrightness}
+                        adminMasterBrightness={adminMasterBrightness}
+                        userBrightnessOverride={userBrightnessOverride}
+                        onChangeBackgroundBrightness={handleUpdateBackgroundBrightness}
+                      />
+                    </div>
+                    <div data-clean-stage="1">
+                      <AuditLogsTab
+                        {...commonProps}
+                        currentUser={currentUser}
+                        securityGeofenceConfig={securityGeofenceConfig}
+                        onUpdateSecurityGeofenceConfig={handleUpdateSecurityGeofenceConfig}
+                        userGpsLocation={userGpsLocation}
+                        onSimulateGpsPosition={handleSimulateGpsPosition}
+                        simulatedShiftMode={simulatedShiftMode}
+                        onChangeSimulatedShiftMode={setSimulatedShiftMode}
+                      />
+                    </div>
+                  </div>
+                )}
               </CleanModuleShell>
             </div>
           )}
         </main>
       </div>
-
-      
-      {menuPosition === 'bottom' && (
-        <nav className="fixed bottom-0 left-0 right-0 h-16 amazonia-bottom-nav z-50 flex items-center px-3 gap-1">
-          <button
-            type="button"
-            onClick={() => setMenuPosition('left')}
-            className="p-2 text-slate-200 hover:text-white rounded shrink-0 cursor-pointer"
-            title="Alternar para Barra Vertical Esquerda"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              bottomBarScrollRef.current?.scrollBy({ left: -240, behavior: 'smooth' })
-            }
-            className="p-2 text-slate-300 hover:bg-black/25 rounded shrink-0 cursor-pointer"
-            aria-label="Rolar menu para a esquerda"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-
-          <div
-            ref={bottomBarScrollRef}
-            className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1"
-          >
-            {categories.flatMap((c) =>
-              c.abas
-                .filter(canAccessTab)
-                .map((tabId) => {
-                  const meta = DEFAULT_TAB_META[tabId];
-                  const override = tabOverrides[tabId];
-                  const displayLabel = override?.label || meta?.label || tabId;
-                  const displayIcon = override?.iconName || meta?.iconName;
-                  const displayIconColor = override?.iconColor || meta?.iconColor;
-                  const isActive = activeTab === tabId;
-                  return (
-                    <button
-                      key={tabId}
-                      type="button"
-                      data-drop-tab-id={tabId}
-                      data-drop-tab-cat={c.id}
-                      draggable
-                      onDragStart={(e) => startHtml5TabDrag(e, tabId, c.id)}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        setDragOverTabId(tabId);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        handleDropOnTabItem(c.id, tabId);
-                      }}
-                      onDragEnd={clearHtml5DragState}
-                      onMouseDown={() => startHoldOnTab(tabId, c.id)}
-                      onMouseUp={cancelHoldTimer}
-                      onMouseLeave={cancelHoldTimer}
-                      onTouchStart={(e) => startHoldOnTab(tabId, c.id, e)}
-                      onTouchMove={handleTouchMoveDrag}
-                      onTouchEnd={handleTouchEndDrag}
-                      onClick={() => {
-                        if (holdTriggeredRef.current) {
-                          holdTriggeredRef.current = false;
-                          return;
-                        }
-                        handleSelectTab(tabId);
-                      }}
-                      title={displayLabel}
-                      className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs whitespace-nowrap shrink-0 transition-all cursor-pointer ${
-                        dragOverTabId === tabId ? 'ring-2 ring-amber-400' : ''
-                      } ${isActive ? 'amazonia-tab-active' : 'amazonia-tab-inactive'}`}
-                    >
-                      <TabIconSVG
-                        tab={tabId}
-                        iconName={displayIcon}
-                        iconColor={displayIconColor}
-                        className="w-3.5 h-3.5"
-                      />
-                      <span>{displayLabel}</span>
-                      {isAdminExclusiveTab(tabId) && (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-500/25 border border-amber-400/60 text-[8px] font-mono font-black uppercase text-amber-300">
-                           ADMIN
-                        </span>
-                      )}
-                      {isActive && <span className="tapiri-orb-turquoise" />}
-                    </button>
-                  );
-                })
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              bottomBarScrollRef.current?.scrollBy({ left: 240, behavior: 'smooth' })
-            }
-            className="p-2 text-slate-300 hover:bg-black/25 rounded shrink-0 cursor-pointer"
-            aria-label="Rolar menu para a direita"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </nav>
-      )}
 
       
       {mobileMenuOpen && (
