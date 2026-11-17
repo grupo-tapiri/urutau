@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Urutau</title>
+    <meta name="description" content="Urutau — Sistema de Gestão" />
+    <meta property="og:title" content="Urutau" />
+    <meta property="og:description" content="Urutau — Sistema de Gestão" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0D171D" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Urutau" />
+    <link rel="apple-touch-icon" href="/icons/icon-180x180.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="antialiased selection:bg-emerald-500/30 selection:text-amber-200">
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        const isDevPreviewHost =
+          location.hostname.includes('run.app') ||
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1';
+        if (isDevPreviewHost) {
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            for (const reg of regs) reg.unregister();
+          });
+          if ('caches' in window) {
+            caches.keys().then((keys) => {
+              for (const k of keys) caches.delete(k);
+            });
+          }
+        } else {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js').then((reg) => {
+              window.__urutauSwRegistration = reg;
+              if (reg.waiting) {
+                window.dispatchEvent(new CustomEvent('urutau-sw-update-ready', { detail: { registration: reg } }));
+              }
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    window.dispatchEvent(new CustomEvent('urutau-sw-update-ready', { detail: { registration: reg } }));
+                  }
+                });
+              });
+            }).catch((err) => {
+              console.warn('[Urutau PWA] Falha ao registrar Service Worker:', err);
+            });
+          });
+        }
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

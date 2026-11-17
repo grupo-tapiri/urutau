@@ -1,0 +1,17 @@
+services:
+  urutau-erp:
+    build: .
+    container_name: urutau-erp-prod
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./backups:/app/backups
+    security_opt:
+      - no-new-privileges:true

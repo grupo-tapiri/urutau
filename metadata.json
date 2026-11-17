@@ -1,0 +1,6 @@
+{
+  "name": "Urutau",
+  "description": "Urutau ERP & Governança Tapiri — Auditoria Constitucional e Gestão Operacional",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
