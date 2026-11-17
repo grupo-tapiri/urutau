@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Check,
   Database,
@@ -8,7 +8,8 @@ import {
   RefreshCw,
   Server,
   ShieldCheck,
-  Terminal
+  Terminal,
+  Upload
 } from 'lucide-react';
 import { isSuperAdminUser } from './UrutauShared';
 
@@ -78,11 +79,21 @@ export function ZeroTrustGovernancePanel({ currentUser }: { currentUser?: any })
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [runningBackup, setRunningBackup] = useState<boolean>(false);
+  const [restoringJson, setRestoringJson] = useState<boolean>(false);
+  const [restoreMode, setRestoreMode] = useState<'mesclar' | 'substituir'>('mesclar');
+  const [restoreResult, setRestoreResult] = useState<{
+    formato_detectado: string;
+    modo_aplicado: string;
+    registros_sincronizados: number;
+    sincronizado_sqlite_wal: boolean;
+    resumo_contagens: Record<string, number>;
+  } | null>(null);
   const [certificate, setCertificate] = useState<BackupRestoreCertificate | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [activeSubSection, setActiveSubSection] = useState<
     'migrations_indices' | 'webhooks_limits' | 'backups_infra'
   >('migrations_indices');
+  const restoreFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const isSuper = isSuperAdminUser(currentUser);
 
@@ -158,12 +169,77 @@ export function ZeroTrustGovernancePanel({ currentUser }: { currentUser?: any })
     }
   };
 
+  const handleDownloadFullJsonBackup = async () => {
+    setErrorMsg('');
+    try {
+      const res = await fetch('/api/erp/download-backup-dados');
+      if (!res.ok) {
+        setErrorMsg('Falha ao baixar backup completo em JSON.');
+        return;
+      }
+      const textContent = await res.text();
+      const blob = new Blob([textContent], { type: 'application/json;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const dataIso = new Date().toISOString().split('T')[0];
+      link.href = blobUrl;
+      link.download = `urutau-backup-dados-${dataIso}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Erro ao exportar backup JSON.');
+    }
+  };
+
+  const handleRestoreJsonFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoringJson(true);
+    setErrorMsg('');
+    setRestoreResult(null);
+    try {
+      const rawText = await file.text();
+      const parsed = JSON.parse(rawText);
+      const res = await fetch('/api/erp/restaurar-backup-completo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modo: restoreMode,
+          backup_json: parsed
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        setErrorMsg(json?.erro || 'Falha ao restaurar arquivo de backup.');
+        return;
+      }
+      setRestoreResult(json);
+      await loadGovernanceStatus();
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Arquivo JSON inválido para restauração.');
+    } finally {
+      setRestoringJson(false);
+      if (restoreFileInputRef.current) {
+        restoreFileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (errorMsg && !status) {
     return null;
   }
 
   return (
     <div className="bg-[#11151E] border border-slate-800/90 rounded-lg p-4 sm:p-5 space-y-5">
+      <input
+        ref={restoreFileInputRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={handleRestoreJsonFileChange}
+      />
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
@@ -173,7 +249,7 @@ export function ZeroTrustGovernancePanel({ currentUser }: { currentUser?: any })
             </h3>
           </div>
           <p className="text-xs text-slate-400">
-            Recalculo autoritativo em centavos inteiros, constraints SQL declarativas, idempotencia HMAC-SHA256 e restauracao testada em instancia isolada.
+            Recalculo autoritativo em centavos inteiros, constraints SQL declarativas, idempotencia HMAC-SHA256 e restauracao completa verificada.
           </p>
         </div>
 
@@ -194,6 +270,38 @@ export function ZeroTrustGovernancePanel({ currentUser }: { currentUser?: any })
 
           <button
             type="button"
+            onClick={handleDownloadFullJsonBackup}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Baixar Backup (.json)</span>
+          </button>
+
+          <div className="inline-flex items-center gap-1">
+            <select
+              value={restoreMode}
+              onChange={(e) =>
+                setRestoreMode(e.target.value === 'substituir' ? 'substituir' : 'mesclar')
+              }
+              className="px-2 py-2 rounded text-xs bg-[#081115] border border-slate-700 text-slate-200"
+              title="Modo de restauração do backup JSON"
+            >
+              <option value="mesclar">Mesclar Backup</option>
+              <option value="substituir">Substituir Tudo</option>
+            </select>
+            <button
+              type="button"
+              disabled={restoringJson}
+              onClick={() => restoreFileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>{restoringJson ? 'Restaurando...' : 'Restaurar Backup (.json)'}</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
             disabled={loading}
             onClick={loadGovernanceStatus}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded border border-slate-700 hover:border-slate-500 text-slate-200 text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
@@ -203,6 +311,32 @@ export function ZeroTrustGovernancePanel({ currentUser }: { currentUser?: any })
           </button>
         </div>
       </div>
+
+      {restoreResult && (
+        <div className="p-4 rounded border border-amber-500/50 bg-[#0A1813] space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+              <Check className="w-4 h-4 text-[#10B981]" />
+              <span>
+                BACKUP JSON RESTAURADO COM SUCESSO ({restoreResult.formato_detectado} • Modo:{' '}
+                {restoreResult.modo_aplicado.toUpperCase()})
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-[#10B981]">
+              {restoreResult.registros_sincronizados} registros sincronizados • SQLite WAL:{' '}
+              {restoreResult.sincronizado_sqlite_wal ? 'OK' : 'N/A'}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 pt-2 border-t border-white/10 text-[11px] font-mono">
+            {Object.entries(restoreResult.resumo_contagens || {}).map(([k, v]) => (
+              <div key={k} className="text-slate-300">
+                <div className="text-slate-400 truncate">{k}</div>
+                <div className="text-[#10B981] font-bold">{v} ativos</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="p-3 rounded border border-rose-500/40 bg-rose-950/30 text-xs text-rose-200 font-medium">

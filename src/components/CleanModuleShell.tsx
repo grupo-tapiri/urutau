@@ -7,13 +7,74 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
-  Copy,
-  Check,
   ExternalLink,
-  Link2,
   Search
 } from 'lucide-react';
-import { DEFAULT_CATEGORIES, DEFAULT_TAB_META, NavCategory, TabId } from '../types/erp';
+import { CustomTabOverride, DEFAULT_CATEGORIES, DEFAULT_TAB_META, NavCategory, TabId } from '../types/erp';
+import { UrutauEmblemSVG } from './UrutauShared';
+
+function parseHexToRgbTuple(hex: string): { r: number; g: number; b: number } {
+  const clean = String(hex || '#10B981').replace('#', '').trim();
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16) || 16;
+    const g = parseInt(clean[1] + clean[1], 16) || 185;
+    const b = parseInt(clean[2] + clean[2], 16) || 129;
+    return { r, g, b };
+  }
+  const num = parseInt(clean.slice(0, 6), 16);
+  if (Number.isNaN(num)) return { r: 16, g: 185, b: 129 };
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255
+  };
+}
+
+export function getMenuColorTheme(
+  tabId: TabId,
+  tabOverrides?: Record<string, CustomTabOverride>
+) {
+  const hex =
+    tabOverrides?.[tabId]?.iconColor ||
+    DEFAULT_TAB_META[tabId]?.iconColor ||
+    '#10B981';
+  const { r, g, b } = parseHexToRgbTuple(hex);
+  const rgb = `${r}, ${g}, ${b}`;
+  const label =
+    tabOverrides?.[tabId]?.label ||
+    DEFAULT_TAB_META[tabId]?.label ||
+    tabId;
+
+  return {
+    hex,
+    r,
+    g,
+    b,
+    rgb,
+    label,
+    solidBtnStyle: {
+      backgroundColor: hex,
+      color: '#061014',
+      borderColor: hex,
+      boxShadow: `0 6px 18px -4px rgba(${rgb}, 0.42)`
+    } as React.CSSProperties,
+    softBtnStyle: {
+      backgroundColor: `rgba(${rgb}, 0.16)`,
+      color: hex,
+      borderColor: `rgba(${rgb}, 0.44)`
+    } as React.CSSProperties,
+    cardBoxStyle: {
+      backgroundColor: `rgba(${rgb}, 0.06)`,
+      borderColor: `rgba(${rgb}, 0.42)`,
+      boxShadow: `inset 0 2px 0 0 ${hex}`
+    } as React.CSSProperties,
+    badgeStyle: {
+      backgroundColor: `rgba(${rgb}, 0.18)`,
+      color: hex,
+      borderColor: `rgba(${rgb}, 0.38)`
+    } as React.CSSProperties
+  };
+}
 
 export interface CleanSubTabItem {
   id: string;
@@ -335,15 +396,15 @@ export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
   },
   portais: {
     title: 'Portais e Links Externos',
-    subtitle: 'Endereços rápidos para garçom, cozinha, cardápio digital e empresário',
-    whatItDoes: 'Cria e compartilha links diretos para cada área da operação abrir direto na tela certa.',
+    subtitle: 'Acessos rápidos para garçom, cozinha, cardápio digital e empresário',
+    whatItDoes: 'Centraliza e organiza os portais específicos de cada área da operação.',
     steps: [
-      'Copie ou abra os links prontos (.nyctibi.us) na etapa "1. Links Rápidos da Empresa".',
+      'Consulte os acessos configurados na etapa "1. Portais por Perfil".',
       'Gerencie ou crie portais específicos na etapa "2. Portais Configurados".'
     ],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'links-rapidos', label: '1. Links Rápidos da Empresa', shortDesc: 'Subdomínios e atalhos por perfil' },
+      { id: 'stage_1', slug: 'links-rapidos', label: '1. Portais por Perfil', shortDesc: 'Acessos e atalhos por perfil' },
       { id: 'stage_2', slug: 'portais-configurados', label: '2. Portais Configurados', shortDesc: 'Portais de cardápio, salão e recepção' }
     ]
   },
@@ -421,7 +482,7 @@ export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
   },
   servidor_ia: {
     title: 'Servidor VPS e Segurança',
-    subtitle: 'Atualização em 1 clique, domínio nyctibi.us, backups e blindagem Zero-Trust',
+    subtitle: 'Atualização em 1 clique, domínio oficial, backups e blindagem Zero-Trust',
     whatItDoes: 'Painel exclusivo do Super Admin para atualizar a VPS, gerenciar backups e monitorar a segurança.',
     steps: [
       'Atualize sua VPS sem perder dados na etapa "1. Atualizar Sistema (OTA)".',
@@ -434,17 +495,17 @@ export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
     ]
   },
   modulos: {
-    title: 'Módulos & Links Diretos (.nyctibi.us)',
-    subtitle: 'Diretório completo de menus e submenus com endereçamento exclusivo por empresa',
-    whatItDoes: 'Centraliza todos os módulos e submenus do sistema com links diretos no formato empresa.nyctibi.us/menu/submenu.',
+    title: 'Central de Módulos e Recursos',
+    subtitle: 'Diretório completo de menus e submenus operacionais da empresa',
+    whatItDoes: 'Centraliza todos os módulos e submenus do sistema para navegação rápida por área.',
     steps: [
       'Navegue ou pesquise qualquer módulo e suas sub-abas na etapa "1. Mapa de Módulos e Submenus".',
-      'Copie os links diretos por setor ou função na etapa "2. Links Rápidos por Setor".'
+      'Acesse os atalhos prontos por setor ou função na etapa "2. Atalhos por Setor".'
     ],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'mapa-links', label: '1. Mapa de Módulos e Submenus', shortDesc: 'Todos os menus e sub-abas com link direto' },
-      { id: 'stage_2', slug: 'atalhos-setor', label: '2. Links Rápidos por Setor', shortDesc: 'Endereços prontos para equipe e gestores' }
+      { id: 'stage_1', slug: 'mapa-links', label: '1. Mapa de Módulos e Submenus', shortDesc: 'Todos os menus e sub-abas do sistema' },
+      { id: 'stage_2', slug: 'atalhos-setor', label: '2. Atalhos por Setor', shortDesc: 'Acesso rápido para equipe e gestores' }
     ]
   }
 };
@@ -455,17 +516,22 @@ interface CleanModuleShellProps {
   companySubdomain?: string;
   initialSubTabSlug?: string | null;
   onSubTabChange?: (subTabSlug: string, stageIndex: number) => void;
+  tabOverrides?: Record<string, CustomTabOverride>;
   children: React.ReactNode;
 }
 
 export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
   activeTab,
   customLabel,
-  companySubdomain,
   initialSubTabSlug,
   onSubTabChange,
+  tabOverrides,
   children
 }) => {
+  const activeMenuTheme = useMemo(
+    () => getMenuColorTheme(activeTab, tabOverrides),
+    [activeTab, tabOverrides]
+  );
   const guide = MODULE_CLEAN_GUIDES[activeTab] || {
     title: customLabel || activeTab,
     subtitle: 'Gestão simplificada por etapas',
@@ -483,7 +549,6 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
   const [helpOpen, setHelpOpen] = useState<boolean>(false);
   const [showDetailedDescriptions, setShowDetailedDescriptions] = useState<boolean>(false);
   const [detectedSectionCount, setDetectedSectionCount] = useState<number>(1);
-  const [copiedRouteLink, setCopiedRouteLink] = useState<boolean>(false);
   const contentContainerRef = useRef<HTMLDivElement | null>(null);
 
   const triggerInternalButtonForStage = (idx: number) => {
@@ -657,12 +722,6 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
   }, [activeTab, selectedStageIndex, showAllStages, guide.mode, guide.subTabs.length]);
 
   const activeSubTabMeta = guide.subTabs[selectedStageIndex] || guide.subTabs[0];
-  const slugEmpresaFinal = (companySubdomain || 'empresa')
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-|-$/g, '') || 'empresa';
-  const currentSubSlug = activeSubTabMeta?.slug || 'principal';
-  const fullDeepLinkUrl = `https://${slugEmpresaFinal}.nyctibi.us/${activeTab}/${currentSubSlug}`;
 
   return (
     <div
@@ -670,107 +729,116 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
         showDetailedDescriptions ? 'urutau-show-all-legends' : 'urutau-clean-mode'
       }`}
     >
-      <div className="bg-[#111821] border border-white/[0.08] rounded-xl p-3 sm:px-4 sm:py-3 flex flex-col gap-3 max-w-full overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
-                {customLabel || guide.title}
-              </h1>
-              <span className="hidden sm:inline-block text-slate-600">·</span>
-              <span className="hidden sm:inline-block text-xs text-slate-400 truncate max-w-md">
-                {activeSubTabMeta ? activeSubTabMeta.shortDesc : guide.subtitle}
-              </span>
+      <div
+        className="bg-[#112229] border rounded-xl overflow-hidden flex flex-col max-w-full"
+        style={{
+          borderColor: `rgba(${activeMenuTheme.rgb}, 0.38)`,
+          boxShadow: `inset 0 2px 0 0 ${activeMenuTheme.hex}`
+        }}
+      >
+        <div className="grafismo-amazonico-frieze opacity-80" />
+        <div className="p-3 sm:px-4 sm:py-3 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{
+                    backgroundColor: activeMenuTheme.hex,
+                    boxShadow: `0 0 8px ${activeMenuTheme.hex}`
+                  }}
+                />
+                <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                  {customLabel || guide.title}
+                </h1>
+                <span
+                  className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border"
+                  style={activeMenuTheme.badgeStyle}
+                >
+                  {activeMenuTheme.label}
+                </span>
+                <span className="hidden md:inline-block text-slate-500">·</span>
+                <span className="hidden md:inline-block text-xs text-slate-300 truncate max-w-md">
+                  {activeSubTabMeta ? activeSubTabMeta.shortDesc : guide.subtitle}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setHelpOpen((prev) => !prev)}
+                className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors min-h-[36px]"
+                style={
+                  helpOpen
+                    ? activeMenuTheme.softBtnStyle
+                    : {
+                        backgroundColor: 'rgba(8, 17, 21, 0.85)',
+                        borderColor: `rgba(${activeMenuTheme.rgb}, 0.32)`,
+                        color: '#E2E8F0'
+                      }
+                }
+                title="Como usar esta tela passo a passo"
+              >
+                <HelpCircle className="w-3.5 h-3.5" style={{ color: activeMenuTheme.hex }} />
+                <span className="hidden sm:inline">Como usar</span>
+              </button>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                navigator.clipboard?.writeText(fullDeepLinkUrl);
-                setCopiedRouteLink(true);
-                setTimeout(() => setCopiedRouteLink(false), 2000);
-              }}
-              className="px-2.5 py-1.5 rounded-lg bg-[#090E14] hover:bg-white/[0.06] border border-white/10 text-[11px] font-mono text-emerald-300 inline-flex items-center gap-1.5 cursor-pointer transition-colors max-w-[220px] sm:max-w-xs truncate"
-              title={`Copiar link direto deste submenu: ${fullDeepLinkUrl}`}
-            >
-              {copiedRouteLink ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                  <span>Link Copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Link2 className="w-3.5 h-3.5 text-[#10B981] shrink-0" />
-                  <span className="truncate">
-                    {slugEmpresaFinal}.nyctibi.us/{activeTab}/{currentSubSlug}
-                  </span>
-                </>
-              )}
-            </button>
+          {guide.subTabs.length > 1 && (
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-1.5 p-1.5 rounded-lg bg-[#081115] border border-white/[0.07] w-full max-w-full">
+              {guide.subTabs.map((sub, idx) => {
+                const isSelected = !showAllStages && selectedStageIndex === idx;
+                return (
+                  <button
+                    key={sub.id}
+                    type="button"
+                    onClick={() => handleSelectStage(idx)}
+                    title={sub.shortDesc}
+                    className={`w-full sm:w-auto min-h-[40px] px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center leading-tight cursor-pointer transition-all ${
+                      isSelected
+                        ? 'font-bold shadow-sm'
+                        : 'bg-[#112229]/80 sm:bg-transparent text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                    }`}
+                    style={isSelected ? activeMenuTheme.solidBtnStyle : undefined}
+                  >
+                    <span className="line-clamp-2 sm:whitespace-nowrap">{sub.label}</span>
+                  </button>
+                );
+              })}
 
-            <button
-              type="button"
-              onClick={() => setHelpOpen((prev) => !prev)}
-              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors min-h-[36px] ${
-                helpOpen
-                  ? 'bg-[#10B981]/20 border-[#10B981]/50 text-[#10B981]'
-                  : 'bg-[#090E14] hover:bg-white/[0.05] border-white/10 text-slate-300'
-              }`}
-              title="Como usar esta tela passo a passo"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-[#10B981]" />
-              <span className="hidden sm:inline">Como usar</span>
-            </button>
-          </div>
-        </div>
-
-        {guide.subTabs.length > 1 && (
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-1.5 p-1.5 rounded-lg bg-[#090E14] border border-white/[0.06] w-full max-w-full">
-            {guide.subTabs.map((sub, idx) => {
-              const isSelected = !showAllStages && selectedStageIndex === idx;
-              return (
+              {guide.mode === 'dom_stages' && detectedSectionCount > 1 && (
                 <button
-                  key={sub.id}
                   type="button"
-                  onClick={() => handleSelectStage(idx)}
-                  title={`${sub.shortDesc} (${slugEmpresaFinal}.nyctibi.us/${activeTab}/${sub.slug})`}
-                  className={`w-full sm:w-auto min-h-[40px] px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center leading-tight cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-[#10B981] text-[#05100C] shadow-sm font-bold'
-                      : 'bg-[#111821]/80 sm:bg-transparent text-slate-300 hover:text-white hover:bg-white/[0.05]'
+                  onClick={() => setShowAllStages((prev) => !prev)}
+                  title="Ver todas as seções desta tela na mesma página"
+                  className={`w-full sm:w-auto min-h-[40px] px-2.5 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                    showAllStages
+                      ? 'bg-white/15 text-white'
+                      : 'bg-[#112229]/80 sm:bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
                   }`}
                 >
-                  <span className="line-clamp-2 sm:whitespace-nowrap">{sub.label}</span>
+                  <Layers className="w-3.5 h-3.5 shrink-0" />
+                  <span>Tudo</span>
                 </button>
-              );
-            })}
-
-            {guide.mode === 'dom_stages' && detectedSectionCount > 1 && (
-              <button
-                type="button"
-                onClick={() => setShowAllStages((prev) => !prev)}
-                title="Ver todas as seções desta tela na mesma página"
-                className={`w-full sm:w-auto min-h-[40px] px-2.5 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1 cursor-pointer transition-colors ${
-                  showAllStages
-                    ? 'bg-white/15 text-white'
-                    : 'bg-[#111821]/80 sm:bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5 shrink-0" />
-                <span>Tudo</span>
-              </button>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {helpOpen && (
-        <div className="bg-[#111821] border border-[#10B981]/35 rounded-xl p-4 shadow-xl space-y-3 animate-fadeIn">
+        <div
+          className="bg-[#112229] border rounded-xl p-4 shadow-xl space-y-3 animate-fadeIn"
+          style={{ borderColor: `rgba(${activeMenuTheme.rgb}, 0.45)` }}
+        >
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <div className="text-xs font-bold text-[#10B981] flex items-center gap-1.5">
+              <div
+                className="text-xs font-bold flex items-center gap-1.5"
+                style={{ color: activeMenuTheme.hex }}
+              >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Guia Rápido — {guide.title}</span>
               </div>
@@ -781,7 +849,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
               <button
                 type="button"
                 onClick={() => setShowDetailedDescriptions((prev) => !prev)}
-                className="px-2.5 py-1 rounded-lg bg-[#090E14] hover:bg-white/[0.06] border border-white/10 text-[11px] font-medium text-slate-300 inline-flex items-center gap-1.5 cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#081115] hover:bg-white/[0.06] border border-white/10 text-[11px] font-medium text-slate-300 inline-flex items-center gap-1.5 cursor-pointer"
                 title="Mostrar ou recolher textos explicativos secundários da tela"
               >
                 {showDetailedDescriptions ? (
@@ -791,7 +859,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                   </>
                 ) : (
                   <>
-                    <Eye className="w-3 h-3 text-[#10B981]" />
+                    <Eye className="w-3 h-3" style={{ color: activeMenuTheme.hex }} />
                     <span>Mostrar legendas técnicas</span>
                   </>
                 )}
@@ -817,15 +885,22 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                     handleSelectStage(idx);
                   }
                 }}
-                className="p-3 rounded-lg bg-[#090E14] border border-white/[0.06] hover:border-[#10B981]/40 flex items-start gap-2.5 cursor-pointer transition-colors"
+                className="p-3 rounded-lg bg-[#081115] border flex items-start gap-2.5 cursor-pointer transition-colors"
+                style={{ borderColor: `rgba(${activeMenuTheme.rgb}, 0.28)` }}
               >
-                <span className="w-5 h-5 rounded-full bg-[#10B981]/20 text-[#10B981] font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                <span
+                  className="w-5 h-5 rounded-full font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
+                  style={activeMenuTheme.badgeStyle}
+                >
                   {idx + 1}
                 </span>
                 <div className="space-y-1 min-w-0">
                   <p className="text-xs text-slate-200 leading-snug">{stepText}</p>
                   {idx < guide.subTabs.length && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#10B981]">
+                    <span
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold"
+                      style={{ color: activeMenuTheme.hex }}
+                    >
                       <span>Ir para {guide.subTabs[idx].label}</span>
                       <ChevronRight className="w-3 h-3" />
                     </span>
@@ -848,29 +923,17 @@ interface ModulosDirectoryHubProps {
   companySubdomain: string;
   companyName: string;
   categories: NavCategory[];
+  tabOverrides?: Record<string, CustomTabOverride>;
   onNavigateModuleSubTab: (tabId: TabId, subTabSlug?: string) => void;
 }
 
 export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
-  companySubdomain,
   companyName,
   categories,
+  tabOverrides,
   onNavigateModuleSubTab
 }) => {
   const [search, setSearch] = useState('');
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-
-  const slugEmpresa = useMemo(() => {
-    return (
-      String(companySubdomain || companyName || 'empresa')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '') || 'empresa'
-    );
-  }, [companySubdomain, companyName]);
 
   const allOrderedTabs = useMemo(() => {
     const sourceCats = categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES;
@@ -899,9 +962,11 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
     return allOrderedTabs.filter(({ tabId, groupTitle }) => {
       const guide = MODULE_CLEAN_GUIDES[tabId];
       const meta = DEFAULT_TAB_META[tabId];
+      const customLabel = tabOverrides?.[tabId]?.label || '';
       const target = [
         tabId,
         groupTitle,
+        customLabel,
         meta?.label || '',
         guide?.title || '',
         guide?.subtitle || '',
@@ -911,28 +976,19 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
         .toLowerCase();
       return target.includes(q);
     });
-  }, [allOrderedTabs, search]);
-
-  const copyLink = (url: string, key: string) => {
-    navigator.clipboard?.writeText(url);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(null), 2000);
-  };
+  }, [allOrderedTabs, search, tabOverrides]);
 
   return (
     <div className="space-y-6 w-full">
       <div data-clean-stage="0" className="space-y-4">
-        <div className="bg-[#071712] border border-[#10B981]/35 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-[#0F2128] border border-[#10B981]/35 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="text-sm font-bold text-white flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-[#10B981]" />
-              <span>Arquitetura de Links Diretos por Menu e Submenu</span>
+              <Sparkles className="w-4 h-4 text-[#10B981]" />
+              <span>Catálogo Completo de Módulos e Recursos ({companyName || 'Empresa Ativa'})</span>
             </div>
             <p className="text-xs text-slate-300">
-              Cada menu e submenu possui seu endereço oficial no padrão{' '}
-              <strong className="font-mono text-[#10B981]">
-                https://{slugEmpresa}.nyctibi.us/menu/submenu
-              </strong>
+              Cada cartão e botão acompanha automaticamente a cor personalizada do respectivo menu lateral.
             </p>
           </div>
 
@@ -942,8 +998,8 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar menu, submenu ou link..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#05100C] border border-white/15 text-xs text-white"
+              placeholder="Buscar menu ou funcionalidade..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#081115] border border-white/15 text-xs text-white"
             />
           </div>
         </div>
@@ -951,54 +1007,40 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredModules.map(({ tabId, groupTitle }) => {
             const guide = MODULE_CLEAN_GUIDES[tabId];
-            const meta = DEFAULT_TAB_META[tabId];
             if (!guide) return null;
-            const mainMenuUrl = `https://${slugEmpresa}.nyctibi.us/${tabId}`;
+            const theme = getMenuColorTheme(tabId, tabOverrides);
             return (
               <div
                 key={tabId}
-                className="bg-[#111821] border border-white/10 hover:border-[#10B981]/45 rounded-xl p-4 flex flex-col justify-between gap-3 transition-all"
+                className="bg-[#112229] border rounded-xl p-4 flex flex-col justify-between gap-3 transition-all"
+                style={theme.cardBoxStyle}
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] font-bold">
+                      <span
+                        className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded font-bold border"
+                        style={theme.badgeStyle}
+                      >
                         {groupTitle}
                       </span>
-                      <h3 className="text-sm font-bold text-white mt-1">
-                        {meta?.label || guide.title}
+                      <h3 className="text-sm font-bold text-white mt-1.5 flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: theme.hex }}
+                        />
+                        <span>{theme.label || guide.title}</span>
                       </h3>
+                      <p className="text-[11px] text-slate-300 mt-0.5 line-clamp-2">{guide.subtitle}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => onNavigateModuleSubTab(tabId, guide.subTabs[0]?.slug)}
-                      className="px-2.5 py-1.5 rounded-lg bg-[#10B981] hover:bg-[#34D399] text-[#05100C] text-xs font-black inline-flex items-center gap-1 cursor-pointer shrink-0"
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-black inline-flex items-center gap-1 cursor-pointer shrink-0 transition-transform active:scale-95"
+                      style={theme.solidBtnStyle}
                     >
                       <span>Abrir</span>
                       <ExternalLink className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <div className="p-2 rounded-lg bg-[#090E14] border border-white/[0.06] flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-mono text-emerald-300 truncate">
-                      {slugEmpresa}.nyctibi.us/{tabId}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => copyLink(mainMenuUrl, `menu-${tabId}`)}
-                      className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-[10px] font-mono text-slate-200 inline-flex items-center gap-1 cursor-pointer shrink-0"
-                    >
-                      {copiedKey === `menu-${tabId}` ? (
-                        <>
-                          <Check className="w-3 h-3 text-[#10B981]" />
-                          <span>Copiado</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copiar</span>
-                        </>
-                      )}
                     </button>
                   </div>
 
@@ -1006,47 +1048,31 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
                     <div className="text-[10px] font-mono uppercase text-slate-400">
                       Submenus ({guide.subTabs.length}):
                     </div>
-                    {guide.subTabs.map((sub) => {
-                      const subUrl = `https://${slugEmpresa}.nyctibi.us/${tabId}/${sub.slug}`;
-                      const subKey = `sub-${tabId}-${sub.slug}`;
-                      return (
-                        <div
-                          key={sub.id}
-                          className="p-2 rounded-lg bg-[#090E14]/90 border border-white/[0.05] hover:border-[#10B981]/30 flex flex-col gap-1.5"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-slate-100 truncate">
-                              {sub.label}
-                            </span>
-                            <div className="grid grid-cols-2 gap-1 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => copyLink(subUrl, subKey)}
-                                className="px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-[10px] font-semibold text-slate-300 inline-flex items-center justify-center gap-1 cursor-pointer"
-                              >
-                                {copiedKey === subKey ? (
-                                  <Check className="w-3 h-3 text-[#10B981]" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
-                                )}
-                                <span>{copiedKey === subKey ? 'OK' : 'Link'}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onNavigateModuleSubTab(tabId, sub.slug)}
-                                className="px-2 py-1 rounded bg-[#10B981]/20 hover:bg-[#10B981] text-[#10B981] hover:text-[#05100C] text-[10px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                              >
-                                <span>Ir</span>
-                                <ChevronRight className="w-3 h-3" />
-                              </button>
-                            </div>
+                    {guide.subTabs.map((sub) => (
+                      <div
+                        key={sub.id}
+                        className="p-2 rounded-lg bg-[#081115]/90 border flex items-center justify-between gap-2"
+                        style={{ borderColor: `rgba(${theme.rgb}, 0.22)` }}
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-slate-100 truncate">
+                            {sub.label}
                           </div>
-                          <div className="text-[10px] font-mono text-slate-400 truncate">
-                            {slugEmpresa}.nyctibi.us/{tabId}/{sub.slug}
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {sub.shortDesc}
                           </div>
                         </div>
-                      );
-                    })}
+                        <button
+                          type="button"
+                          onClick={() => onNavigateModuleSubTab(tabId, sub.slug)}
+                          className="px-2.5 py-1 rounded border text-[10px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer transition-colors shrink-0"
+                          style={theme.softBtnStyle}
+                        >
+                          <span>Ir</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1055,9 +1081,9 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
         </div>
       </div>
 
-      <div data-clean-stage="1" className="bg-[#111821] border border-white/10 rounded-xl p-4 sm:p-5 space-y-4">
+      <div data-clean-stage="1" className="bg-[#112229] border border-white/10 rounded-xl p-4 sm:p-5 space-y-4">
         <h3 className="text-sm font-bold text-white">
-          Atalhos Rápidos por Perfil de Operação ({slugEmpresa}.nyctibi.us)
+          Atalhos Rápidos por Perfil de Operação
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[
@@ -1068,10 +1094,10 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
               desc: 'Abre direto no Mapa de Mesas e Comandas'
             },
             {
-              perfil: 'Balcão e Expedição Delivery',
-              tab: 'pdv' as TabId,
-              sub: 'balcao-delivery',
-              desc: 'Abre direto nos Pedidos Rápidos e Entregas'
+              perfil: 'Mapa de Reservas e Ocupação',
+              tab: 'reservas' as TabId,
+              sub: 'mapa-salao',
+              desc: 'Abre direto no Mapa do Salão e Reservas'
             },
             {
               perfil: 'Fechamento de Caixa e Turno',
@@ -1081,8 +1107,8 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
             },
             {
               perfil: 'Divisão de Gorjetas (Rateio 10%)',
-              tab: 'caixa' as TabId,
-              sub: 'rateio-comissoes',
+              tab: 'rateio' as TabId,
+              sub: 'comissoes',
               desc: 'Abre direto no Rateio de Comissões do Turno'
             },
             {
@@ -1098,36 +1124,35 @@ export const ModulosDirectoryHub: React.FC<ModulosDirectoryHubProps> = ({
               desc: 'Abre direto no Diagnóstico de Erros do Sistema'
             }
           ].map((item) => {
-            const url = `https://${slugEmpresa}.nyctibi.us/${item.tab}/${item.sub}`;
             const k = `preset-${item.tab}-${item.sub}`;
+            const theme = getMenuColorTheme(item.tab, tabOverrides);
             return (
               <div
                 key={k}
-                className="p-3.5 rounded-xl bg-[#090E14] border border-white/10 flex flex-col justify-between gap-3"
+                className="p-3.5 rounded-xl bg-[#081115] border flex flex-col justify-between gap-3"
+                style={theme.cardBoxStyle}
               >
                 <div className="space-y-1">
-                  <div className="text-xs font-bold text-white">{item.perfil}</div>
-                  <div className="text-[11px] text-slate-400">{item.desc}</div>
-                  <div className="text-[11px] font-mono text-[#10B981] break-all pt-1">{url}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xs font-bold text-white">{item.perfil}</div>
+                    <span
+                      className="px-2 py-0.5 rounded text-[10px] font-mono font-bold border"
+                      style={theme.badgeStyle}
+                    >
+                      {theme.label}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-300">{item.desc}</div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => copyLink(url, k)}
-                    className="py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {copiedKey === k ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedKey === k ? 'Copiado!' : 'Copiar Link'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavigateModuleSubTab(item.tab, item.sub)}
-                    className="py-2 px-3 rounded-lg bg-[#10B981] hover:bg-[#34D399] text-[#05100C] text-xs font-black inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span>Abrir Agora</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onNavigateModuleSubTab(item.tab, item.sub)}
+                  className="w-full py-2 px-3 rounded-lg text-xs font-black inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  style={theme.solidBtnStyle}
+                >
+                  <span>Abrir {theme.label}</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             );
           })}
@@ -1142,8 +1167,9 @@ export const HomeDashboardHub: React.FC<{
   currentUser: any;
   companyName: string;
   companySubdomain: string;
+  tabOverrides?: Record<string, CustomTabOverride>;
   onNavigateTab: (tab: TabId, subTabSlug?: string) => void;
-}> = ({ data, currentUser, companyName, companySubdomain, onNavigateTab }) => {
+}> = ({ data, currentUser, companyName, tabOverrides, onNavigateTab }) => {
   const resumo = useMemo(() => {
     const caixaLista = Array.isArray(data?.caixa) ? data.caixa : [];
     let entradas = 0;
@@ -1212,53 +1238,99 @@ export const HomeDashboardHub: React.FC<{
   const formatBRL = (val: number) =>
     val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+  const pdvTheme = getMenuColorTheme('pdv', tabOverrides);
+  const reservasTheme = getMenuColorTheme('reservas', tabOverrides);
+  const caixaTheme = getMenuColorTheme('caixa', tabOverrides);
+  const cadastrosTheme = getMenuColorTheme('cadastros', tabOverrides);
+  const estoqueTheme = getMenuColorTheme('estoque', tabOverrides);
+  const rateioTheme = getMenuColorTheme('rateio', tabOverrides);
+  const comprasTheme = getMenuColorTheme('compras', tabOverrides);
+  const auditoriaTheme = getMenuColorTheme('auditoria', tabOverrides);
+
   return (
     <div className="space-y-5 w-full">
       <div data-clean-stage="0" className="space-y-5">
-        <div className="bg-[#0A1813] border border-[#10B981]/35 rounded-xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-wider text-[#10B981]">
-              <span>Painel Central • {companyName || 'Empresa Ativa'}</span>
-              <span className="text-slate-500">•</span>
-              <span className="text-amber-300">{companySubdomain}.nyctibi.us</span>
-            </div>
-            <h2 className="text-base sm:text-lg font-bold text-white">
-              Olá, {currentUser?.nome || 'Operador'} ({currentUser?.cargo || currentUser?.tipo || 'Gestão'})
-            </h2>
-            <p className="text-xs text-slate-300">
-              Acompanhe os indicadores em tempo real e toque em qualquer cartão abaixo para abrir a área desejada.
-            </p>
-          </div>
+        <div className="relative overflow-hidden bg-gradient-to-br from-[#0F242A] via-[#112229] to-[#0B191E] border border-[#10B981]/35 rounded-xl shadow-lg">
+          <div className="grafismo-amazonico-frieze opacity-90" />
 
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => onNavigateTab('pdv', 'mesas-comandas')}
-              className="px-3.5 py-2.5 rounded-lg bg-[#10B981] hover:bg-[#34D399] text-[#05100C] text-xs font-black min-h-[40px] cursor-pointer"
-            >
-              Abrir PDV & Mesas
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('reservas', 'mapa-salao')}
-              className="px-3.5 py-2.5 rounded-lg bg-[#F59E0B] hover:bg-[#FBBF24] text-[#05100C] text-xs font-black min-h-[40px] cursor-pointer"
-            >
-              Mapa de Reservas
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('caixa', 'fluxo-turno')}
-              className="px-3.5 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold min-h-[40px] cursor-pointer"
-            >
-              Fluxo de Caixa
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigateTab('cadastros', 'base-geral')}
-              className="px-3.5 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs font-bold min-h-[40px] cursor-pointer"
-            >
-              Cadastros
-            </button>
+          <svg
+            className="pointer-events-none select-none absolute right-0 bottom-0 w-72 h-48 opacity-15 text-[#10B981]"
+            viewBox="0 0 320 200"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M320 200C260 190 210 150 185 90C235 100 280 130 320 200Z"
+              fill="currentColor"
+            />
+            <path
+              d="M320 165C270 140 235 95 225 35C265 55 300 100 320 165Z"
+              fill="#06B6D4"
+            />
+            <path
+              d="M275 200C220 185 170 155 135 110C185 115 235 145 275 200Z"
+              fill="#F59E0B"
+            />
+          </svg>
+
+          <div className="relative z-10 p-4 sm:p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="shrink-0 hidden sm:flex flex-col items-center">
+                <UrutauEmblemSVG
+                  pose="sentinel"
+                  className="w-14 h-14"
+                />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <div className="inline-flex flex-wrap items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-wider text-[#10B981]">
+                  <span>Painel Central • {companyName || 'Empresa Ativa'}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#10B981]/15 border border-[#10B981]/35 text-[#6EE7B7] text-[10px]">
+                    Bioma Amazônico • Igapó Noturno
+                  </span>
+                </div>
+                <h2 className="text-base sm:text-lg font-bold text-white">
+                  Olá, {currentUser?.nome || 'Operador'} ({currentUser?.cargo || currentUser?.tipo || 'Gestão'})
+                </h2>
+                <p className="text-xs text-slate-300">
+                  Todos os botões e caixas abaixo refletem automaticamente as cores configuradas para cada menu lateral.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onNavigateTab('pdv', 'mesas-comandas')}
+                className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95"
+                style={pdvTheme.solidBtnStyle}
+              >
+                Abrir {pdvTheme.label}
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('reservas', 'mapa-salao')}
+                className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95"
+                style={reservasTheme.solidBtnStyle}
+              >
+                Mapa de {reservasTheme.label}
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('caixa', 'fluxo-turno')}
+                className="px-3.5 py-2.5 rounded-lg border text-xs font-bold min-h-[40px] cursor-pointer transition-transform active:scale-95"
+                style={caixaTheme.softBtnStyle}
+              >
+                Fluxo de {caixaTheme.label}
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigateTab('cadastros', 'base-geral')}
+                className="px-3.5 py-2.5 rounded-lg border text-xs font-bold min-h-[40px] cursor-pointer transition-transform active:scale-95"
+                style={cadastrosTheme.softBtnStyle}
+              >
+                {cadastrosTheme.label}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1266,22 +1338,30 @@ export const HomeDashboardHub: React.FC<{
           <button
             type="button"
             onClick={() => onNavigateTab('caixa', 'fluxo-turno')}
-            className="p-4 rounded-xl bg-[#111821] hover:bg-[#16202B] border border-[#10B981]/35 text-left transition-all cursor-pointer flex flex-col justify-between gap-3"
+            className="p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 hover:brightness-110"
+            style={caixaTheme.cardBoxStyle}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Saldo Líquido em Caixa
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: caixaTheme.hex }}
+                />
+                <span>Saldo Líquido em {caixaTheme.label}</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-[#10B981]/20 text-[#10B981] text-[10px] font-mono font-bold">
-                Caixa & Turno
+              <span
+                className="px-2 py-0.5 rounded border text-[10px] font-mono font-bold"
+                style={caixaTheme.badgeStyle}
+              >
+                {caixaTheme.label}
               </span>
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">
                 {formatBRL(resumo.saldoCaixa)}
               </div>
-              <div className="text-[11px] font-mono text-slate-400 mt-1 flex items-center justify-between">
-                <span className="text-emerald-400">Entradas: {formatBRL(resumo.entradas)}</span>
+              <div className="text-[11px] font-mono text-slate-300 mt-1 flex items-center justify-between">
+                <span style={{ color: caixaTheme.hex }}>Entradas: {formatBRL(resumo.entradas)}</span>
                 <span className="text-rose-400">Saídas: {formatBRL(resumo.saidas)}</span>
               </div>
             </div>
@@ -1290,13 +1370,21 @@ export const HomeDashboardHub: React.FC<{
           <button
             type="button"
             onClick={() => onNavigateTab('reservas', 'mapa-salao')}
-            className="p-4 rounded-xl bg-[#111821] hover:bg-[#16202B] border border-amber-500/35 text-left transition-all cursor-pointer flex flex-col justify-between gap-3"
+            className="p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 hover:brightness-110"
+            style={reservasTheme.cardBoxStyle}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Reservas & Salão
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: reservasTheme.hex }}
+                />
+                <span>{reservasTheme.label} & Salão</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold">
+              <span
+                className="px-2 py-0.5 rounded border text-[10px] font-mono font-bold"
+                style={reservasTheme.badgeStyle}
+              >
                 {resumo.reservasConfirmadas} Confirmadas
               </span>
             </div>
@@ -1304,8 +1392,8 @@ export const HomeDashboardHub: React.FC<{
               <div className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">
                 {resumo.totalReservas} Mesas • {resumo.totalPaxReservas} Pax
               </div>
-              <div className="text-[11px] text-slate-400 mt-1">
-                Toque para abrir a planta do salão e lista de clientes
+              <div className="text-[11px] mt-1 font-medium" style={{ color: reservasTheme.hex }}>
+                Toque para abrir {reservasTheme.label} e planta do salão
               </div>
             </div>
           </button>
@@ -1313,31 +1401,39 @@ export const HomeDashboardHub: React.FC<{
           <button
             type="button"
             onClick={() => onNavigateTab('estoque', 'posicao-estoque')}
-            className={`p-4 rounded-xl bg-[#111821] hover:bg-[#16202B] border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 ${
-              resumo.estoqueCritico.length > 0 ? 'border-rose-500/45' : 'border-cyan-500/35'
-            }`}
+            className="p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 hover:brightness-110"
+            style={estoqueTheme.cardBoxStyle}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Estoque & Insumos
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: estoqueTheme.hex }}
+                />
+                <span>{estoqueTheme.label} & Insumos</span>
               </span>
               <span
-                className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                className="px-2 py-0.5 rounded border text-[10px] font-mono font-bold"
+                style={
                   resumo.estoqueCritico.length > 0
-                    ? 'bg-rose-500/20 text-rose-300'
-                    : 'bg-cyan-500/20 text-cyan-300'
-                }`}
+                    ? {
+                        backgroundColor: 'rgba(244, 63, 94, 0.2)',
+                        color: '#FDA4AF',
+                        borderColor: 'rgba(244, 63, 94, 0.45)'
+                      }
+                    : estoqueTheme.badgeStyle
+                }
               >
                 {resumo.estoqueCritico.length > 0
                   ? `${resumo.estoqueCritico.length} em Alerta`
-                  : 'Estoque Saudável'}
+                  : `${estoqueTheme.label} Saudável`}
               </span>
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">
                 {resumo.totalEstoque} Itens Ativos
               </div>
-              <div className="text-[11px] text-slate-400 mt-1">
+              <div className="text-[11px] mt-1" style={{ color: estoqueTheme.hex }}>
                 {resumo.estoqueCritico.length > 0
                   ? `${resumo.estoqueCritico.length} insumo(s) abaixo do mínimo recomendado`
                   : 'Todos os itens acima do estoque mínimo'}
@@ -1348,13 +1444,21 @@ export const HomeDashboardHub: React.FC<{
           <button
             type="button"
             onClick={() => onNavigateTab('cadastros', 'base-geral')}
-            className="p-4 rounded-xl bg-[#111821] hover:bg-[#16202B] border border-purple-500/35 text-left transition-all cursor-pointer flex flex-col justify-between gap-3"
+            className="p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 hover:brightness-110"
+            style={cadastrosTheme.cardBoxStyle}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Equipe & Cadastros
+              <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: cadastrosTheme.hex }}
+                />
+                <span>Equipe & {cadastrosTheme.label}</span>
               </span>
-              <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold">
+              <span
+                className="px-2 py-0.5 rounded border text-[10px] font-mono font-bold"
+                style={cadastrosTheme.badgeStyle}
+              >
                 Base Unificada
               </span>
             </div>
@@ -1362,7 +1466,7 @@ export const HomeDashboardHub: React.FC<{
               <div className="text-xl sm:text-2xl font-mono font-black text-white tabular-nums">
                 {resumo.usuariosAtivos} Equipe • {resumo.freelancersAtivos} Free
               </div>
-              <div className="text-[11px] text-slate-400 mt-1">
+              <div className="text-[11px] mt-1" style={{ color: cadastrosTheme.hex }}>
                 {resumo.cadastrosTotal} cadastros gerais • {resumo.checklistsCount} checklists ativos
               </div>
             </div>
@@ -1370,32 +1474,41 @@ export const HomeDashboardHub: React.FC<{
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="bg-[#111821] border border-white/10 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+          <div
+            className="bg-[#112229] border rounded-xl p-4 space-y-3 flex flex-col justify-between"
+            style={caixaTheme.cardBoxStyle}
+          >
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#10B981]">
-                  Últimos Lançamentos do Caixa
+                <h3
+                  className="text-xs font-bold uppercase tracking-wider"
+                  style={{ color: caixaTheme.hex }}
+                >
+                  Últimos Lançamentos • {caixaTheme.label}
                 </h3>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('caixa', 'fluxo-turno')}
-                  className="text-[11px] font-semibold text-emerald-300 hover:underline cursor-pointer"
+                  className="px-2 py-0.5 rounded border text-[11px] font-bold cursor-pointer"
+                  style={caixaTheme.badgeStyle}
                 >
-                  Abrir Caixa
+                  Abrir {caixaTheme.label}
                 </button>
               </div>
               {resumo.caixaRecentes.length === 0 ? (
-                <div className="p-3 rounded-lg bg-[#090E14] text-xs text-slate-400">
+                <div className="p-3 rounded-lg bg-[#081115] text-xs text-slate-400">
                   Nenhuma movimentação registrada hoje.
                 </div>
               ) : (
                 <div className="space-y-2">
                   {resumo.caixaRecentes.map((c: any) => {
-                    const isSaida = String(c?.tipo || '').toLowerCase().includes('sai') || String(c?.tipo || '').toLowerCase().includes('desp');
+                    const isSaida =
+                      String(c?.tipo || '').toLowerCase().includes('sai') ||
+                      String(c?.tipo || '').toLowerCase().includes('desp');
                     return (
                       <div
                         key={c.id}
-                        className="p-2.5 rounded-lg bg-[#090E14] border border-white/5 flex items-center justify-between gap-2 text-xs"
+                        className="p-2.5 rounded-lg bg-[#081115] border border-white/5 flex items-center justify-between gap-2 text-xs"
                       >
                         <div className="min-w-0">
                           <div className="font-semibold text-white truncate">
@@ -1422,28 +1535,36 @@ export const HomeDashboardHub: React.FC<{
             <button
               type="button"
               onClick={() => onNavigateTab('rateio', 'comissoes')}
-              className="w-full py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 cursor-pointer"
+              className="w-full py-2 px-3 rounded-lg border text-xs font-bold cursor-pointer transition-all"
+              style={rateioTheme.softBtnStyle}
             >
-              Ver Rateio de 10% e Comissões
+              Ver {rateioTheme.label} e Comissões
             </button>
           </div>
 
-          <div className="bg-[#111821] border border-white/10 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+          <div
+            className="bg-[#112229] border rounded-xl p-4 space-y-3 flex flex-col justify-between"
+            style={reservasTheme.cardBoxStyle}
+          >
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-300">
-                  Reservas e Ocupação de Mesas
+                <h3
+                  className="text-xs font-bold uppercase tracking-wider"
+                  style={{ color: reservasTheme.hex }}
+                >
+                  {reservasTheme.label} e Ocupação de Mesas
                 </h3>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('reservas', 'lista-reservas')}
-                  className="text-[11px] font-semibold text-amber-300 hover:underline cursor-pointer"
+                  className="px-2 py-0.5 rounded border text-[11px] font-bold cursor-pointer"
+                  style={reservasTheme.badgeStyle}
                 >
-                  Ver Todas
+                  Abrir {reservasTheme.label}
                 </button>
               </div>
               {resumo.proximasReservas.length === 0 ? (
-                <div className="p-3 rounded-lg bg-[#090E14] text-xs text-slate-400">
+                <div className="p-3 rounded-lg bg-[#081115] text-xs text-slate-400">
                   Nenhuma reserva cadastrada para o período.
                 </div>
               ) : (
@@ -1451,7 +1572,7 @@ export const HomeDashboardHub: React.FC<{
                   {resumo.proximasReservas.map((r: any) => (
                     <div
                       key={r.id}
-                      className="p-2.5 rounded-lg bg-[#090E14] border border-white/5 flex items-center justify-between gap-2 text-xs"
+                      className="p-2.5 rounded-lg bg-[#081115] border border-white/5 flex items-center justify-between gap-2 text-xs"
                     >
                       <div className="min-w-0">
                         <div className="font-semibold text-white truncate">
@@ -1461,7 +1582,10 @@ export const HomeDashboardHub: React.FC<{
                           {r.horario || '19:30'} • {r.status || 'Confirmada'}
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 font-mono font-bold text-[11px] shrink-0">
+                      <span
+                        className="px-2 py-0.5 rounded border font-mono font-bold text-[11px] shrink-0"
+                        style={reservasTheme.badgeStyle}
+                      >
                         {r.pessoas || 4} pax
                       </span>
                     </div>
@@ -1471,29 +1595,37 @@ export const HomeDashboardHub: React.FC<{
             </div>
             <button
               type="button"
-              onClick={() => onNavigateTab('pdv', 'mesas-comandas')}
-              className="w-full py-2 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 cursor-pointer"
+              onClick={() => onNavigateTab('reservas', 'mapa-salao')}
+              className="w-full py-2 px-3 rounded-lg border text-xs font-black cursor-pointer transition-all"
+              style={reservasTheme.solidBtnStyle}
             >
-              Abrir Atendimento de Mesas no PDV
+              Abrir Mapa de {reservasTheme.label}
             </button>
           </div>
 
-          <div className="bg-[#111821] border border-white/10 rounded-xl p-4 space-y-3 flex flex-col justify-between">
+          <div
+            className="bg-[#112229] border rounded-xl p-4 space-y-3 flex flex-col justify-between"
+            style={estoqueTheme.cardBoxStyle}
+          >
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-rose-300">
-                  Reposição de Estoque & Alertas
+                <h3
+                  className="text-xs font-bold uppercase tracking-wider"
+                  style={{ color: estoqueTheme.hex }}
+                >
+                  Reposição de {estoqueTheme.label} & Alertas
                 </h3>
                 <button
                   type="button"
                   onClick={() => onNavigateTab('compras', 'sugestao-compras')}
-                  className="text-[11px] font-semibold text-rose-300 hover:underline cursor-pointer"
+                  className="px-2 py-0.5 rounded border text-[11px] font-bold cursor-pointer"
+                  style={comprasTheme.badgeStyle}
                 >
-                  Lista de Compras
+                  {comprasTheme.label}
                 </button>
               </div>
               {resumo.estoqueCritico.length === 0 ? (
-                <div className="p-3 rounded-lg bg-[#090E14] text-xs text-emerald-300">
+                <div className="p-3 rounded-lg bg-[#081115] text-xs text-emerald-300">
                   Nenhum insumo abaixo do estoque mínimo no momento.
                 </div>
               ) : (
@@ -1501,7 +1633,7 @@ export const HomeDashboardHub: React.FC<{
                   {resumo.estoqueCritico.slice(0, 5).map((it: any) => (
                     <div
                       key={it.id}
-                      className="p-2.5 rounded-lg bg-[#090E14] border border-rose-500/30 flex items-center justify-between gap-2 text-xs"
+                      className="p-2.5 rounded-lg bg-[#081115] border border-rose-500/30 flex items-center justify-between gap-2 text-xs"
                     >
                       <div className="min-w-0">
                         <div className="font-semibold text-white truncate">{it.insumo}</div>
@@ -1520,9 +1652,10 @@ export const HomeDashboardHub: React.FC<{
             <button
               type="button"
               onClick={() => onNavigateTab('auditoria', 'erros-falhas')}
-              className="w-full py-2 px-3 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-xs font-bold text-rose-200 cursor-pointer"
+              className="w-full py-2 px-3 rounded-lg border text-xs font-bold cursor-pointer transition-all"
+              style={auditoriaTheme.softBtnStyle}
             >
-              Central de Logs de Erros ({resumo.alertasCount})
+              {auditoriaTheme.label} ({resumo.alertasCount} alertas)
             </button>
           </div>
         </div>
@@ -1533,7 +1666,7 @@ export const HomeDashboardHub: React.FC<{
           {[
             {
               grupo: '1. Atendimento, Salão e Vendas',
-              cor: 'border-[#10B981]/35',
+              anchorTab: 'pdv' as TabId,
               itens: [
                 { tab: 'pdv' as TabId, sub: 'mesas-comandas', titulo: 'PDV, Mesas e Comandas', desc: 'Pedidos no salão, balcão, delivery e impressão térmica' },
                 { tab: 'reservas' as TabId, sub: 'mapa-salao', titulo: 'Reservas e Mapa do Salão', desc: 'Ocupação ao vivo das mesas e agendamentos de clientes' },
@@ -1543,7 +1676,7 @@ export const HomeDashboardHub: React.FC<{
             },
             {
               grupo: '2. Financeiro, Compras e Estoque',
-              cor: 'border-amber-500/35',
+              anchorTab: 'caixa' as TabId,
               itens: [
                 { tab: 'caixa' as TabId, sub: 'fluxo-turno', titulo: 'Caixa e Fechamento de Turno', desc: 'Entradas, saídas, sangrias e conferência de turno' },
                 { tab: 'rateio' as TabId, sub: 'comissoes', titulo: 'Rateio de 10% (Gorjetas)', desc: 'Divisão justa por pontos, pesos e presença no turno' },
@@ -1553,7 +1686,7 @@ export const HomeDashboardHub: React.FC<{
             },
             {
               grupo: '3. Equipe, Escalas e RH',
-              cor: 'border-purple-500/35',
+              anchorTab: 'cadastros' as TabId,
               itens: [
                 { tab: 'cadastros' as TabId, sub: 'base-geral', titulo: 'Cadastros Unificados', desc: 'Colaboradores, gestores, freelancers, clientes e fornecedores' },
                 { tab: 'escalas' as TabId, sub: 'escala-semanal', titulo: 'Escalas e Folgas', desc: 'Grade semanal de turnos e cobertura de folgas' },
@@ -1563,63 +1696,86 @@ export const HomeDashboardHub: React.FC<{
             },
             {
               grupo: '4. Governança, Módulos e Sistema',
-              cor: 'border-cyan-500/35',
+              anchorTab: 'auditoria' as TabId,
               itens: [
-                { tab: 'modulos' as TabId, sub: 'diretorio-links', titulo: 'Módulos & Links Diretos', desc: 'Todos os endereços empresa.nyctibi.us/menu/submenu' },
+                { tab: 'modulos' as TabId, sub: 'diretorio-links', titulo: 'Central de Módulos', desc: 'Catálogo completo de módulos e funcionalidades' },
                 { tab: 'auditoria' as TabId, sub: 'erros-falhas', titulo: 'Central de Logs de Erros e Desarquivar', desc: 'Diagnóstico de falhas, restauração de arquivados e GPS' },
                 { tab: 'permissoes' as TabId, sub: 'matriz-acessos', titulo: 'Permissões de Acesso', desc: 'Controle do que cada colaborador pode ver ou editar' },
                 { tab: 'config' as TabId, sub: 'marca-cores', titulo: 'Aparência, Menus e Brilho', desc: 'Personalização de cores, logo e organização dos menus' }
               ]
             }
-          ].map((bloco) => (
-            <div
-              key={bloco.grupo}
-              className={`bg-[#111821] border ${bloco.cor} rounded-xl p-4 space-y-3`}
-            >
-              <h3 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/10 pb-2">
-                {bloco.grupo}
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {bloco.itens.map((it) => (
-                  <button
-                    key={`${it.tab}-${it.sub}`}
-                    type="button"
-                    onClick={() => onNavigateTab(it.tab, it.sub)}
-                    className="p-3 rounded-lg bg-[#090E14] hover:bg-[#113025]/60 border border-white/10 hover:border-[#10B981]/50 text-left transition-all cursor-pointer flex flex-col justify-between gap-2"
-                  >
-                    <div>
-                      <div className="text-xs font-bold text-white">{it.titulo}</div>
-                      <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{it.desc}</div>
-                    </div>
-                    <div className="text-[10px] font-mono text-[#10B981] flex items-center justify-between pt-1">
-                      <span>/{it.tab}/{it.sub}</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </div>
-                  </button>
-                ))}
+          ].map((bloco) => {
+            const groupTheme = getMenuColorTheme(bloco.anchorTab, tabOverrides);
+            return (
+              <div
+                key={bloco.grupo}
+                className="bg-[#112229] border rounded-xl p-4 space-y-3"
+                style={{ borderColor: `rgba(${groupTheme.rgb}, 0.35)` }}
+              >
+                <h3 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/10 pb-2">
+                  {bloco.grupo}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {bloco.itens.map((it) => {
+                    const itemTheme = getMenuColorTheme(it.tab, tabOverrides);
+                    return (
+                      <button
+                        key={`${it.tab}-${it.sub}`}
+                        type="button"
+                        onClick={() => onNavigateTab(it.tab, it.sub)}
+                        className="p-3 rounded-lg border text-left transition-all cursor-pointer flex flex-col justify-between gap-2 hover:brightness-110"
+                        style={itemTheme.cardBoxStyle}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1.5">
+                            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                              <span
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: itemTheme.hex }}
+                              />
+                              <span>{itemTheme.label || it.titulo}</span>
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-300 mt-1 leading-snug">{it.desc}</div>
+                        </div>
+                        <div
+                          className="text-[10px] font-mono font-bold flex items-center justify-between pt-1"
+                          style={{ color: itemTheme.hex }}
+                        >
+                          <span>Abrir {itemTheme.label}</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       <div data-clean-stage="2" className="space-y-4">
-        <div className="bg-[#111821] border border-white/10 rounded-xl p-4 sm:p-5 space-y-3">
+        <div
+          className="bg-[#112229] border rounded-xl p-4 sm:p-5 space-y-3"
+          style={auditoriaTheme.cardBoxStyle}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
             <div>
               <h3 className="text-sm font-bold text-white">
                 Últimas Atividades Registradas na Empresa
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-300">
                 Histórico recente de ações dos operadores e eventos automáticos do sistema.
               </p>
             </div>
             <button
               type="button"
               onClick={() => onNavigateTab('auditoria', 'erros-falhas')}
-              className="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-[#34D399] text-[#05100C] text-xs font-black cursor-pointer"
+              className="px-3.5 py-2 rounded-lg border text-xs font-black cursor-pointer"
+              style={auditoriaTheme.solidBtnStyle}
             >
-              Ver Todos os Logs e Erros
+              Ver Todos em {auditoriaTheme.label}
             </button>
           </div>
 

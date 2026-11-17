@@ -9323,6 +9323,206 @@ app.get('/api/erp/download-backup-dados', (_req: Request, res: Response) => {
   }
 });
 
+app.post('/api/erp/restaurar-backup-completo', async (req: Request, res: Response) => {
+  try {
+    const body = req.body || {};
+    const modo: 'mesclar' | 'substituir' =
+      body.modo === 'substituir' ? 'substituir' : 'mesclar';
+    const payload =
+      body.backup_json && typeof body.backup_json === 'object'
+        ? body.backup_json
+        : body;
+
+    if (!payload || typeof payload !== 'object') {
+      res.status(400).json({ ok: false, erro: 'Arquivo de backup JSON inválido ou vazio.' });
+      return;
+    }
+
+    const origem =
+      payload.dados && typeof payload.dados === 'object'
+        ? payload.dados
+        : payload.pacote_portatil && typeof payload.pacote_portatil === 'object'
+        ? payload.pacote_portatil
+        : payload;
+
+    const formatoDetectado = payload.versao_formato
+      ? String(payload.versao_formato)
+      : payload.pacote_portatil
+      ? 'LGPD-Pacote-Portatil'
+      : Array.isArray(payload.erp_caixa) || Array.isArray(payload.empresas)
+      ? 'DatabaseSchema-Completo'
+      : 'Backup-JSON-Universal';
+
+    let totalInseridosOuAtualizados = 0;
+
+    const mesclarColecao = (atual: any[], recebida: any[] | undefined): any[] => {
+      const base = Array.isArray(atual) ? [...atual] : [];
+      if (!Array.isArray(recebida)) return base;
+      if (modo === 'substituir' && recebida.length > 0) {
+        totalInseridosOuAtualizados += recebida.length;
+        return [...recebida];
+      }
+      if (recebida.length === 0) return base;
+      const porId = new Map<number, number>();
+      base.forEach((item, idx) => {
+        const idNum = Number(item?.id || 0);
+        if (idNum > 0) porId.set(idNum, idx);
+      });
+      let maxId = base.reduce((m, it) => Math.max(m, Number(it?.id || 0)), 0);
+
+      for (const rec of recebida) {
+        if (!rec || typeof rec !== 'object') continue;
+        const idRec = Number(rec.id || 0);
+        if (idRec > 0 && porId.has(idRec)) {
+          const targetIdx = porId.get(idRec)!;
+          base[targetIdx] = { ...base[targetIdx], ...rec };
+          totalInseridosOuAtualizados += 1;
+        } else if (idRec > 0) {
+          base.push(rec);
+          porId.set(idRec, base.length - 1);
+          if (idRec > maxId) maxId = idRec;
+          totalInseridosOuAtualizados += 1;
+        } else {
+          maxId += 1;
+          const novo = { ...rec, id: maxId };
+          base.push(novo);
+          porId.set(maxId, base.length - 1);
+          totalInseridosOuAtualizados += 1;
+        }
+      }
+      return base;
+    };
+
+    db.empresas = mesclarColecao(db.empresas, origem.empresas);
+    db.unidades = mesclarColecao(db.unidades, origem.unidades);
+    db.setores = mesclarColecao(db.setores, origem.setores);
+    db.freelancers = mesclarColecao(db.freelancers, origem.freelancers);
+    db.cadastros_pessoas = mesclarColecao(
+      db.cadastros_pessoas || [],
+      origem.cadastros_pessoas || origem.cadastrosPessoas
+    );
+    db.cargos = mesclarColecao(db.cargos || [], origem.cargos);
+    db.reservas = mesclarColecao(db.reservas, origem.reservas);
+    db.erp_caixa = mesclarColecao(db.erp_caixa, origem.erp_caixa || origem.caixa);
+    db.erp_estoque = mesclarColecao(db.erp_estoque, origem.erp_estoque || origem.estoque);
+    db.erp_cmv = mesclarColecao(db.erp_cmv, origem.erp_cmv || origem.cmv);
+    db.erp_escalas_movimentos = mesclarColecao(
+      db.erp_escalas_movimentos,
+      origem.erp_escalas_movimentos || origem.movimentosEscala
+    );
+    db.erp_selecao = mesclarColecao(db.erp_selecao, origem.erp_selecao || origem.selecao);
+    db.erp_notificacoes = mesclarColecao(
+      db.erp_notificacoes,
+      origem.erp_notificacoes || origem.notificacoes
+    );
+    db.erp_rh_nr01 = mesclarColecao(
+      db.erp_rh_nr01,
+      origem.erp_rh_nr01 || origem.rhRegistros
+    );
+    db.erp_rateios_historico = mesclarColecao(
+      db.erp_rateios_historico,
+      origem.erp_rateios_historico || origem.rateiosHistorico
+    );
+    db.eventos_agenda = mesclarColecao(
+      db.eventos_agenda,
+      origem.eventos_agenda || origem.agenda
+    );
+    db.checklists = mesclarColecao(db.checklists, origem.checklists);
+    db.pdv_produtos = mesclarColecao(
+      db.pdv_produtos || [],
+      origem.pdv_produtos || origem.pdvProdutos
+    );
+    db.pdv_comandas = mesclarColecao(
+      db.pdv_comandas || [],
+      origem.pdv_comandas || origem.pdvComandas
+    );
+    db.pdv_impressoras = mesclarColecao(
+      db.pdv_impressoras || [],
+      origem.pdv_impressoras || origem.pdvImpressoras
+    );
+
+    const configsRecebidas = Array.isArray(origem.erp_configs)
+      ? origem.erp_configs
+      : Array.isArray(origem.configs)
+      ? origem.configs
+      : [];
+    if (configsRecebidas.length > 0) {
+      const cfgMap = new Map<string, any>();
+      (db.erp_configs || []).forEach((c) => {
+        if (c?.chave) cfgMap.set(String(c.chave), c);
+      });
+      for (const cfg of configsRecebidas) {
+        if (cfg?.chave) {
+          cfgMap.set(String(cfg.chave), {
+            chave: String(cfg.chave),
+            valor_json: cfg.valor_json,
+            atualizado_em: cfg.atualizado_em || new Date().toISOString()
+          });
+          totalInseridosOuAtualizados += 1;
+        }
+      }
+      db.erp_configs = Array.from(cfgMap.values());
+    }
+
+    if (
+      origem.relacionamentos &&
+      typeof origem.relacionamentos === 'object' &&
+      Array.isArray(origem.relacionamentos.usuarios)
+    ) {
+      if (!db.relacionamentos) db.relacionamentos = {};
+      db.relacionamentos.usuarios = mesclarColecao(
+        db.relacionamentos.usuarios || [],
+        origem.relacionamentos.usuarios
+      );
+    } else if (Array.isArray(origem.usuarios) && origem.usuarios.length > 0) {
+      if (!db.relacionamentos) db.relacionamentos = {};
+      db.relacionamentos.usuarios = mesclarColecao(
+        db.relacionamentos.usuarios || [],
+        origem.usuarios
+      );
+    }
+
+    saveDbToDisk();
+    let sqliteSincronizado = false;
+    try {
+      commerceRepository.syncCatalogAndStockFromMemoryDb(db);
+      sqliteSincronizado = true;
+    } catch {}
+
+    await cacheERP.invalidatePrefix('erp:');
+    await registrarAuditLog(
+      'Admin Master',
+      'RESTAURACAO_BACKUP_COMPLETO',
+      `Backup restaurado (${formatoDetectado} • modo=${modo} • ${totalInseridosOuAtualizados} registros sincronizados)`,
+      req.ip,
+      'Super Admin'
+    );
+
+    sseBroker.emit('config.atualizada', { restaurado_em: new Date().toISOString() });
+
+    res.json({
+      ok: true,
+      formato_detectado: formatoDetectado,
+      modo_aplicado: modo,
+      registros_sincronizados: totalInseridosOuAtualizados,
+      persistido_disco: true,
+      sincronizado_sqlite_wal: sqliteSincronizado,
+      resumo_contagens: {
+        empresas: (db.empresas || []).length,
+        reservas: (db.reservas || []).length,
+        caixa: (db.erp_caixa || []).length,
+        estoque: (db.erp_estoque || []).length,
+        cadastros_pessoas: (db.cadastros_pessoas || []).length,
+        pdv_produtos: (db.pdv_produtos || []).length,
+        pdv_comandas: (db.pdv_comandas || []).length,
+        configs: (db.erp_configs || []).length
+      }
+    });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, erro: e.message || 'Falha ao restaurar backup JSON.' });
+  }
+});
+
 function stripPureFunctionalCode(content: string, filePath: string): string {
   const ext = (filePath.split('.').pop() || '').toLowerCase();
   let out = content;

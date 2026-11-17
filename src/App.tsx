@@ -972,9 +972,9 @@ export default function App() {
     sidebarWidth: number;
   }>({
     menuPosition: 'left',
-    menuVisualMode: 'dock',
+    menuVisualMode: 'grid',
     expandAllCategories: true,
-    sidebarWidth: 264
+    sidebarWidth: 236
   });
 
   const [adminMasterBrightness, setAdminMasterBrightness] = useState<number>(() => {
@@ -1329,9 +1329,9 @@ export default function App() {
   );
 
   const [menuPosition, setMenuPosition] = useState<'left' | 'bottom'>('left');
-  const [menuVisualMode, setMenuVisualMode] = useState<'grid' | 'dock' | 'compact'>('dock');
+  const [menuVisualMode, setMenuVisualMode] = useState<'grid' | 'dock' | 'compact'>('grid');
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(264);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(236);
   const [isResizingSidebar, setIsResizingSidebar] = useState<boolean>(false);
 
   const normalizeUnifiedCategories = useCallback((rawCats: NavCategory[]): NavCategory[] => {
@@ -1380,9 +1380,10 @@ export default function App() {
     try {
       localStorage.removeItem('urutau_nav_categories_v2');
       localStorage.removeItem('urutau_nav_categories_v8');
-      localStorage.removeItem('urutau_nav_categories_v9');
       localStorage.removeItem('urutau_nav_categories_v10');
-      const saved = localStorage.getItem('urutau_nav_categories_v11');
+      const saved =
+        localStorage.getItem('urutau_nav_categories_v11') ||
+        localStorage.getItem('urutau_nav_categories_v9');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -1411,6 +1412,7 @@ export default function App() {
       setCategories(cleanNext);
       if (isSuperAdminUser(currentUser)) {
         adminMasterCategoriesRef.current = cleanNext;
+        localStorage.setItem('urutau_nav_categories_v11', JSON.stringify(cleanNext));
         localStorage.setItem('urutau_nav_categories_v9', JSON.stringify(cleanNext));
         fetch('/api/erp/configs/salvar', {
           method: 'POST',
@@ -1535,20 +1537,14 @@ export default function App() {
     }>) => {
       const nextLayout = {
         menuPosition: patch.menuPosition ?? menuPosition,
-        menuVisualMode: 'dock' as const,
-        expandAllCategories: patch.expandAllCategories ?? expandAllCategories,
+        menuVisualMode: 'grid' as const,
+        expandAllCategories: true,
         sidebarWidth: patch.sidebarWidth ?? sidebarWidth
       };
       if (patch.menuPosition !== undefined) setMenuPosition(patch.menuPosition);
-      setMenuVisualMode('dock');
-      if (patch.expandAllCategories !== undefined) {
-        setExpandAllCategories(patch.expandAllCategories);
-        const nextCollapsed = patch.expandAllCategories ? [] : categories.map((c) => c.id);
-        setCollapsedCategoryIds(nextCollapsed);
-        try {
-          localStorage.setItem('urutau_collapsed_categories_v1', JSON.stringify(nextCollapsed));
-        } catch {}
-      }
+      setMenuVisualMode('grid');
+      setExpandAllCategories(true);
+      setCollapsedCategoryIds([]);
       if (patch.sidebarWidth !== undefined) setSidebarWidth(patch.sidebarWidth);
 
       if (isSuperAdminUser(currentUser)) {
@@ -1623,8 +1619,8 @@ export default function App() {
       setCategories(masterCats);
       setTabOverrides(masterOverrides);
       setMenuPosition(masterLayout.menuPosition);
-      setMenuVisualMode('dock');
-      setExpandAllCategories(masterLayout.expandAllCategories);
+      setMenuVisualMode('grid');
+      setExpandAllCategories(true);
       if (adminMasterBrandRef.current) {
         handleUpdateBrandConfig(adminMasterBrandRef.current, false);
       }
@@ -2481,14 +2477,34 @@ export default function App() {
       if (Array.isArray(cfgCats?.valor_json) && cfgCats.valor_json.length > 0) {
         adminMasterCategoriesRef.current = normalizeUnifiedCategories(cfgCats.valor_json);
       } else {
-        adminMasterCategoriesRef.current = DEFAULT_CATEGORIES;
+        try {
+          const localCatsRaw =
+            localStorage.getItem('urutau_nav_categories_v11') ||
+            localStorage.getItem('urutau_nav_categories_v9');
+          const localCats = localCatsRaw ? JSON.parse(localCatsRaw) : null;
+          adminMasterCategoriesRef.current =
+            Array.isArray(localCats) && localCats.length > 0
+              ? normalizeUnifiedCategories(localCats)
+              : DEFAULT_CATEGORIES;
+        } catch {
+          adminMasterCategoriesRef.current = DEFAULT_CATEGORIES;
+        }
       }
 
       const cfgOverrides = json.configs?.find((c) => c.chave === 'menu_abas_overrides_v8');
-      if (cfgOverrides?.valor_json && typeof cfgOverrides.valor_json === 'object') {
+      if (cfgOverrides?.valor_json && typeof cfgOverrides.valor_json === 'object' && Object.keys(cfgOverrides.valor_json).length > 0) {
         adminMasterOverridesRef.current = cfgOverrides.valor_json;
+        try {
+          localStorage.setItem('urutau_tab_overrides_v8', JSON.stringify(cfgOverrides.valor_json));
+        } catch {}
       } else {
-        adminMasterOverridesRef.current = {};
+        try {
+          const localOvRaw = localStorage.getItem('urutau_tab_overrides_v8');
+          const localOv = localOvRaw ? JSON.parse(localOvRaw) : {};
+          adminMasterOverridesRef.current = localOv && typeof localOv === 'object' ? localOv : {};
+        } catch {
+          adminMasterOverridesRef.current = {};
+        }
       }
 
       const cfgLayout = json.configs?.find((c) => c.chave === 'layout_modo_menu_padrao');
@@ -2558,7 +2574,7 @@ export default function App() {
         const effectiveLayout = userCustomCfg?.layout || adminMasterLayoutRef.current;
         if (effectiveLayout) {
           if (effectiveLayout.menuPosition) setMenuPosition(effectiveLayout.menuPosition);
-          setMenuVisualMode('dock');
+          setMenuVisualMode('grid');
         }
       }
 
@@ -3704,7 +3720,7 @@ export default function App() {
 
         {menuPosition === 'left' && !sidebarCollapsed && (
           <aside
-            style={{ width: menuVisualMode === 'dock' ? 148 : sidebarWidth }}
+            style={{ width: menuVisualMode === 'dock' ? 148 : Math.max(220, sidebarWidth) }}
             className="hidden md:flex sticky top-0 self-start h-screen tapiri-sidebar flex-col shrink-0 select-none z-30 transition-[width] duration-150"
           >
             <button
@@ -3721,37 +3737,41 @@ export default function App() {
             </button>
 
             <div className="p-2.5 border-b border-white/[0.06] space-y-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setBrandShowcaseOpen(true)}
-                className="w-full flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer group"
-                title="Personalizar Identidade Visual e Cores da Empresa"
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <SystemSlotImage
-                    slot={
-                      ssePulseActive &&
-                      !brandConfig.logoDataUrl &&
-                      brandConfig.imagePlacements?.topo_painel !== 'logo_empresa' &&
-                      !String(brandConfig.imagePlacements?.topo_painel || '').startsWith('custom_')
-                        ? 'pulso_tempo_real'
-                        : 'topo_painel'
-                    }
-                    brandConfig={brandConfig}
-                    ssePulse={ssePulseActive}
-                    className="w-9 h-7 shrink-0 transition-transform duration-200 group-hover:scale-105"
-                  />
-                  <span
-                    className={`tapiri-orb-turquoise shrink-0 transition-transform duration-300 ${
-                      ssePulseActive ? 'scale-125' : ''
-                    }`}
-                    title="Sincronização em Tempo Real Ativa"
-                  />
-                </div>
-                <span className="text-[11px] font-bold tracking-[0.06em] text-slate-100 uppercase leading-tight text-center truncate w-full">
-                  {brandConfig.companyName ? brandConfig.companyName : 'URUTAU'}
-                </span>
-              </button>
+              <div className="grafismo-amazonico-frieze opacity-75 rounded-sm" />
+                <button
+                  type="button"
+                  onClick={() => setBrandShowcaseOpen(true)}
+                  className="w-full flex flex-col items-center justify-center gap-1 py-1.5 px-2 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer group"
+                  title="Personalizar Identidade Visual e Cores da Empresa"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <SystemSlotImage
+                      slot={
+                        ssePulseActive &&
+                        !brandConfig.logoDataUrl &&
+                        brandConfig.imagePlacements?.topo_painel !== 'logo_empresa' &&
+                        !String(brandConfig.imagePlacements?.topo_painel || '').startsWith('custom_')
+                          ? 'pulso_tempo_real'
+                          : 'topo_painel'
+                      }
+                      brandConfig={brandConfig}
+                      ssePulse={ssePulseActive}
+                      className="w-10 h-8 shrink-0 transition-transform duration-200 group-hover:scale-105"
+                    />
+                    <span
+                      className={`tapiri-orb-turquoise shrink-0 transition-transform duration-300 ${
+                        ssePulseActive ? 'scale-125' : ''
+                      }`}
+                      title="Sincronização em Tempo Real Ativa"
+                    />
+                  </div>
+                  <span className="text-[11px] font-bold tracking-[0.06em] text-slate-100 uppercase leading-tight text-center truncate w-full">
+                    {brandConfig.companyName ? brandConfig.companyName : 'URUTAU'}
+                  </span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-[#10B981]/90 leading-none">
+                    Sentinela da Amazônia
+                  </span>
+                </button>
 
               {erpData.empresas && erpData.empresas.length > 0 && (
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/[0.03] border border-white/[0.06] min-w-0">
@@ -4124,7 +4144,7 @@ export default function App() {
                   .map((cat) => {
                   const visibleTabs = cat.abas.filter(canAccessTab);
                   if (visibleTabs.length === 0 && inlineEditingCatId !== cat.id) return null;
-                  const isExpanded = !collapsedCategoryIds.includes(cat.id);
+                  const isExpanded = true;
                   const isEditingThisCat = inlineEditingCatId === cat.id;
                   const isDragOverThisCat = dragOverCatId === cat.id;
                   const cleanCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
@@ -4144,7 +4164,7 @@ export default function App() {
                         e.preventDefault();
                         handleDropOnCategoryHeader(cat.id);
                       }}
-                      className={`rounded-lg overflow-hidden transition-all ${
+                      className={`rounded-lg overflow-hidden transition-all mb-1.5 ${
                         isDragOverThisCat
                           ? 'ring-1 ring-amber-400/50 bg-white/[0.03]'
                           : ''
@@ -4218,8 +4238,7 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        <button
-                          type="button"
+                        <div
                           draggable
                           onDragStart={(e) => startHtml5CatDrag(e, cat.id)}
                           onDragEnd={clearHtml5DragState}
@@ -4229,23 +4248,14 @@ export default function App() {
                           onTouchStart={(e) => startHoldOnCategory(cat.id, e)}
                           onTouchMove={handleTouchMoveDrag}
                           onTouchEnd={handleTouchEndDrag}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cancelHoldTimer();
-                            if (holdTriggeredRef.current) {
-                              holdTriggeredRef.current = false;
-                              return;
-                            }
-                            handleToggleCategoryCollapse(cat.id);
-                          }}
-                          className="w-full flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-white/[0.03] text-left text-[11px] font-semibold tracking-wide text-slate-400 hover:text-slate-200 cursor-pointer transition-colors"
+                          className="w-full flex items-center justify-between px-2 py-1 border-b border-white/[0.06] text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none"
                           title={cleanCatTitle}
                         >
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
                             <CategorySymbolSVG
                               categoryId={cat.id}
                               colorHex={cat.corSimbolo}
-                              className="w-3.5 h-3.5 shrink-0 opacity-80"
+                              className="w-3.5 h-3.5 shrink-0 opacity-85"
                             />
                             <span className="truncate">{cleanCatTitle}</span>
                             {isAdminExclusiveCategory(cat.id) && (
@@ -4254,18 +4264,11 @@ export default function App() {
                               </span>
                             )}
                           </div>
-                          <CestariaGrafismoSVG expanded={isExpanded} className="w-3 h-3 shrink-0 opacity-60" />
-                        </button>
+                        </div>
                       )}
 
                       {isExpanded && (
-                        <div
-                          className={
-                            menuVisualMode === 'grid'
-                              ? 'p-1 grid grid-cols-2 gap-1'
-                              : 'py-0.5 space-y-0.5'
-                          }
-                        >
+                        <div className="p-1 grid grid-cols-2 gap-1.5">
                           {visibleTabs.map((tabId) => {
                             const meta = DEFAULT_TAB_META[tabId];
                             const override = tabOverrides[tabId];
@@ -4818,6 +4821,7 @@ export default function App() {
                 }
                 initialSubTabSlug={activeSubTabSlug}
                 onSubTabChange={(slug) => setActiveSubTabSlug(slug)}
+                tabOverrides={tabOverrides}
               >
                 {activeTab === 'home' && (
                   <HomeDashboardHub
@@ -4831,6 +4835,7 @@ export default function App() {
                       empresaAtivaObj?.nome ||
                       'empresa'
                     }
+                    tabOverrides={tabOverrides}
                     onNavigateTab={(tId, sSlug) => handleSelectTab(tId, sSlug)}
                   />
                 )}
@@ -4845,6 +4850,7 @@ export default function App() {
                     }
                     companyName={brandConfig.companyName || empresaAtivaObj?.nome || 'Empresa'}
                     categories={categories}
+                    tabOverrides={tabOverrides}
                     onNavigateModuleSubTab={(tId, sSlug) => handleSelectTab(tId, sSlug)}
                   />
                 )}
@@ -5376,7 +5382,7 @@ export default function App() {
                   .map((cat) => {
                   const visibleTabs = cat.abas.filter(canAccessTab);
                   if (visibleTabs.length === 0 && inlineEditingCatId !== cat.id) return null;
-                  const isExpanded = !collapsedCategoryIds.includes(cat.id);
+                  const isExpanded = true;
                   const isDragOverThisCat = dragOverCatId === cat.id;
                   const cleanCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
                   return (
@@ -5453,8 +5459,7 @@ export default function App() {
                           </div>
                         </div>
                       ) : (
-                        <button
-                          type="button"
+                        <div
                           draggable
                           onDragStart={(e) => startHtml5CatDrag(e, cat.id)}
                           onDragEnd={clearHtml5DragState}
@@ -5463,16 +5468,7 @@ export default function App() {
                           onTouchStart={(e) => startHoldOnCategory(cat.id, e)}
                           onTouchMove={handleTouchMoveDrag}
                           onTouchEnd={handleTouchEndDrag}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cancelHoldTimer();
-                            if (holdTriggeredRef.current) {
-                              holdTriggeredRef.current = false;
-                              return;
-                            }
-                            handleToggleCategoryCollapse(cat.id);
-                          }}
-                          className="w-full px-3 py-2 bg-black/25 flex items-center justify-between text-left text-xs font-bold text-slate-200 cursor-pointer"
+                          className="w-full px-3 py-2 bg-black/25 border-b border-white/[0.06] flex items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-300 select-none"
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <CategorySymbolSVG
@@ -5487,18 +5483,11 @@ export default function App() {
                               </span>
                             )}
                           </div>
-                          <CestariaGrafismoSVG expanded={isExpanded} className="w-3.5 h-3.5 shrink-0 opacity-75" />
-                        </button>
+                        </div>
                       )}
 
                       {isExpanded && (
-                        <div
-                          className={
-                            menuVisualMode === 'grid'
-                              ? 'p-2 grid grid-cols-2 gap-1.5'
-                              : 'p-1.5 space-y-1'
-                          }
-                        >
+                        <div className="p-2 grid grid-cols-2 gap-1.5">
                           {visibleTabs.map((tabId) => {
                             const meta = DEFAULT_TAB_META[tabId];
                             const override = tabOverrides[tabId];

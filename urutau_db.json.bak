@@ -1,6 +1,69 @@
 {
   "audit_logs": [
     {
+      "id": 15,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Super Admin",
+      "cargo": "Super Admin",
+      "ambiente": "development",
+      "acao": "ALTERAR_PARAMETRO_CONFIG",
+      "detalhes": "Parâmetro [menu_abas_overrides_v8] atualizado",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-17T02:33:42.074Z"
+    },
+    {
+      "id": 14,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "Super Admin",
+      "ambiente": "development",
+      "acao": "DESBLOQUEIO_MESTRE",
+      "detalhes": "Sessão autenticada com Senha Mestra Argon2id",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-17T02:29:13.063Z"
+    },
+    {
+      "id": 13,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-17T02:29:06.858Z"
+    },
+    {
       "id": 12,
       "id_empresa": 1,
       "usuario_id": 1,
@@ -243,7 +306,28 @@
       "criado_em": "2026-11-15T18:50:52.507Z"
     }
   ],
-  "erp_outbox": [],
+  "erp_outbox": [
+    {
+      "id": 1,
+      "agregado": "CONFIGS",
+      "tipo_evento": "config.atualizada",
+      "payload_json": {
+        "chave": "menu_abas_overrides_v8",
+        "valor_json": {
+          "reservas": {
+            "iconColor": "#8B5CF6"
+          }
+        }
+      },
+      "status": "PROCESSADO",
+      "tentativas": 0,
+      "ultimo_erro": null,
+      "proxima_tentativa_em": "2026-11-17T02:33:42.073Z",
+      "criado_em": "2026-11-17T02:33:42.073Z",
+      "processado_em": "2026-11-17T02:33:42.077Z",
+      "arquivado_legal": false
+    }
+  ],
   "empresas": [
     {
       "id": 1,
@@ -398,6 +482,15 @@
         "tempo_inatividade_seg": 300
       },
       "atualizado_em": "2026-11-15T18:50:52.507Z"
+    },
+    {
+      "chave": "menu_abas_overrides_v8",
+      "valor_json": {
+        "reservas": {
+          "iconColor": "#8B5CF6"
+        }
+      },
+      "atualizado_em": "2026-11-17T02:33:42.073Z"
     }
   ],
   "fila_aprovacoes_pendentes": [],
@@ -598,7 +691,8 @@
       "interacao_sistema_bloqueada": false,
       "observacoes": "Cadastrado automaticamente via módulo GESTOR_CONTA",
       "arquivado_legal": false,
-      "criado_em": "2026-11-15T18:50:52.509Z"
+      "criado_em": "2026-11-15T18:50:52.509Z",
+      "usuario_sistema_id": 2
     },
     {
       "id": 1,
@@ -609,7 +703,8 @@
       "email": "",
       "papeis": [
         "colaborador",
-        "gestor_conta"
+        "gestor_conta",
+        "colaborador_efetivo"
       ],
       "empresa_id": 1,
       "cidade": "Belém - PA",
@@ -618,7 +713,8 @@
       "arquivado_legal": false,
       "criado_em": "2026-11-15T18:50:52.507Z",
       "comunidade_wpp_autorizada": true,
-      "interacao_sistema_bloqueada": false
+      "interacao_sistema_bloqueada": false,
+      "usuario_sistema_id": 1
     }
   ],
   "cargos": [
