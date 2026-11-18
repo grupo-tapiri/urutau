@@ -219,6 +219,17 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
   const [impVias, setImpVias] = useState<string>('1');
   const [salvandoImp, setSalvandoImp] = useState<boolean>(false);
   const [jobSelecionadoBobina, setJobSelecionadoBobina] = useState<JobFilaImpressaoPdv | null>(null);
+  const [elginAutoPrintLocal, setElginAutoPrintLocal] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('urutau_elgin_i9_autoprint') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [elginDirectPort, setElginDirectPort] = useState<any>(null);
+  const [elginDirectUsbDevice, setElginDirectUsbDevice] = useState<any>(null);
+  const [elginDirectStatus, setElginDirectStatus] = useState<string>('');
+  const processedUsbJobsRef = React.useRef<Set<number>>(new Set());
 
   const [floorPlanSyncTick, setFloorPlanSyncTick] = useState<number>(0);
   useEffect(() => {
@@ -834,6 +845,212 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
     }
   };
 
+  const confirmarJobUsbServidor = useCallback(
+    async (jobId: number, detalhe: string) => {
+      try {
+        await fetch('/api/pdv/spooler-usb/confirmar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            job_id: jobId,
+            sucesso: true,
+            detalhe
+          })
+        });
+        onRefresh();
+      } catch {}
+    },
+    [onRefresh]
+  );
+
+  const construirBytesEscPosJob = useCallback((job: JobFilaImpressaoPdv): Uint8Array => {
+    if (job.escpos_base64) {
+      try {
+        const bin = atob(job.escpos_base64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) {
+          bytes[i] = bin.charCodeAt(i);
+        }
+        return bytes;
+      } catch {}
+    }
+    const texto = `${(job.linhas_texto || []).join('\r\n')}\r\n\r\n\r\n\r\n`;
+    const enc = new TextEncoder().encode(texto);
+    const out = new Uint8Array(2 + enc.length + 4);
+    out[0] = 0x1b;
+    out[1] = 0x40;
+    out.set(enc, 2);
+    out[2 + enc.length] = 0x1d;
+    out[2 + enc.length + 1] = 0x56;
+    out[2 + enc.length + 2] = 0x41;
+    out[2 + enc.length + 3] = 0x10;
+    return out;
+  }, []);
+
+  const enviarEscPosDiretoElgin = useCallback(
+    async (job: JobFilaImpressaoPdv): Promise<boolean> => {
+      const payload = construirBytesEscPosJob(job);
+      if (elginDirectPort && elginDirectPort.writable) {
+        try {
+          const writer = elginDirectPort.writable.getWriter();
+          await writer.write(payload);
+          writer.releaseLock();
+          setElginDirectStatus(`Impresso via Porta USB/COM Elgin i9 (${payload.length} bytes ESC/POS + corte).`);
+          await confirmarJobUsbServidor(job.id, 'Impresso na Elgin i9 via Porta USB/COM Direta (ESC/POS).');
+          return true;
+        } catch (err: any) {
+          setElginDirectStatus(`Falha na Porta COM Elgin i9: ${err?.message || 'erro serial'}`);
+        }
+      }
+      if (elginDirectUsbDevice) {
+        try {
+          if (!elginDirectUsbDevice.opened) {
+            await elginDirectUsbDevice.open();
+          }
+          if (elginDirectUsbDevice.configuration === null) {
+            await elginDirectUsbDevice.selectConfiguration(1);
+          }
+          const iface = elginDirectUsbDevice.configuration.interfaces[0];
+          await elginDirectUsbDevice.claimInterface(iface.interfaceNumber);
+          const alt = iface.alternates[0];
+          const outEp = alt.endpoints.find((ep: any) => ep.direction === 'out');
+          if (outEp) {
+            await elginDirectUsbDevice.transferOut(outEp.endpointNumber, payload);
+            setElginDirectStatus(`Impresso via WebUSB Elgin i9 (${payload.length} bytes ESC/POS + corte).`);
+            await confirmarJobUsbServidor(job.id, 'Impresso na Elgin i9 via WebUSB Direto (ESC/POS).');
+            return true;
+          }
+        } catch (err: any) {
+          setElginDirectStatus(`Falha WebUSB Elgin i9: ${err?.message || 'use o Driver Windows ou Porta COM'}`);
+        }
+      }
+      return false;
+    },
+    [elginDirectPort, elginDirectUsbDevice, construirBytesEscPosJob, confirmarJobUsbServidor]
+  );
+
+  const handleImprimirBobinaNavegador = useCallback(
+    async (job: JobFilaImpressaoPdv) => {
+      const enviouDireto = await enviarEscPosDiretoElgin(job);
+      if (enviouDireto) return;
+
+      const iframeId = 'urutau-elgin-i9-thermal-iframe';
+      let iframe = document.getElementById(iframeId) as HTMLIFrameElement | null;
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = iframeId;
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+      }
+
+      const linhasEscapadas = (job.linhas_texto || [])
+        .map((l) => String(l).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+        .join('\n');
+
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>${job.referencia || 'Cupom Elgin i9 80mm'}</title>
+<style>
+  @page { size: 80mm auto; margin: 0mm; }
+  html, body {
+    margin: 0;
+    padding: 2mm 2mm 6mm 2mm;
+    width: 76mm;
+    background: #ffffff;
+    color: #000000;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    line-height: 1.28;
+    font-weight: 600;
+  }
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body><pre>${linhasEscapadas}</pre></body>
+</html>`);
+        doc.close();
+        setTimeout(() => {
+          iframe?.contentWindow?.focus();
+          iframe?.contentWindow?.print();
+          confirmarJobUsbServidor(job.id, 'Impresso na Elgin i9 (80mm) via Driver Local do Windows.');
+        }, 120);
+      }
+    },
+    [enviarEscPosDiretoElgin, confirmarJobUsbServidor]
+  );
+
+  const handleConectarElginPortaSerialCom = async () => {
+    const nav = navigator as any;
+    if (!nav.serial) {
+      showAlert(
+        'Navegador sem WebSerial',
+        'Use o Google Chrome ou Microsoft Edge no Windows para conectar direto na porta USB/COM da Elgin i9, ou ative o botão "Auto-Imprimir pelo Driver Windows".'
+      );
+      return;
+    }
+    try {
+      const port = await nav.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+      setElginDirectPort(port);
+      setElginDirectStatus('Elgin i9 conectada via Porta USB/COM Virtual (115200 bps). Disparo ESC/POS + corte ativo!');
+    } catch (e: any) {
+      setElginDirectStatus(`Conexão USB/COM cancelada ou ocupada pelo spooler Windows (${e?.message || ''}).`);
+    }
+  };
+
+  const handleConectarElginWebUsb = async () => {
+    const nav = navigator as any;
+    if (!nav.usb) {
+      showAlert(
+        'Navegador sem WebUSB',
+        'Use o Google Chrome ou Microsoft Edge no Windows para parear via WebUSB, ou use o modo Driver Windows (80mm).'
+      );
+      return;
+    }
+    try {
+      const device = await nav.usb.requestDevice({ filters: [] });
+      await device.open();
+      if (device.configuration === null) {
+        await device.selectConfiguration(1);
+      }
+      await device.claimInterface(0);
+      setElginDirectUsbDevice(device);
+      setElginDirectStatus(`Elgin i9 (${device.productName || 'USB'}) pareada via WebUSB Direto!`);
+    } catch (e: any) {
+      setElginDirectStatus(
+        'O driver do Windows já está controlando a USB da Elgin i9. Ative "Auto-Imprimir pelo Driver Windows (80mm)" ao lado para imprimir direto!'
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!elginAutoPrintLocal && !elginDirectPort && !elginDirectUsbDevice) return;
+    const pendentesUsb = (filaImpressao || []).filter((j) => j.status === 'pendente_usb');
+    for (const job of pendentesUsb) {
+      if (!processedUsbJobsRef.current.has(job.id)) {
+        processedUsbJobsRef.current.add(job.id);
+        handleImprimirBobinaNavegador(job);
+        break;
+      }
+    }
+  }, [filaImpressao, elginAutoPrintLocal, elginDirectPort, elginDirectUsbDevice, handleImprimirBobinaNavegador]);
+
   const handleTestarImpressora = async (impId: number) => {
     try {
       const resp = await fetch('/api/pdv/impressoras/testar', {
@@ -848,6 +1065,10 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
       const json = await resp.json();
       if (json?.job) {
         setJobSelecionadoBobina(json.job);
+        if (elginAutoPrintLocal || elginDirectPort || elginDirectUsbDevice) {
+          processedUsbJobsRef.current.add(json.job.id);
+          await handleImprimirBobinaNavegador(json.job);
+        }
       }
       onRefresh();
     } catch (e: any) {
@@ -865,19 +1086,12 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
       const json = await resp.json();
       if (json?.job) {
         setJobSelecionadoBobina(json.job);
+        await handleImprimirBobinaNavegador(json.job);
       }
       onRefresh();
     } catch (e: any) {
       showAlert('Erro na reimpressão', e?.message || 'Falha ao reimprimir cupom.');
     }
-  };
-
-  const handleImprimirBobinaNavegador = (job: JobFilaImpressaoPdv) => {
-    const areaPrint = document.getElementById('urutau-bobina-print-only');
-    if (areaPrint) {
-      areaPrint.innerText = (job.linhas_texto || []).join('\n');
-    }
-    window.print();
   };
 
   const handleReconciliarComVpsAgora = async () => {
@@ -2063,6 +2277,45 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
                 <RefreshCw className={`w-4 h-4 ${reconcilingVps ? 'animate-spin' : ''}`} />
                 Reconciliar Vendas Locais com a VPS ({data.lanHubStatus?.pendentes_outbox_lan || 0} pendentes)
               </button>
+
+              <a
+                href="/api/lan/baixar-instalador-servidor-windows"
+                download="Urutau_Servidor_Local_Caixa_Windows.bat"
+                className="min-h-[44px] px-4 py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 font-bold text-xs inline-flex items-center gap-2"
+              >
+                <Server className="w-4 h-4" />
+                Baixar Servidor Local + Auto-Update Windows (.bat)
+              </a>
+
+              <a
+                href="/api/lan/baixar-instalador-servidor-linux"
+                download="Urutau_Servidor_Local_Caixa_Linux.sh"
+                className="min-h-[44px] px-4 py-2 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-400/40 text-violet-200 font-bold text-xs inline-flex items-center gap-2"
+              >
+                <Server className="w-4 h-4" />
+                Baixar Servidor Local + Auto-Update Linux (.sh)
+              </a>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-white/10 text-xs">
+              <div className="rounded-lg bg-[#0F171E] border border-white/10 p-3 space-y-1">
+                <div className="font-bold text-amber-300">1. No PC do Caixa (Windows ou Linux)</div>
+                <p className="text-slate-300 leading-relaxed">
+                  Coloque o script baixado na pasta do Urutau no PC do Caixa e execute. Ele libera a porta 3000 no Firewall, atualiza o código quando há internet (preservando os bancos SQLite/JSON) e exibe o IP do Wi-Fi.
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#0F171E] border border-white/10 p-3 space-y-1">
+                <div className="font-bold text-emerald-300">2. Nos Celulares Android e iOS (Garçons)</div>
+                <p className="text-slate-300 leading-relaxed">
+                  Conectados no mesmo Wi-Fi do restaurante, acesse <span className="font-mono text-white">http://{ipManualInput.trim() || ipsDetectadosCaixa[0] || '192.168.0.100'}:{portaManualInput.trim() || '3000'}</span> e adicione à Tela Inicial (Chrome no Android / Safari no iOS).
+                </p>
+              </div>
+              <div className="rounded-lg bg-[#0F171E] border border-white/10 p-3 space-y-1">
+                <div className="font-bold text-sky-300">3. Impressão e Sincronização com a VPS</div>
+                <p className="text-slate-300 leading-relaxed">
+                  Mesmo sem internet da rua, os pedidos dos celulares chegam na hora no Caixa e imprimem na Cozinha/Bar (Porta 9100 ou USB). Quando a internet voltar, clique em Reconciliar com a VPS.
+                </p>
+              </div>
             </div>
 
             {lanTestState.msg && (
@@ -2088,9 +2341,48 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
               onSubmit={handleSalvarImpressora}
               className="lg:col-span-5 bg-[#0B1217] border border-white/10 rounded-xl p-4 space-y-3"
             >
-              <h3 className="text-sm font-bold text-slate-100">
-                {editImpId ? 'Editar Impressora Térmica' : 'Cadastrar Impressora Térmica (Rede 9100 ou USB Caixa)'}
-              </h3>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-slate-100">
+                  {editImpId ? 'Editar Impressora Térmica' : 'Cadastrar Impressora Térmica (Elgin i9 Rede 9100 ou USB)'}
+                </h3>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                <div className="text-[11px] font-bold text-emerald-300">
+                  Atalho Rápido — Configurar Elgin i9 em 1 Clique:
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImpNome('Elgin i9 USB Caixa');
+                      setImpSetor('caixa');
+                      setImpTipoConexao('usb_caixa_windows');
+                      setImpNomeUsb('Elgin i9');
+                      setImpLargura('80mm');
+                      setImpVias('1');
+                    }}
+                    className="px-2.5 py-1.5 rounded bg-emerald-500 text-slate-950 font-bold text-[11px] cursor-pointer hover:bg-emerald-400"
+                  >
+                    1. Elgin i9 no Cabo USB (Windows)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImpNome('Elgin i9 Rede Ethernet');
+                      setImpSetor('cozinha');
+                      setImpTipoConexao('rede_tcp_9100');
+                      setImpIpRede('192.168.0.201');
+                      setImpPortaRede('9100');
+                      setImpLargura('80mm');
+                      setImpVias('1');
+                    }}
+                    className="px-2.5 py-1.5 rounded bg-white/10 text-slate-100 font-bold text-[11px] border border-white/15 cursor-pointer hover:bg-white/15"
+                  >
+                    2. Elgin i9 no Cabo de Rede (IP :9100)
+                  </button>
+                </div>
+              </div>
 
               <div>
                 <label className="text-[11px] text-slate-400">Identificação da Impressora</label>
@@ -2098,7 +2390,7 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
                   type="text"
                   value={impNome}
                   onChange={(e) => setImpNome(e.target.value)}
-                  placeholder="Ex: Elgin i9 Cozinha Quente"
+                  placeholder="Ex: Elgin i9 Caixa / Cozinha"
                   className="w-full min-h-[40px] px-3 rounded-lg bg-[#0F171E] border border-white/15 text-xs text-slate-100"
                 />
               </div>
@@ -2157,13 +2449,13 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
               ) : (
                 <div>
                   <label className="text-[11px] text-slate-400">
-                    Nome da Impressora USB no Windows (Ponte via Urutau.exe)
+                    Nome da Impressora USB no Windows (Ex: Elgin i9)
                   </label>
                   <input
                     type="text"
                     value={impNomeUsb}
                     onChange={(e) => setImpNomeUsb(e.target.value)}
-                    placeholder="CAIXA-TERMICA-80MM"
+                    placeholder="Elgin i9"
                     className="w-full min-h-[40px] px-3 rounded-lg bg-[#0F171E] border border-white/15 text-xs font-mono text-slate-100"
                   />
                 </div>
@@ -2242,7 +2534,7 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
                             setImpTipoConexao(imp.tipo_conexao);
                             setImpIpRede(imp.ip_rede);
                             setImpPortaRede(String(imp.porta_rede || 9100));
-                            setImpNomeUsb(imp.nome_usb_windows || 'CAIXA-TERMICA-80MM');
+                            setImpNomeUsb(imp.nome_usb_windows || 'Elgin i9');
                             setImpLargura(imp.largura_papel);
                             setImpVias(String(imp.vias || 1));
                           }}
@@ -2257,11 +2549,57 @@ export const PdvHibridoTab: React.FC<PdvHibridoTabProps> = ({
               </div>
 
               <div className="bg-[#0B1217] border border-white/10 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-100">
-                    Fila de Impressão & Bobina Térmica ({filaImpressao.length})
-                  </h3>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-100">
+                      Fila de Impressão & Ponte Direta Elgin i9 ({filaImpressao.length})
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Conecte sua Elgin i9 via Porta USB/COM para corte automático ESC/POS ou ative o Auto-Disparo pelo Driver Windows (80mm).
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !elginAutoPrintLocal;
+                        setElginAutoPrintLocal(next);
+                        try {
+                          localStorage.setItem('urutau_elgin_i9_autoprint', String(next));
+                        } catch {}
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border cursor-pointer ${
+                        elginAutoPrintLocal
+                          ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                          : 'bg-[#0F171E] text-slate-200 border-white/15 hover:bg-white/10'
+                      }`}
+                    >
+                      {elginAutoPrintLocal
+                        ? 'Auto-Imprimir Driver Windows: ATIVO'
+                        : 'Ativar Auto-Imprimir Driver Windows (80mm)'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConectarElginPortaSerialCom}
+                      className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-[11px] font-bold cursor-pointer"
+                    >
+                      Conectar Elgin i9 Porta USB/COM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConectarElginWebUsb}
+                      className="px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-[11px] font-bold cursor-pointer"
+                    >
+                      WebUSB
+                    </button>
+                  </div>
                 </div>
+
+                {elginDirectStatus && (
+                  <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs">
+                    {elginDirectStatus}
+                  </div>
+                )}
 
                 {jobSelecionadoBobina && (
                   <div className="p-3.5 rounded-lg bg-[#F8FAFC] text-slate-950 font-mono text-xs space-y-2 border border-slate-300">

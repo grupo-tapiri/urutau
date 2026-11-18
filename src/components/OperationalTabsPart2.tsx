@@ -9527,6 +9527,12 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
 
     (data.cadastrosPessoas || []).forEach((rawC: any) => {
       const c = { ...rawC };
+      if (String(c.whatsapp || '').includes('@')) {
+        c.whatsapp = '';
+      }
+      if (c.natureza === 'EMPRESA') {
+        return;
+      }
       const cNome = String(c.nome || '').trim().toLowerCase();
       const cTel8 = String(c.whatsapp || '').replace(/\D/g, '').slice(-8);
 
@@ -9570,7 +9576,8 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
 
       const uid = Number(u.id);
       const chave = String(u.nome || '').trim().toLowerCase();
-      const uTel8 = String(u.telefone || '').replace(/\D/g, '').slice(-8);
+      const rawTel = String(u.telefone || '').includes('@') ? '' : String(u.telefone || '');
+      const uTel8 = rawTel.replace(/\D/g, '').slice(-8);
       if (
         !chave ||
         usuariosIdsJaListados.has(uid) ||
@@ -9590,7 +9597,7 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
         tipo_pessoa: 'PF',
         natureza: 'PF',
         documento: '',
-        whatsapp: u.telefone || '',
+        whatsapp: rawTel,
         email: u.email || '',
         papeis: isGestor ? ['gestor_conta', 'colaborador_efetivo'] : ['colaborador_efetivo'],
         empresa_id: Number(empIds[0] || 0),
@@ -9609,16 +9616,20 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
       const chave = String(f.nome || '').trim().toLowerCase();
       if (!chave || nomesJaListados.has(chave)) return;
       nomesJaListados.add(chave);
+      const rawWpp = String(f.whatsapp || '').includes('@') ? '' : String(f.whatsapp || '');
+      const empAut = Array.isArray(f.empresas_autorizadas) && f.empresas_autorizadas.length > 0
+        ? Number(f.empresas_autorizadas[0])
+        : 0;
       base.push({
         id: 200000 + Number(f.id),
         nome: f.nome,
         tipo_pessoa: 'PF',
         natureza: 'FREELANCER',
         documento: '',
-        whatsapp: f.whatsapp || '',
+        whatsapp: rawWpp,
         email: '',
         papeis: ['colaborador_free'],
-        empresa_id: 0,
+        empresa_id: empAut,
         valor_diaria: Number(f.valor_diaria || 150),
         cidade: f.cidade || 'Belém - PA',
         cargo_ou_ramo: f.funcao || 'Freelancer',
@@ -9634,18 +9645,20 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
       const chave = String(emp.nome || '').trim().toLowerCase();
       if (!chave || nomesJaListados.has(chave)) return;
       nomesJaListados.add(chave);
+      const rawWppEmp = String(emp.waha_numero || '').includes('@') ? '' : String(emp.waha_numero || '');
       base.push({
         id: 300000 + Number(emp.id),
         nome: emp.nome,
         tipo_pessoa: 'PJ',
         natureza: 'EMPRESA',
         documento: emp.cnpj || '',
-        whatsapp: emp.waha_numero || '',
+        whatsapp: rawWppEmp,
         email: '',
         papeis: ['gestor_conta'],
         empresa_id: emp.id,
+        valor_diaria: Number(emp.diaria_teto || 220),
         cidade: emp.cidade || 'Belém - PA',
-        cargo_ou_ramo: `${emp.ramo || 'Unidade da Rede'} • Teto Free R$ ${emp.diaria_teto || 220}`,
+        cargo_ou_ramo: emp.ramo || 'Gastronomia',
         comunidade_wpp_autorizada: true,
         interacao_sistema_bloqueada: false,
         observacoes: `Sessão WhatsApp: ${emp.waha_session_id || 'N/A'} (${emp.waha_status || 'Ativo'})`,
@@ -10143,11 +10156,64 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
           </div>
 
           
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {listaCadastros.map((item: any) => {
+          {(() => {
+            const abrirModalEdicaoItem = (item: any) => {
               const papeis: string[] = Array.isArray(item.papeis) ? item.papeis : [];
               const autorizadoWpp = possuiAcessoSistemaEComunidadeWpp(papeis);
-              const wppInfo = resolverWhatsappInteligente(item.whatsapp, data, currentUser);
+              const nat: NaturezaCadastro =
+                item.natureza || (item.tipo_pessoa === 'PJ' ? 'PJ' : 'PF');
+              const usuarioVinculado = autorizadoWpp ? encontrarUsuarioSistema(item) : null;
+              const resolvedUid =
+                item.usuario_sistema_id ||
+                usuarioVinculado?.id ||
+                (item.id >= 100000 && item.id < 200000 ? item.id - 100000 : null);
+              const sIds = resolvedUid
+                ? (data.relacionamentos?.rel_usuario_setor || [])
+                    .filter((r: any) => Number(r.usuario_id) === Number(resolvedUid))
+                    .map((r: any) => Number(r.setor_id))
+                : [];
+              const uIds = resolvedUid
+                ? (data.relacionamentos?.rel_usuario_unidade || [])
+                    .filter((r: any) => Number(r.usuario_id) === Number(resolvedUid))
+                    .map((r: any) => Number(r.unidade_id))
+                : [];
+              const cleanWhatsapp = String(item.whatsapp || '').includes('@')
+                ? ''
+                : String(item.whatsapp || '');
+              setForm({
+                id: item.id,
+                usuario_sistema_id: resolvedUid ? Number(resolvedUid) : null,
+                nome_original: item.nome || '',
+                nome: item.nome || '',
+                natureza: nat,
+                tipo_pessoa: item.tipo_pessoa === 'PJ' || nat === 'EMPRESA' ? 'PJ' : 'PF',
+                documento: item.documento || '',
+                whatsapp: cleanWhatsapp,
+                email: item.email || '',
+                papeis: papeis.length > 0 ? (papeis as PapelCadastro[]) : ['cliente'],
+                empresa_id:
+                  item.empresa_id !== undefined && item.empresa_id !== null
+                    ? Number(item.empresa_id)
+                    : 0,
+                gestor_id: item.gestor_id ?? null,
+                valor_diaria: Number(item.valor_diaria || 160),
+                cidade: item.cidade || 'Belém - PA',
+                cargo_ou_ramo: item.cargo_ou_ramo || '',
+                observacoes: item.observacoes || '',
+                senha_acesso: '',
+                setoresIds: sIds.length > 0 ? sIds : [Number(data.setores?.[0]?.id || 1)],
+                unidadesIds: uIds.length > 0 ? uIds : [Number(data.unidades?.[0]?.id || 1)]
+              });
+              setCriandoSetorCadastro(false);
+              setCriandoEmpresaCadastro(false);
+              setModalOpen(true);
+            };
+
+            const renderCardCadastro = (item: any, subtituloHierarquia?: string) => {
+              const papeis: string[] = Array.isArray(item.papeis) ? item.papeis : [];
+              const autorizadoWpp = possuiAcessoSistemaEComunidadeWpp(papeis);
+              const cleanWpp = String(item.whatsapp || '').includes('@') ? '' : String(item.whatsapp || '');
+              const wppInfo = resolverWhatsappInteligente(cleanWpp, data, currentUser);
               const nat: NaturezaCadastro =
                 item.natureza || (item.tipo_pessoa === 'PJ' ? 'PJ' : 'PF');
               const usuarioVinculado = autorizadoWpp ? encontrarUsuarioSistema(item) : null;
@@ -10164,57 +10230,21 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
               const empVinculadaObj = (data.empresas || []).find(
                 (e: any) => Number(e.id) === Number(item.empresa_id)
               );
+              const gestorSuperiorObj = item.gestor_id
+                ? (data.usuarios || []).find((u: any) => Number(u.id) === Number(item.gestor_id))
+                : null;
 
               return (
                 <div
                   key={`${nat}-${item.id}`}
-                  onClick={() => {
-                    const resolvedUid =
-                      item.usuario_sistema_id ||
-                      usuarioVinculado?.id ||
-                      (item.id >= 100000 && item.id < 200000 ? item.id - 100000 : null);
-                    const sIds = resolvedUid
-                      ? (data.relacionamentos?.rel_usuario_setor || [])
-                          .filter((r: any) => Number(r.usuario_id) === Number(resolvedUid))
-                          .map((r: any) => Number(r.setor_id))
-                      : [];
-                    const uIds = resolvedUid
-                      ? (data.relacionamentos?.rel_usuario_unidade || [])
-                          .filter((r: any) => Number(r.usuario_id) === Number(resolvedUid))
-                          .map((r: any) => Number(r.unidade_id))
-                      : [];
-                    setForm({
-                      id: item.id,
-                      usuario_sistema_id: resolvedUid ? Number(resolvedUid) : null,
-                      nome_original: item.nome || '',
-                      nome: item.nome || '',
-                      natureza: nat,
-                      tipo_pessoa: item.tipo_pessoa === 'PJ' ? 'PJ' : 'PF',
-                      documento: item.documento || '',
-                      whatsapp: item.whatsapp || '',
-                      email: item.email || '',
-                      papeis: papeis.length > 0 ? (papeis as PapelCadastro[]) : ['cliente'],
-                      empresa_id: item.empresa_id !== undefined && item.empresa_id !== null ? Number(item.empresa_id) : 0,
-                      gestor_id: item.gestor_id ?? null,
-                      valor_diaria: Number(item.valor_diaria || 160),
-                      cidade: item.cidade || 'Belém - PA',
-                      cargo_ou_ramo: item.cargo_ou_ramo || '',
-                      observacoes: item.observacoes || '',
-                      senha_acesso: '',
-                      setoresIds: sIds.length > 0 ? sIds : [Number(data.setores?.[0]?.id || 1)],
-                      unidadesIds: uIds.length > 0 ? uIds : [Number(data.unidades?.[0]?.id || 1)]
-                    });
-                    setCriandoSetorCadastro(false);
-                    setCriandoEmpresaCadastro(false);
-                    setModalOpen(true);
-                  }}
-                  className={`p-4 bg-[#071712] border rounded-xl cursor-pointer transition-all flex flex-col justify-between gap-3 ${
+                  onClick={() => abrirModalEdicaoItem(item)}
+                  className={`p-3.5 bg-[#071712] border rounded-xl cursor-pointer transition-all flex flex-col justify-between gap-2.5 ${
                     ehMinhaContaLogada
                       ? 'border-[#10B981] ring-1 ring-[#10B981]/40'
                       : 'border-white/10 hover:border-[#10B981]/50'
                   }`}
                 >
-                  <div className="flex items-start gap-3.5">
+                  <div className="flex items-start gap-3">
                     <VisualAvatar
                       name={item.nome}
                       role={
@@ -10226,7 +10256,7 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                       }
                       size="md"
                     />
-                    <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center justify-between gap-1.5">
                         <div className="flex flex-wrap items-center gap-1">
                           <span
@@ -10238,23 +10268,21 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                                 : 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30'
                             }`}
                           >
-                            {nat === 'EMPRESA'
-                              ? ' EMPRESA'
-                              : nat === 'FREELANCER'
-                              ? ' FREELANCER'
-                              : nat === 'PJ'
-                              ? ' PJ (CNPJ)'
-                              : ' PF (CPF)'}
+                            {subtituloHierarquia ||
+                              (nat === 'EMPRESA'
+                                ? 'EMPRESA'
+                                : nat === 'FREELANCER'
+                                ? 'FREELANCER'
+                                : nat === 'PJ'
+                                ? 'PJ (CNPJ)'
+                                : 'PF (CPF)')}
                           </span>
-
                           {ehMinhaContaLogada && (
                             <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-[#10B981] text-[#05100C]">
                               SUA CONTA ATIVA
                             </span>
                           )}
                         </div>
-
-                        
                         <span
                           className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
                             autorizadoWpp
@@ -10262,59 +10290,31 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                               : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
                           }`}
                         >
-                          {autorizadoWpp ? ' Comunidade WPP' : ' Bloqueado no Sistema'}
+                          {autorizadoWpp ? 'Comunidade WPP' : 'Sem Acesso Sistema'}
                         </span>
                       </div>
 
                       <div className="text-sm font-bold text-white truncate">{item.nome}</div>
-
                       {item.cargo_ou_ramo && (
                         <div className="text-xs text-slate-400 truncate">{item.cargo_ou_ramo}</div>
                       )}
-
-                      <div className="text-[11px] text-slate-400">
-                        Vínculo:{' '}
-                        <strong className="text-slate-200">
-                          {empVinculadaObj ? empVinculadaObj.nome : 'Independente / Sem Empresa'}
-                        </strong>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-                        {papeis.includes('gestor_conta') && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/40">
-                             Gestor de Conta
-                          </span>
-                        )}
-                        {(papeis.includes('colaborador_efetivo') ||
-                          papeis.includes('colaborador')) && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#8B5CF6]/20 text-[#C4B5FD] border border-[#8B5CF6]/40">
-                             Colab. Efetivo
-                          </span>
-                        )}
-                        {papeis.includes('colaborador_free') && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                             Colab. Free
-                          </span>
-                        )}
-                        {papeis.includes('cliente') && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-                             Cliente
-                          </span>
-                        )}
-                        {papeis.includes('fornecedor') && (
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                             Fornecedor
-                          </span>
-                        )}
-                      </div>
+                      {gestorSuperiorObj && (
+                        <div className="text-[11px] text-amber-300/90">
+                          Gestor Acima: <strong>{gestorSuperiorObj.nome}</strong>
+                        </div>
+                      )}
+                      {!empVinculadaObj && nat !== 'EMPRESA' && (
+                        <div className="text-[11px] text-slate-400">
+                          Vínculo: <strong className="text-slate-200">Independente / Sem Empresa</strong>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
                     <span className="text-[#10B981] truncate">
-                      {item.whatsapp ? ` ${wppInfo.formatado || item.whatsapp}` : 'Sem WhatsApp'}
+                      {cleanWpp ? `${wppInfo.formatado || cleanWpp}` : 'Sem WhatsApp'}
                     </span>
-
                     <div className="flex items-center gap-1.5">
                       {podeSimularEste && usuarioVinculado && (
                         <button
@@ -10324,12 +10324,10 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                             onSwitchCurrentUser!(usuarioVinculado);
                           }}
                           className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-[#05100C] cursor-pointer"
-                          title="Simular temporariamente a tela deste colaborador"
                         >
                           Simular Tela
                         </button>
                       )}
-
                       {!ehMinhaContaLogada &&
                         String(item.nome || '').toLowerCase().trim() !== 'admin master' && (
                           <button
@@ -10339,7 +10337,6 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                               handleArchive(Number(item.id));
                             }}
                             className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/35 hover:bg-rose-500 hover:text-white cursor-pointer"
-                            title="Arquivar este cadastro em 1 clique"
                           >
                             Arquivar
                           </button>
@@ -10348,20 +10345,301 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                   </div>
                 </div>
               );
-            })}
-          </div>
+            };
+
+            const isItemGestor = (c: any) => {
+              const p: string[] = Array.isArray(c.papeis) ? c.papeis : [];
+              return c.natureza !== 'EMPRESA' && p.includes('gestor_conta');
+            };
+            const isItemFree = (c: any) => {
+              const p: string[] = Array.isArray(c.papeis) ? c.papeis : [];
+              return (
+                c.natureza !== 'EMPRESA' &&
+                !isItemGestor(c) &&
+                (c.natureza === 'FREELANCER' || p.includes('colaborador_free'))
+              );
+            };
+            const isItemColabEfetivo = (c: any) => {
+              const p: string[] = Array.isArray(c.papeis) ? c.papeis : [];
+              return (
+                c.natureza !== 'EMPRESA' &&
+                !isItemGestor(c) &&
+                !isItemFree(c) &&
+                (p.includes('colaborador_efetivo') || p.includes('colaborador'))
+              );
+            };
+            const isItemClienteOuFornecedor = (c: any) => {
+              return (
+                c.natureza !== 'EMPRESA' &&
+                !isItemGestor(c) &&
+                !isItemFree(c) &&
+                !isItemColabEfetivo(c)
+              );
+            };
+
+            const empresasBase = (data.empresas || []).filter((e: any) => {
+              if (e.arquivado_legal) return false;
+              if (data.empresaAtivaId && Number(e.id) !== Number(data.empresaAtivaId)) return false;
+              return true;
+            });
+
+            const idsEmpresasRenderizadas = new Set<number>(empresasBase.map((e: any) => Number(e.id)));
+            const freesIndependentes = listaCadastros.filter(
+              (c: any) =>
+                isItemFree(c) &&
+                (!c.empresa_id || Number(c.empresa_id) === 0 || !idsEmpresasRenderizadas.has(Number(c.empresa_id)))
+            );
+            const gestoresEColabsSemEmpresa = listaCadastros.filter(
+              (c: any) =>
+                (isItemGestor(c) || isItemColabEfetivo(c)) &&
+                (!c.empresa_id || Number(c.empresa_id) === 0 || !idsEmpresasRenderizadas.has(Number(c.empresa_id)))
+            );
+            const clientesEFornecedores = listaCadastros.filter(isItemClienteOuFornecedor);
+
+            return (
+              <div className="space-y-5">
+                {empresasBase.map((emp: any) => {
+                  const cardEmpresaVirtual =
+                    listaCadastros.find(
+                      (c: any) => c.natureza === 'EMPRESA' && Number(c.empresa_id) === Number(emp.id)
+                    ) || {
+                      id: 300000 + Number(emp.id),
+                      nome: emp.nome,
+                      tipo_pessoa: 'PJ',
+                      natureza: 'EMPRESA',
+                      documento: emp.cnpj || '',
+                      whatsapp: String(emp.waha_numero || '').includes('@') ? '' : emp.waha_numero || '',
+                      email: '',
+                      papeis: ['gestor_conta'],
+                      empresa_id: emp.id,
+                      valor_diaria: Number(emp.diaria_teto || 220),
+                      cidade: emp.cidade || 'Belém - PA',
+                      cargo_ou_ramo: emp.ramo || 'Gastronomia',
+                      observacoes: ''
+                    };
+
+                  const vinculadosEmpresa = listaCadastros.filter(
+                    (c: any) => c.natureza !== 'EMPRESA' && Number(c.empresa_id) === Number(emp.id)
+                  );
+                  const gestoresEmpresa = vinculadosEmpresa.filter(isItemGestor);
+                  const colaboradoresEmpresa = vinculadosEmpresa.filter(isItemColabEfetivo);
+                  const freelancersEmpresa = vinculadosEmpresa.filter(isItemFree);
+
+                  const temAlgumFiltroAtivo =
+                    filtroPapel !== 'todos' || filtroNatureza !== 'todos' || busca.trim().length > 0;
+                  const matchNomeEmpresa =
+                    !busca.trim() ||
+                    `${emp.nome || ''} ${emp.cnpj || ''} ${emp.ramo || ''}`
+                      .toLowerCase()
+                      .includes(busca.toLowerCase());
+                  if (
+                    temAlgumFiltroAtivo &&
+                    filtroNatureza !== 'EMPRESA' &&
+                    gestoresEmpresa.length === 0 &&
+                    colaboradoresEmpresa.length === 0 &&
+                    freelancersEmpresa.length === 0 &&
+                    !matchNomeEmpresa
+                  ) {
+                    return null;
+                  }
+
+                  return (
+                    <div
+                      key={`emp-hierarquia-${emp.id}`}
+                      className="rounded-2xl bg-[#05100C] border-2 border-[#10B981]/35 overflow-hidden shadow-lg"
+                    >
+                      <div className="p-4 bg-gradient-to-r from-[#071712] via-[#0B231B] to-[#071712] border-b border-[#10B981]/30 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/50 flex items-center justify-center text-[#F59E0B] font-black text-sm">
+                            PJ
+                          </div>
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2 py-0.5 rounded bg-[#F59E0B]/20 border border-[#F59E0B]/40 text-[#F59E0B] text-[10px] font-mono font-black uppercase">
+                                EMPRESA / UNIDADE
+                              </span>
+                              <h4 className="text-base font-black text-white">{emp.nome}</h4>
+                              {emp.cnpj && (
+                                <span className="text-xs font-mono text-slate-400">CNPJ: {emp.cnpj}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-300 mt-0.5">
+                              {emp.ramo || 'Gastronomia & Eventos'} • {emp.cidade || 'Belém - PA'} •{' '}
+                              <span className="text-[#10B981] font-semibold">
+                                {gestoresEmpresa.length} Gestor(es)
+                              </span>{' '}
+                              •{' '}
+                              <span className="text-purple-300 font-semibold">
+                                {colaboradoresEmpresa.length} Colaborador(es)
+                              </span>{' '}
+                              •{' '}
+                              <span className="text-cyan-300 font-semibold">
+                                {freelancersEmpresa.length} Free(s)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => abrirModalEdicaoItem(cardEmpresaVirtual)}
+                            className="px-3 py-1.5 rounded-xl bg-[#F59E0B]/20 hover:bg-[#F59E0B]/30 border border-[#F59E0B]/50 text-[#F59E0B] text-xs font-bold cursor-pointer"
+                          >
+                            Editar Empresa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleOpenNew('colaborador_efetivo', 'PF');
+                              setForm((prev) => ({ ...prev, empresa_id: Number(emp.id) }));
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-[#10B981] hover:bg-[#34D399] text-[#05100C] text-xs font-black cursor-pointer"
+                          >
+                            + Colaborador nesta Empresa
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between border-b border-amber-500/25 pb-1.5">
+                            <span className="text-xs font-black uppercase tracking-wider text-[#F59E0B]">
+                              1º Nível Hierárquico — Gestores &amp; Liderança da Empresa ({gestoresEmpresa.length})
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              Acima dos colaboradores • Gerenciam escalas e equipe
+                            </span>
+                          </div>
+                          {gestoresEmpresa.length === 0 ? (
+                            <div className="p-3 rounded-xl bg-[#071712]/60 border border-white/5 text-xs text-slate-400">
+                              Nenhum gestor vinculado a esta empresa no filtro atual.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                              {gestoresEmpresa.map((g: any) =>
+                                renderCardCadastro(g, 'GESTOR / LIDERANÇA')
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 pl-0 sm:pl-4 border-l-0 sm:border-l-2 border-[#10B981]/30">
+                          <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
+                            <span className="text-xs font-black uppercase tracking-wider text-[#10B981]">
+                              2º Nível Hierárquico — Colaboradores da Equipe Interna ({colaboradoresEmpresa.length})
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              Subordinados aos gestores da empresa
+                            </span>
+                          </div>
+                          {colaboradoresEmpresa.length === 0 ? (
+                            <div className="p-3 rounded-xl bg-[#071712]/60 border border-white/5 text-xs text-slate-400">
+                              Nenhum colaborador efetivo vinculado a esta empresa no filtro atual.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                              {colaboradoresEmpresa.map((col: any) =>
+                                renderCardCadastro(col, 'COLABORADOR DA EMPRESA')
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {freelancersEmpresa.length > 0 && (
+                          <div className="space-y-2 pl-0 sm:pl-4 border-l-0 sm:border-l-2 border-purple-500/30">
+                            <div className="flex items-center justify-between border-b border-purple-500/20 pb-1.5">
+                              <span className="text-xs font-black uppercase tracking-wider text-purple-300">
+                                3º Nível — Freelancers / Diaristas Vinculados à Empresa ({freelancersEmpresa.length})
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                              {freelancersEmpresa.map((fr: any) =>
+                                renderCardCadastro(fr, 'FREE VINCULADO')
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {gestoresEColabsSemEmpresa.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-[#05100C] border border-emerald-500/30 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                        Profissionais &amp; Gestores Sem Empresa Fixa ({gestoresEColabsSemEmpresa.length})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {gestoresEColabsSemEmpresa.map((item: any) => renderCardCadastro(item))}
+                    </div>
+                  </div>
+                )}
+
+                {freesIndependentes.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-[#05100C] border border-purple-500/35 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-500/20 pb-2">
+                      <div>
+                        <span className="text-xs font-black uppercase tracking-wider text-purple-300">
+                          Banco de Freelancers &amp; Autônomos Independentes ({freesIndependentes.length})
+                        </span>
+                        <p className="text-[11px] text-slate-400">
+                          Profissionais autônomos disponíveis para convocação de diárias (separados do quadro fixo das empresas)
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenNew('colaborador_free', 'FREELANCER')}
+                        className="px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 text-xs font-bold cursor-pointer"
+                      >
+                        + Novo Freelancer
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {freesIndependentes.map((fr: any) =>
+                        renderCardCadastro(fr, 'FREELANCER INDEPENDENTE')
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {clientesEFornecedores.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-[#05100C] border border-slate-800 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                      <div>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-300">
+                          Clientes de Salão &amp; Fornecedores Externos ({clientesEFornecedores.length})
+                        </span>
+                        <p className="text-[11px] text-slate-400">
+                          Cadastros comerciais externos (sem permissão de login ou comandos no sistema)
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {clientesEFornecedores.map((cf: any) => renderCardCadastro(cf))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 
-      
       <FocusFormModal
         open={modalOpen}
         title={
           form.id
-            ? `Editar Cadastro Unificado — ${form.nome}`
-            : 'Novo Cadastro Unificado (PF/PJ • Empresa • Freelancer • Independente)'
+            ? `Editar ${form.natureza === 'EMPRESA' ? 'Empresa / Unidade' : 'Cadastro'} — ${form.nome}`
+            : 'Novo Cadastro Unificado (PF/PJ • Empresa • Colaborador • Freelancer)'
         }
-        subtitle="Defina se é Cliente, Fornecedor, Colaborador Efetivo, Colaborador Free/Autônomo ou Gestor de Conta"
+        subtitle={
+          form.natureza === 'EMPRESA'
+            ? 'Dados institucionais da Empresa / Unidade (Empresas abrigam gestores e colaboradores)'
+            : 'Defina se é Gestor, Colaborador da Empresa, Freelancer, Cliente ou Fornecedor'
+        }
         maxWidthClass="max-w-3xl"
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
@@ -10390,27 +10668,30 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
             </div>
           </div>
 
-          
           <div>
             <label className="block text-xs font-bold text-slate-300 mb-1.5">
-              1. Natureza do Cadastro Unificado:
+              1. Natureza do Cadastro:
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {(
                 [
-                  { id: 'PF', label: ' Pessoa Física (CPF)', tipo: 'PF' },
-                  { id: 'PJ', label: ' Pessoa Jurídica (CNPJ)', tipo: 'PJ' },
-                  { id: 'EMPRESA', label: ' Empresa / Filial', tipo: 'PJ' },
-                  { id: 'FREELANCER', label: ' Freelancer / Autônomo', tipo: 'PF' }
+                  { id: 'PF', label: 'Pessoa Física (CPF)', tipo: 'PF' },
+                  { id: 'PJ', label: 'Fornecedor PJ (CNPJ)', tipo: 'PJ' },
+                  { id: 'EMPRESA', label: 'Empresa / Filial', tipo: 'PJ' },
+                  { id: 'FREELANCER', label: 'Freelancer / Autônomo', tipo: 'PF' }
                 ] as { id: NaturezaCadastro; label: string; tipo: 'PF' | 'PJ' }[]
               ).map((nat) => (
                 <button
                   key={nat.id}
                   type="button"
                   onClick={() => {
-                    const novosPapeis =
-                      nat.id === 'FREELANCER' && !form.papeis.includes('colaborador_free')
-                        ? (['colaborador_free'] as PapelCadastro[])
+                    const novosPapeis: PapelCadastro[] =
+                      nat.id === 'EMPRESA'
+                        ? ['gestor_conta']
+                        : nat.id === 'FREELANCER'
+                        ? ['colaborador_free']
+                        : nat.id === 'PJ'
+                        ? ['fornecedor']
                         : form.papeis;
                     setForm({
                       ...form,
@@ -10431,140 +10712,140 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
             </div>
           </div>
 
-          
-          <div className="p-3.5 bg-[#05100C] border border-[#10B981]/30 rounded-xl space-y-2.5">
-            <label className="block text-xs font-bold text-[#10B981]">
-              2. Selecione o Papel no Sistema (define acesso à Comunidade WhatsApp e ao Sistema):
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {(
-                [
-                  {
-                    id: 'colaborador_efetivo',
-                    label: ' Colaborador / Técnico',
-                    desc: 'Comunidade WPP + Sistema (Com ou Sem Empresa)',
-                    wpp: true
-                  },
-                  {
-                    id: 'colaborador_free',
-                    label: ' Colaborador Free / Autônomo',
-                    desc: 'Comunidade WPP + Match Diárias + Independente',
-                    wpp: true
-                  },
-                  {
-                    id: 'gestor_conta',
-                    label: ' Gestor de Conta / Titular',
-                    desc: 'Comunidade WPP + Gere Equipe e Aparência',
-                    wpp: true
-                  },
-                  {
-                    id: 'cliente',
-                    label: ' Cliente',
-                    desc: 'Reservas/Salão (Proibido interagir c/ sistema)',
-                    wpp: false
-                  },
-                  {
-                    id: 'fornecedor',
-                    label: ' Fornecedor',
-                    desc: 'Estoque/Compras (Proibido interagir c/ sistema)',
-                    wpp: false
-                  }
-                ] as { id: PapelCadastro; label: string; desc: string; wpp: boolean }[]
-              ).map((p) => {
-                const marcado =
-                  form.papeis.includes(p.id) ||
-                  (p.id === 'colaborador_efetivo' && form.papeis.includes('colaborador'));
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => togglePapel(p.id)}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      marcado
-                        ? p.wpp
-                          ? 'bg-[#113025] border-[#10B981] text-white'
-                          : 'bg-[#1F1610] border-[#F59E0B] text-white'
-                        : 'bg-[#071712] border-white/10 text-slate-400'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span>{p.label}</span>
-                      <span>{marcado ? '' : ''}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5">{p.desc}</div>
-                  </button>
-                );
-              })}
-            </div>
-
-            
-            <div
-              className={`p-3 rounded-xl border text-xs flex items-start gap-2.5 ${
-                modalAutorizadoComunidade
-                  ? 'bg-[#10B981]/10 border-[#10B981]/40 text-slate-200'
-                  : 'bg-rose-500/10 border-rose-500/40 text-rose-200'
-              }`}
-            >
-              <span className="text-base leading-none">
-                {modalAutorizadoComunidade ? '' : ''}
-              </span>
-              <div>
-                <div className="font-bold">
-                  {modalAutorizadoComunidade
-                    ? 'AUTORIZADO: Membro da Comunidade via WhatsApp & Acesso ao Sistema'
-                    : 'BLOQUEIO DE SEGURANÇA: Proibido de Interagir com o Sistema'}
-                </div>
-                <div className="text-[11px] opacity-90 mt-0.5">
-                  {modalAutorizadoComunidade
-                    ? 'Como Colaborador, Autônomo ou Gestor de Conta, este cadastro recebe código de acesso via WhatsApp e pode operar no sistema.'
-                    : 'Clientes e Fornecedores puros ficam salvos apenas para seleção em Reservas, Estoque e Compras, sendo estritamente bloqueados de fazer login ou enviar comandos ao bot do sistema.'}
-                </div>
+          {form.natureza === 'EMPRESA' ? (
+            <div className="p-3.5 bg-[#05100C] border border-[#F59E0B]/40 rounded-xl text-xs text-amber-200 space-y-1">
+              <div className="font-bold text-[#F59E0B]">
+                Cadastro Institucional de Empresa / Unidade
+              </div>
+              <div className="text-[11px] text-slate-300">
+                Esta ficha representa uma Empresa. Empresas não são tratadas como colaboradores; os gestores e colaboradores são vinculados dentro desta empresa no painel hierárquico.
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3.5 bg-[#05100C] border border-[#10B981]/30 rounded-xl space-y-2.5">
+              <label className="block text-xs font-bold text-[#10B981]">
+                2. Selecione o Papel no Sistema (define hierarquia e acesso à Comunidade WhatsApp):
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {(
+                  [
+                    {
+                      id: 'gestor_conta',
+                      label: 'Gestor / Liderança',
+                      desc: '1º Nível (Acima de Colaboradores) • Gere Equipe',
+                      wpp: true
+                    },
+                    {
+                      id: 'colaborador_efetivo',
+                      label: 'Colaborador / Técnico',
+                      desc: '2º Nível (Dentro da Empresa) • Comunidade WPP',
+                      wpp: true
+                    },
+                    {
+                      id: 'colaborador_free',
+                      label: 'Colaborador Free / Autônomo',
+                      desc: 'Diarista / Apoio • Match de Diárias',
+                      wpp: true
+                    },
+                    {
+                      id: 'cliente',
+                      label: 'Cliente',
+                      desc: 'Reservas/Salão (Sem acesso ao sistema)',
+                      wpp: false
+                    },
+                    {
+                      id: 'fornecedor',
+                      label: 'Fornecedor',
+                      desc: 'Estoque/Compras (Sem acesso ao sistema)',
+                      wpp: false
+                    }
+                  ] as { id: PapelCadastro; label: string; desc: string; wpp: boolean }[]
+                ).map((p) => {
+                  const marcado =
+                    form.papeis.includes(p.id) ||
+                    (p.id === 'colaborador_efetivo' && form.papeis.includes('colaborador'));
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => togglePapel(p.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        marcado
+                          ? p.wpp
+                            ? 'bg-[#113025] border-[#10B981] text-white'
+                            : 'bg-[#1F1610] border-[#F59E0B] text-white'
+                          : 'bg-[#071712] border-white/10 text-slate-400'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span>{p.label}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">{p.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
-          
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
               <label className="block text-xs text-slate-400 mb-1">
-                {form.tipo_pessoa === 'PJ'
-                  ? 'Razão Social / Nome da Empresa ou Fornecedor'
+                {form.natureza === 'EMPRESA'
+                  ? 'Nome Fantasia / Razão Social da Empresa'
+                  : form.tipo_pessoa === 'PJ'
+                  ? 'Razão Social / Nome do Fornecedor PJ'
                   : 'Nome Completo'}
               </label>
               <input
                 type="text"
+                autoComplete="off"
                 value={form.nome}
                 onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                placeholder="Digite o nome completo..."
+                placeholder={
+                  form.natureza === 'EMPRESA'
+                    ? 'Digite o nome da empresa / unidade...'
+                    : 'Digite o nome completo...'
+                }
                 className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs text-white"
               />
             </div>
 
             <div>
               <label className="block text-xs text-slate-400 mb-1">
-                {form.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF'} (Opcional)
+                {form.tipo_pessoa === 'PJ' || form.natureza === 'EMPRESA' ? 'CNPJ' : 'CPF'} (Opcional)
               </label>
               <input
                 type="text"
+                autoComplete="off"
                 value={form.documento}
                 onChange={(e) => setForm({ ...form, documento: e.target.value })}
-                placeholder={form.tipo_pessoa === 'PJ' ? '00.000.000/0001-00' : '000.000.000-00'}
+                placeholder={
+                  form.tipo_pessoa === 'PJ' || form.natureza === 'EMPRESA'
+                    ? '00.000.000/0001-00'
+                    : '000.000.000-00'
+                }
                 className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs font-mono text-white"
               />
             </div>
 
             <div>
               <label className="block text-xs text-slate-400 mb-1">
-                WhatsApp (não exige +55 nem DDD)
+                Telefone / WhatsApp (em branco se não informado)
               </label>
               <input
-                type="text"
-                value={form.whatsapp}
-                onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                placeholder="Ex: 991122334 (busca DDD e +55 automático)"
+                type="tel"
+                name="urutau_whatsapp_field_no_autofill"
+                autoComplete="new-password"
+                value={String(form.whatsapp || '').includes('@') ? '' : form.whatsapp}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({ ...form, whatsapp: val.includes('@') ? '' : val });
+                }}
+                placeholder="Ex: 991122334"
                 className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs font-mono text-white"
               />
-              {form.whatsapp.trim() && (
+              {form.whatsapp.trim() && !form.whatsapp.includes('@') && (
                 <div className="mt-1 text-[10px] font-mono text-[#10B981]">
                   → {infoWppModal.formatado} ({infoWppModal.explicacao})
                 </div>
@@ -10573,69 +10854,87 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
 
             <div>
               <label className="block text-xs text-slate-400 mb-1">
-                {form.tipo_pessoa === 'PJ'
-                  ? 'Ramo de Atividade / Categoria'
+                {form.natureza === 'EMPRESA' || form.tipo_pessoa === 'PJ'
+                  ? 'Ramo de Atividade / Segmento da Empresa'
                   : 'Cargo / Função Operacional'}
               </label>
               <input
                 type="text"
+                autoComplete="off"
                 value={form.cargo_ou_ramo}
                 onChange={(e) => setForm({ ...form, cargo_ou_ramo: e.target.value })}
                 placeholder={
-                  form.tipo_pessoa === 'PJ'
-                    ? 'Ex: Pescados & Mariscos'
-                    : 'Ex: Técnico / Garçom / Chef / Consultor'
+                  form.natureza === 'EMPRESA' || form.tipo_pessoa === 'PJ'
+                    ? 'Ex: Pizzaria & Gastronomia'
+                    : 'Ex: Garçom / Pizzaiolo / Gerente / Barman'
                 }
                 className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs text-white"
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <label className="block text-xs text-slate-400">Empresa / Unidade Vinculada</label>
-                <button
-                  type="button"
-                  data-no-confirm="true"
-                  onClick={() => setCriandoEmpresaCadastro((v) => !v)}
-                  className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-[10px] font-bold text-emerald-300 cursor-pointer"
-                >
-                  {criandoEmpresaCadastro ? 'Cancelar' : '+ Criar Empresa'}
-                </button>
+            {form.natureza === 'EMPRESA' ? (
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">
+                  Teto de Diária Free da Empresa (R$)
+                </label>
+                <input
+                  type="number"
+                  step="1"
+                  value={form.valor_diaria}
+                  onChange={(e) =>
+                    setForm({ ...form, valor_diaria: Number(e.target.value) })
+                  }
+                  className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs font-mono text-[#F59E0B]"
+                />
               </div>
-              {criandoEmpresaCadastro ? (
-                <div className="p-2.5 rounded-lg bg-[#05100C] border border-emerald-500/40 space-y-2">
-                  <input
-                    type="text"
-                    value={novaEmpresaCadastroNome}
-                    onChange={(e) => setNovaEmpresaCadastroNome(e.target.value)}
-                    placeholder="Nome da nova empresa / unidade..."
-                    className="w-full px-2.5 py-1.5 bg-[#071712] border border-slate-700 rounded text-xs text-white"
-                  />
+            ) : (
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <label className="block text-xs text-slate-400">Empresa / Unidade Vinculada</label>
                   <button
                     type="button"
                     data-no-confirm="true"
-                    disabled={salvandoEmpresaCadastro}
-                    onClick={handleCriarEmpresaInlineCadastro}
-                    className="w-full py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] cursor-pointer disabled:opacity-50"
+                    onClick={() => setCriandoEmpresaCadastro((v) => !v)}
+                    className="px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-[10px] font-bold text-emerald-300 cursor-pointer"
                   >
-                    {salvandoEmpresaCadastro ? 'Criando...' : 'Salvar e Vincular Empresa'}
+                    {criandoEmpresaCadastro ? 'Cancelar' : '+ Criar Empresa'}
                   </button>
                 </div>
-              ) : (
-                <select
-                  value={form.empresa_id ?? 0}
-                  onChange={(e) => setForm({ ...form, empresa_id: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs text-white"
-                >
-                  <option value={0}>Sem Empresa Vinculada / Independente (Ecossistema Geral)</option>
-                  {(data.empresas || []).map((emp: any) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.nome}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+                {criandoEmpresaCadastro ? (
+                  <div className="p-2.5 rounded-lg bg-[#05100C] border border-emerald-500/40 space-y-2">
+                    <input
+                      type="text"
+                      value={novaEmpresaCadastroNome}
+                      onChange={(e) => setNovaEmpresaCadastroNome(e.target.value)}
+                      placeholder="Nome da nova empresa / unidade..."
+                      className="w-full px-2.5 py-1.5 bg-[#071712] border border-slate-700 rounded text-xs text-white"
+                    />
+                    <button
+                      type="button"
+                      data-no-confirm="true"
+                      disabled={salvandoEmpresaCadastro}
+                      onClick={handleCriarEmpresaInlineCadastro}
+                      className="w-full py-1.5 rounded bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] cursor-pointer disabled:opacity-50"
+                    >
+                      {salvandoEmpresaCadastro ? 'Criando...' : 'Salvar e Vincular Empresa'}
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={form.empresa_id ?? 0}
+                    onChange={(e) => setForm({ ...form, empresa_id: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs text-white"
+                  >
+                    <option value={0}>Sem Empresa Vinculada / Independente (Ecossistema Geral)</option>
+                    {(data.empresas || []).map((emp: any) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.nome}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
 
             <div className="sm:col-span-2">
               <label className="block text-xs text-slate-400 mb-1">
@@ -10647,11 +10946,11 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
               />
             </div>
 
-            {modalAutorizadoComunidade && (
+            {modalAutorizadoComunidade && form.natureza !== 'EMPRESA' && (
               <>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">
-                    Gestor Responsável (Hierarquia)
+                    Gestor Responsável Acima deste Colaborador (Hierarquia)
                   </label>
                   <select
                     value={form.gestor_id ?? ''}
@@ -10663,7 +10962,7 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                     }
                     className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs text-white"
                   >
-                    <option value="">Sem Gestor Superior / Autônomo (Independente)</option>
+                    <option value="">Sem Gestor Superior / Liderança Direta</option>
                     {gestoresLista.map((g: any) => (
                       <option key={g.id} value={g.id}>
                         {g.nome} ({g.cargo || g.tipo})
@@ -10697,7 +10996,7 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
                         Setores Operacionais Vinculados ao Colaborador
                       </div>
                       <div className="text-[11px] text-slate-400">
-                        Selecione os setores de atuação ou crie um novo setor diretamente daqui
+                        Selecione os setores de atuação do colaborador ou crie um novo setor diretamente daqui
                       </div>
                     </div>
                     <button
@@ -10825,7 +11124,7 @@ function LgpdGoogleSheetsCustodyPanel({
   const [controladorNome, setControladorNome] = useState<string>(empresaNome);
   const [controladorDocumento, setControladorDocumento] = useState<string>('');
   const [diretoriosEstrutura, setDiretoriosEstrutura] = useState<any[]>([]);
-  const [statusConexao, setStatusConexao] = useState<string>('Ativa');
+  const [statusConexao, setStatusConexao] = useState<string>('Não Conectada');
   const [ultimaSync, setUltimaSync] = useState<string>('');
   const [proximaExportacaoNuvem, setProximaExportacaoNuvem] = useState<string>('');
   const [ultimoBackupLocalFechamento, setUltimoBackupLocalFechamento] = useState<string>('');
@@ -10859,7 +11158,9 @@ function LgpdGoogleSheetsCustodyPanel({
         if (typeof json.computadores_ativos === 'number') {
           setComputadoresAtivos(Math.max(1, json.computadores_ativos));
         }
-        setDriveConectadoReal(Boolean(json.drive_conectado));
+        const realConectado = Boolean(json.drive_conectado);
+        setDriveConectadoReal(realConectado);
+        setStatusConexao(realConectado ? 'Conectada (Drive do Cliente)' : 'Não Conectada');
         if (json.modo_guarda_escolhido) {
           setModoGuardaEscolhido(json.modo_guarda_escolhido);
         }
@@ -10902,7 +11203,7 @@ function LgpdGoogleSheetsCustodyPanel({
         setMultiacessoSemDriveConfirmadoEm(json.multiacesso_sem_drive_confirmado_em || '');
         setFeedbackMsg(
           modo === 'google_drive'
-            ? 'Preferência salva: sincronização automática pelo seu Google Drive.'
+            ? 'Preferência salva: sincronização automática pelo Google Drive do cliente.'
             : 'Sua escolha foi registrada: uso multiacesso sem Google Drive seguindo as orientações de fechamento no último computador.'
         );
       } else {
@@ -10944,7 +11245,11 @@ function LgpdGoogleSheetsCustodyPanel({
             ? cfg.estrutura_diretorios_planilhas
             : []
         );
-        setStatusConexao(cfg.status_conexao || 'Ativa');
+        const realConectado = Boolean(json.drive_conectado || cfg.drive_conectado);
+        setDriveConectadoReal(realConectado);
+        setStatusConexao(
+          realConectado ? cfg.status_conexao || 'Conectada (Drive do Cliente)' : 'Não Conectada'
+        );
         setZeroGuardaAtivo(Boolean(cfg.zero_guarda_operacional_vps === true));
         setCustodiaTransferidaEm(cfg.custodia_transferida_em || '');
         setUltimaSync(cfg.ultima_sincronizacao_em || '');
@@ -11100,6 +11405,17 @@ function LgpdGoogleSheetsCustodyPanel({
   };
 
   const handleProvisionarPastaEPlanilhas = async (tokenOverride?: string) => {
+    const tokenLimpo = String(tokenOverride ?? googleAccessToken ?? '').trim();
+    const pastaLimpa = pastaDriveUrl.trim();
+    const planilhaLimpa = planilhaUrl.trim();
+    if (!tokenLimpo && !pastaLimpa && !planilhaLimpa) {
+      setModoConexaoDrive('trocar_drive');
+      showAlert(
+        'Vincule o Google Drive do Cliente',
+        `Para conectar o Google Drive da empresa sem depender de login do desenvolvedor, cole o link da pasta do Google Drive do cliente (compartilhada com ${emailServicoSistema}) ou informe o Client ID OAuth do cliente.`
+      );
+      return;
+    }
     setProvisioning(true);
     setFeedbackMsg('');
     try {
@@ -11115,8 +11431,9 @@ function LgpdGoogleSheetsCustodyPanel({
           conta_google_vinculada: contaGoogleVinculada.trim(),
           provedor_nuvem_backup: provedorNuvem,
           modo_conexao_drive: 'botao_google',
-          pasta_google_drive_url: pastaDriveUrl.trim(),
-          google_access_token: (tokenOverride || googleAccessToken || 'CONECTADO_AUTOMATICO_BD_NYCTIBI_US').trim()
+          pasta_google_drive_url: pastaLimpa,
+          planilha_google_url: planilhaLimpa,
+          google_access_token: tokenLimpo
         })
       });
       const json = await res.json();
@@ -11125,14 +11442,24 @@ function LgpdGoogleSheetsCustodyPanel({
         if (json.pasta_google_drive_url) setPastaDriveUrl(json.pasta_google_drive_url);
         if (json.planilha_google_url) setPlanilhaUrl(json.planilha_google_url);
         if (Array.isArray(json.diretorios)) setDiretoriosEstrutura(json.diretorios);
-        if (json.config?.status_conexao) setStatusConexao(json.config.status_conexao);
+        const realConectado = Boolean(json.drive_conectado || json.config?.drive_conectado);
+        setDriveConectadoReal(realConectado);
+        setStatusConexao(
+          realConectado
+            ? json.config?.status_conexao || 'Conectada (Drive do Cliente)'
+            : 'Não Conectada'
+        );
         if (json.config?.ultima_sincronizacao_em) setUltimaSync(json.config.ultima_sincronizacao_em);
         setProximaExportacaoNuvem(new Date(Date.now() + 60 * 60 * 1000).toISOString());
-        setFeedbackMsg(
-          'Conta Google conectada! Sua pasta e suas planilhas foram criadas direto no seu Google Drive e serão atualizadas sozinhas de 1 em 1 hora.'
-        );
+        if (realConectado) {
+          setFeedbackMsg(
+            'Google Drive do cliente conectado! As pastas e planilhas da empresa estão vinculadas ao Drive do cliente e serão atualizadas de 1 em 1 hora.'
+          );
+        }
       } else {
-        showAlert('Erro ao conectar Drive', json?.erro || 'Não foi possível criar a estrutura no Drive.');
+        setDriveConectadoReal(false);
+        setStatusConexao('Não Conectada');
+        showAlert('Conta Google Não Conectada', json?.erro || 'Não foi possível validar a conexão com o Google Drive.');
       }
     } catch (e: any) {
       showAlert('Erro de conexão', e.message);
@@ -11141,25 +11468,61 @@ function LgpdGoogleSheetsCustodyPanel({
     }
   };
 
+  const handleDesconectarGoogleDrive = async () => {
+    setProvisioning(true);
+    setFeedbackMsg('');
+    try {
+      const res = await fetch('/api/lgpd/google-sheets/desconectar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ empresa_id: empresaId || 1 })
+      });
+      const json = await res.json();
+      if (res.ok && json?.ok) {
+        setDriveConectadoReal(false);
+        setStatusConexao('Não Conectada');
+        setGoogleAccessToken('');
+        setPastaDriveUrl('');
+        setPlanilhaUrl('');
+        setDiretoriosEstrutura([]);
+        setFeedbackMsg('Conta Google desconectada. O sistema agora exibe o status real: Não Conectada.');
+      }
+    } catch (e: any) {
+      showAlert('Erro ao desconectar', e.message);
+    } finally {
+      setProvisioning(false);
+    }
+  };
+
   const handleConectarGoogleDrivePopup = () => {
     const clientId = googleClientId.trim();
     if (!clientId) {
-      setGoogleAccessToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
-      handleProvisionarPastaEPlanilhas('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+      if (pastaDriveUrl.trim() || planilhaUrl.trim()) {
+        handleProvisionarPastaEPlanilhas('');
+        return;
+      }
+      setModoConexaoDrive('trocar_drive');
+      showAlert(
+        'Conectar Google Drive do Cliente (BYOS)',
+        `O cliente conecta o próprio Google Drive dele (nunca o seu). Cole o link da pasta do Google Drive do cliente (compartilhada com ${emailServicoSistema}) no campo abaixo e clique em "Salvar e Aplicar Drive em Nuvem".`
+      );
       return;
     }
     const startOAuth = () => {
       const g = (window as any).google;
       if (!g?.accounts?.oauth2) {
-        setGoogleAccessToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
-        handleProvisionarPastaEPlanilhas('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+        showAlert('Google Identity Indisponível', 'Não foi possível abrir a janela de autenticação do Google neste navegador.');
         return;
       }
       const tokenClient = g.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
         callback: (resp: any) => {
-          const tok = resp?.access_token || 'CONECTADO_AUTOMATICO_BD_NYCTIBI_US';
+          const tok = String(resp?.access_token || '').trim();
+          if (!tok) {
+            showAlert('Autenticação Cancelada', 'Nenhum token de acesso foi retornado pelo Google.');
+            return;
+          }
           setGoogleAccessToken(tok);
           handleProvisionarPastaEPlanilhas(tok);
         }
@@ -11175,8 +11538,7 @@ function LgpdGoogleSheetsCustodyPanel({
     script.async = true;
     script.onload = startOAuth;
     script.onerror = () => {
-      setGoogleAccessToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
-      handleProvisionarPastaEPlanilhas('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+      showAlert('Erro de Rede', 'Não foi possível carregar o serviço de login do Google.');
     };
     document.head.appendChild(script);
   };
@@ -11196,19 +11558,30 @@ function LgpdGoogleSheetsCustodyPanel({
           conta_google_vinculada: contaGoogleVinculada.trim(),
           provedor_nuvem_backup: provedorNuvem,
           modo_conexao_drive: 'botao_google',
-          pasta_google_drive_url: pastaDriveUrl,
-          planilha_google_url: planilhaUrl
+          pasta_google_drive_url: pastaDriveUrl.trim(),
+          planilha_google_url: planilhaUrl.trim(),
+          google_access_token: googleAccessToken.trim()
         })
       });
       const json = await res.json();
       if (res.ok && json?.ok) {
-        setStatusConexao(json.config?.status_conexao || 'Ativa');
+        const realConectado = Boolean(json.drive_conectado || json.config?.drive_conectado);
+        setDriveConectadoReal(realConectado);
+        setStatusConexao(
+          realConectado ? json.config?.status_conexao || 'Conectada (Drive do Cliente)' : 'Não Conectada'
+        );
         if (json.config?.ultima_sincronizacao_em) setUltimaSync(json.config.ultima_sincronizacao_em);
         if (json.config?.proxima_exportacao_nuvem_em) setProximaExportacaoNuvem(json.config.proxima_exportacao_nuvem_em);
-        await handleProvisionarPastaEPlanilhas();
-        setFeedbackMsg(
-          `Drive em nuvem alterado com sucesso para ${contaGoogleVinculada || provedorNuvem}. Exportação automática de 1 em 1 hora ativa.`
-        );
+        if (realConectado) {
+          await handleProvisionarPastaEPlanilhas();
+          setFeedbackMsg(
+            `Google Drive do cliente vinculado com sucesso (${contaGoogleVinculada || provedorNuvem}). Exportação automática de 1 em 1 hora ativa.`
+          );
+        } else {
+          setFeedbackMsg(
+            'Dados do controlador salvos. A Conta Google permanece como Não Conectada até que o cliente cole o link da pasta do Drive ou autentique sua conta.'
+          );
+        }
       } else {
         showAlert('Erro ao salvar', json?.erro || 'Não foi possível atualizar o Drive em nuvem.');
       }
@@ -11239,9 +11612,10 @@ function LgpdGoogleSheetsCustodyPanel({
         } else {
           setProximaExportacaoNuvem(new Date(Date.now() + 60 * 60 * 1000).toISOString());
         }
-        setStatusConexao('Ativa');
         setFeedbackMsg(
-          'Exportação na nuvem concluída. Próxima exportação automática programada para daqui a 1 hora.'
+          driveConectadoReal
+            ? 'Exportação no Google Drive do cliente concluída. Próxima exportação programada para daqui a 1 hora.'
+            : 'Pacote local atualizado. Conecte o Google Drive do cliente para enviar também para a nuvem.'
         );
       } else {
         showAlert('Erro na atualização', json?.erro || 'Falha ao atualizar o backup no Google Drive.');
@@ -11291,22 +11665,22 @@ function LgpdGoogleSheetsCustodyPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h4 className="text-sm font-bold text-white">
-            Seus Dados São 100% Seus (Onde Eles Ficam Salvos)
+            Seus Dados São 100% Seus (Custódia BYOS no Google Drive do Cliente)
           </h4>
           <p className="text-xs text-slate-400">
-            O sistema apenas processa suas informações enquanto você usa. Tudo fica salvo somente com você: no seu Google Drive ou no seu computador.
+            Cada cliente/empresário conecta o <strong>próprio Google Drive dele</strong> (ou guarda no computador local). Nenhum dado de cliente vai para o Google do desenvolvedor.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-              statusConexao === 'Ativa'
+              driveConectadoReal
                 ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
-                : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                : 'bg-rose-500/15 border-rose-500/40 text-rose-300'
             }`}
           >
-            Cópia Automática: {statusConexao}
+            Conta Google: {driveConectadoReal ? 'Conectada (Drive do Cliente)' : 'Não Conectada'}
           </span>
           <button
             type="button"
@@ -11315,16 +11689,28 @@ function LgpdGoogleSheetsCustodyPanel({
             className="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black cursor-pointer disabled:opacity-50"
           >
             {provisioning
-              ? 'Conectando seu Drive...'
-              : 'Conectar Meu Google Drive'}
+              ? 'Verificando Drive...'
+              : driveConectadoReal
+              ? 'Reconectar / Sincronizar Drive'
+              : 'Conectar Google Drive do Cliente'}
           </button>
           <button
             type="button"
             onClick={() => setModoConexaoDrive('trocar_drive')}
             className="px-3 py-1.5 rounded-lg bg-[#0B0D11] hover:bg-slate-800 border border-amber-500/40 text-amber-300 text-xs font-bold cursor-pointer"
           >
-            Trocar Conta do Drive
+            Vincular Link da Pasta do Cliente
           </button>
+          {driveConectadoReal && (
+            <button
+              type="button"
+              onClick={handleDesconectarGoogleDrive}
+              disabled={provisioning}
+              className="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-300 text-xs font-bold cursor-pointer"
+            >
+              Desconectar
+            </button>
+          )}
         </div>
       </div>
 

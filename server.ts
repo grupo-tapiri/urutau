@@ -1566,7 +1566,11 @@ function resolverTelefoneBanco(rawInput: string, usuarioRef?: any, empresaId?: n
   usuarioMatch?: any;
   cadastroMatch?: any;
 } {
-  const digits = String(rawInput || '').replace(/\D/g, '');
+  const rawStr = String(rawInput || '').trim();
+  if (!rawStr || rawStr.includes('@')) {
+    return { telefoneResolvido: '', dddInferido: '91', encontradoNoBanco: false };
+  }
+  const digits = rawStr.replace(/\D/g, '');
   if (!digits) {
     return { telefoneResolvido: '', dddInferido: '91', encontradoNoBanco: false };
   }
@@ -1826,6 +1830,36 @@ function deduplicarCadastrosEUsuariosEspelhados() {
   if (!db) return;
   if (!Array.isArray(db.usuarios)) db.usuarios = [];
   if (!Array.isArray(db.cadastros_pessoas)) db.cadastros_pessoas = [];
+  if (!Array.isArray(db.empresas)) db.empresas = [];
+
+  for (const u of db.usuarios) {
+    if (String(u.telefone || '').includes('@')) {
+      u.telefone = '';
+    }
+  }
+  for (const c of db.cadastros_pessoas) {
+    if (String(c.whatsapp || '').includes('@')) {
+      c.whatsapp = '';
+    }
+  }
+  for (const e of db.empresas) {
+    if (String(e.waha_numero || '').includes('@')) {
+      e.waha_numero = '';
+    }
+  }
+
+  const nomesEmpresasAtivas = new Set(
+    db.empresas
+      .filter((e) => !e.arquivado_legal && e.nome)
+      .map((e) => String(e.nome).trim().toLowerCase())
+  );
+  for (const c of db.cadastros_pessoas) {
+    if (c.arquivado_legal) continue;
+    const cNome = String(c.nome || '').trim().toLowerCase();
+    if (c.natureza === 'EMPRESA' || nomesEmpresasAtivas.has(cNome)) {
+      c.arquivado_legal = true;
+    }
+  }
 
   const masterUser = db.usuarios.find((u) => Number(u.id) === 1);
   if (masterUser) {
@@ -1879,6 +1913,7 @@ function deduplicarCadastrosEUsuariosEspelhados() {
   }
 
   const vistosPorUsuarioId = new Map<number, any>();
+  const vistosPorNome = new Map<string, any>();
   for (const c of db.cadastros_pessoas) {
     if (c.arquivado_legal) continue;
     const uid = Number(c.usuario_sistema_id || 0);
@@ -1892,6 +1927,17 @@ function deduplicarCadastrosEUsuariosEspelhados() {
         if (String(c.nome || '').trim().toLowerCase() === nomeAtualUsuario && String(anterior.nome || '').trim().toLowerCase() !== nomeAtualUsuario) {
           anterior.arquivado_legal = true;
           vistosPorUsuarioId.set(uid, c);
+        } else {
+          c.arquivado_legal = true;
+        }
+      }
+    }
+    if (!c.arquivado_legal) {
+      const nomeKey = String(c.nome || '').trim().toLowerCase();
+      if (nomeKey) {
+        const prevNome = vistosPorNome.get(nomeKey);
+        if (!prevNome) {
+          vistosPorNome.set(nomeKey, c);
         } else {
           c.arquivado_legal = true;
         }
@@ -4816,7 +4862,106 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
         let nomeAntesDeRenomear = String(nome_original || '').trim();
         let uidAntesDeRenomear: number | null = virtualUserId;
 
-        const realCadastroId = id && Number(id) > 0 && Number(id) < 100000 ? Number(id) : null;
+        if (!nomeAntesDeRenomear && virtualFreeId) {
+          const freeOrig = (db.freelancers || []).find((f) => Number(f.id) === Number(virtualFreeId));
+          if (freeOrig?.nome) nomeAntesDeRenomear = String(freeOrig.nome).trim();
+        }
+        if (!nomeAntesDeRenomear && virtualEmpId) {
+          const empOrig = (db.empresas || []).find((e) => Number(e.id) === Number(virtualEmpId));
+          if (empOrig?.nome) nomeAntesDeRenomear = String(empOrig.nome).trim();
+        }
+        if (!nomeAntesDeRenomear && virtualUserId) {
+          const userOrig = (db.usuarios || []).find((u) => Number(u.id) === Number(virtualUserId));
+          if (userOrig?.nome) nomeAntesDeRenomear = String(userOrig.nome).trim();
+        }
+
+        if (natFinal === 'EMPRESA') {
+          let jaEmp = virtualEmpId
+            ? (db.empresas || []).find((e) => Number(e.id) === Number(virtualEmpId))
+            : null;
+          if (!jaEmp && resolvedEmpresaId > 0 && (rawIdRef > 0 || nomeAntesDeRenomear)) {
+            jaEmp = (db.empresas || []).find((e) => Number(e.id) === Number(resolvedEmpresaId));
+          }
+          if (!jaEmp && nomeAntesDeRenomear) {
+            jaEmp = (db.empresas || []).find(
+              (e) => String(e.nome || '').toLowerCase().trim() === nomeAntesDeRenomear.toLowerCase().trim()
+            );
+          }
+          if (!jaEmp) {
+            jaEmp = (db.empresas || []).find(
+              (e) => String(e.nome || '').toLowerCase().trim() === String(nome).toLowerCase().trim()
+            );
+          }
+          const ramoLimpo = String(cargo_ou_ramo || '')
+            .replace(/\s*•\s*Teto Free R\$\s*[\d.,]+/i, '')
+            .trim();
+          if (!jaEmp) {
+            const novaEmpObj = {
+              id: nextId(db.empresas),
+              nome: String(nome).trim(),
+              cnpj: documento || '',
+              waha_session_id: `urutau_${Date.now()}`,
+              waha_numero: wppResolvido || '',
+              bot_interno_numero: wppResolvido || '',
+              bot_interno_status: 'Desconectado',
+              wpp_comercial_numero: '',
+              waha_status: 'Desconectado',
+              wpp_web_autenticado_real: false,
+              nivel_acesso_licenca: 'uso_completo',
+              cidade: cidade || 'Belém - PA',
+              ramo: ramoLimpo || 'Gastronomia',
+              diaria_teto: Number(valor_diaria || 220),
+              bloqueios_freelancers: [],
+              arquivado_legal: false,
+              criado_em: new Date().toISOString()
+            };
+            db.empresas.push(novaEmpObj);
+            jaEmp = novaEmpObj;
+          } else {
+            jaEmp.nome = String(nome).trim();
+            if (documento !== undefined) jaEmp.cnpj = documento || jaEmp.cnpj || '';
+            if (wppResolvido) {
+              jaEmp.waha_numero = wppResolvido;
+              jaEmp.bot_interno_numero = wppResolvido;
+            }
+            if (cidade) jaEmp.cidade = cidade;
+            if (ramoLimpo) jaEmp.ramo = ramoLimpo;
+            if (valor_diaria) jaEmp.diaria_teto = Number(valor_diaria);
+            jaEmp.arquivado_legal = false;
+          }
+
+          for (const c of db.cadastros_pessoas) {
+            const cNome = String(c.nome || '').trim().toLowerCase();
+            if (
+              c.natureza === 'EMPRESA' &&
+              (cNome === String(nome).trim().toLowerCase() ||
+                (nomeAntesDeRenomear && cNome === nomeAntesDeRenomear.toLowerCase()) ||
+                Number(c.id) === Number(id))
+            ) {
+              c.arquivado_legal = true;
+            }
+          }
+
+          deduplicarCadastrosEUsuariosEspelhados();
+          return {
+            id: 300000 + Number(jaEmp.id),
+            nome: jaEmp.nome,
+            natureza: 'EMPRESA',
+            tipo_pessoa: 'PJ',
+            documento: jaEmp.cnpj || '',
+            whatsapp: jaEmp.waha_numero || '',
+            empresa_id: jaEmp.id,
+            cidade: jaEmp.cidade || 'Belém - PA',
+            cargo_ou_ramo: jaEmp.ramo || 'Gastronomia'
+          };
+        }
+
+        const realCadastroId =
+          id && Number(id) > 0 && Number(id) < 100000
+            ? Number(id)
+            : rawIdRef > 0 && rawIdRef < 100000
+            ? rawIdRef
+            : null;
 
         let idxExistente = -1;
         if (realCadastroId) {
@@ -4841,7 +4986,7 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
               String(c.nome || '').trim().toLowerCase() === String(nome).trim().toLowerCase()
           );
         }
-        if (idxExistente < 0 && wpp8.length >= 8 && (virtualUserId || nomeAntesDeRenomear)) {
+        if (idxExistente < 0 && wpp8.length >= 8 && (virtualUserId || virtualFreeId || nomeAntesDeRenomear)) {
           idxExistente = db.cadastros_pessoas.findIndex(
             (c) =>
               !c.arquivado_legal &&
@@ -4861,29 +5006,42 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
             usuario_sistema_id: uidAntesDeRenomear || db.cadastros_pessoas[idxExistente].usuario_sistema_id,
             nome: String(nome).trim(),
             natureza: natFinal,
-            tipo_pessoa: tipo_pessoa === 'PJ' || natFinal === 'EMPRESA' ? 'PJ' : 'PF',
-            documento: documento || db.cadastros_pessoas[idxExistente].documento || '',
-            whatsapp: wppResolvido || db.cadastros_pessoas[idxExistente].whatsapp || '',
-            email: email || db.cadastros_pessoas[idxExistente].email || '',
+            tipo_pessoa: tipo_pessoa === 'PJ' ? 'PJ' : 'PF',
+            documento: documento !== undefined ? documento : db.cadastros_pessoas[idxExistente].documento || '',
+            whatsapp: whatsapp !== undefined ? wppResolvido : db.cadastros_pessoas[idxExistente].whatsapp || '',
+            email: email !== undefined ? email : db.cadastros_pessoas[idxExistente].email || '',
             papeis: papeisValidos,
             empresa_id: resolvedEmpresaId,
             gestor_id: resolvedGestorId,
             valor_diaria: valor_diaria ? Number(valor_diaria) : db.cadastros_pessoas[idxExistente].valor_diaria,
             cidade: cidade || db.cadastros_pessoas[idxExistente].cidade || 'Belém - PA',
-            cargo_ou_ramo: cargo_ou_ramo || db.cadastros_pessoas[idxExistente].cargo_ou_ramo || '',
+            cargo_ou_ramo: cargo_ou_ramo !== undefined ? cargo_ou_ramo : db.cadastros_pessoas[idxExistente].cargo_ou_ramo || '',
             comunidade_wpp_autorizada: autorizadoWpp,
             interacao_sistema_bloqueada: !autorizadoWpp,
             arquivado_legal: false,
-            observacoes: observacoes || db.cadastros_pessoas[idxExistente].observacoes || ''
+            observacoes: observacoes !== undefined ? observacoes : db.cadastros_pessoas[idxExistente].observacoes || ''
           };
           registroFinal = db.cadastros_pessoas[idxExistente];
+
+          for (let i = 0; i < db.cadastros_pessoas.length; i++) {
+            if (i === idxExistente) continue;
+            const item = db.cadastros_pessoas[i];
+            if (item.arquivado_legal) continue;
+            const itemNome = String(item.nome || '').trim().toLowerCase();
+            if (
+              (nomeAntesDeRenomear && itemNome === nomeAntesDeRenomear.toLowerCase()) ||
+              itemNome === String(nome).trim().toLowerCase()
+            ) {
+              item.arquivado_legal = true;
+            }
+          }
         } else {
           registroFinal = {
             id: nextId(db.cadastros_pessoas),
             usuario_sistema_id: uidAntesDeRenomear || undefined,
             nome: String(nome).trim(),
             natureza: natFinal,
-            tipo_pessoa: tipo_pessoa === 'PJ' || natFinal === 'EMPRESA' ? 'PJ' : 'PF',
+            tipo_pessoa: tipo_pessoa === 'PJ' ? 'PJ' : 'PF',
             documento: documento || '',
             whatsapp: wppResolvido,
             email: email || '',
@@ -4902,7 +5060,7 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
           db.cadastros_pessoas.unshift(registroFinal);
         }
 
-        if (autorizadoWpp && natFinal !== 'EMPRESA' && tipo_pessoa !== 'PJ') {
+        if (autorizadoWpp && tipo_pessoa !== 'PJ') {
           const isGestor = papeisValidos.includes('gestor_conta');
           const isFree = papeisValidos.includes('colaborador_free') || natFinal === 'FREELANCER';
           const isAutonomo = !resolvedGestorId && resolvedEmpresaId === 0;
@@ -4960,8 +5118,8 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
               ...uExistente,
               nome: String(nome).trim(),
               arquivado_legal: false,
-              telefone: wppResolvido || uExistente.telefone,
-              email: email || uExistente.email || '',
+              telefone: whatsapp !== undefined ? wppResolvido : uExistente.telefone,
+              email: email !== undefined ? email : uExistente.email || '',
               tipo: novoTipo,
               cargo: cargoLimpo || uExistente.cargo || 'Operacional',
               empresas_ids: ehMaster
@@ -5077,9 +5235,13 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
               ...db.freelancers[jaFreeIdx],
               nome: String(nome).trim(),
               arquivado_legal: false,
-              whatsapp: wppResolvido || db.freelancers[jaFreeIdx].whatsapp,
+              whatsapp: whatsapp !== undefined ? wppResolvido : db.freelancers[jaFreeIdx].whatsapp,
               funcao: cargo_ou_ramo || db.freelancers[jaFreeIdx].funcao || 'Garçom',
               valor_diaria: Number(valor_diaria || db.freelancers[jaFreeIdx].valor_diaria || 160),
+              empresas_autorizadas:
+                resolvedEmpresaId > 0
+                  ? Array.from(new Set([...(db.freelancers[jaFreeIdx].empresas_autorizadas || []), resolvedEmpresaId]))
+                  : db.freelancers[jaFreeIdx].empresas_autorizadas || [],
               cidade: cidade || 'Belém - PA'
             };
           } else {
@@ -5100,46 +5262,6 @@ app.post('/api/cadastros/salvar', async (req: Request, res: Response) => {
               arquivado_legal: false,
               criado_em: new Date().toISOString()
             });
-          }
-        }
-
-        if (natFinal === 'EMPRESA') {
-          let jaEmp = virtualEmpId
-            ? (db.empresas || []).find((e) => Number(e.id) === Number(virtualEmpId))
-            : null;
-          if (!jaEmp && nomeAntesDeRenomear) {
-            jaEmp = (db.empresas || []).find(
-              (e) => String(e.nome || '').toLowerCase().trim() === nomeAntesDeRenomear.toLowerCase().trim()
-            );
-          }
-          if (!jaEmp) {
-            jaEmp = (db.empresas || []).find(
-              (e) => String(e.nome || '').toLowerCase().trim() === String(nome).toLowerCase().trim()
-            );
-          }
-          if (!jaEmp) {
-            db.empresas.push({
-              id: nextId(db.empresas),
-              nome: String(nome).trim(),
-              cnpj: documento || '',
-              waha_session_id: `urutau_${Date.now()}`,
-              waha_numero: wppResolvido || '',
-              bot_interno_numero: wppResolvido || '',
-              bot_interno_status: 'Desconectado',
-              wpp_comercial_numero: '',
-              waha_status: 'Desconectado',
-              wpp_web_autenticado_real: false,
-              nivel_acesso_licenca: 'uso_completo',
-              cidade: cidade || 'Belém - PA',
-              ramo: cargo_ou_ramo || 'Gastronomia',
-              diaria_teto: Number(valor_diaria || 220),
-              bloqueios_freelancers: [],
-              arquivado_legal: false,
-              criado_em: new Date().toISOString()
-            });
-          } else {
-            jaEmp.nome = String(nome).trim();
-            jaEmp.arquivado_legal = false;
           }
         }
 
@@ -5725,6 +5847,8 @@ app.post('/api/reservas/salvar', async (req: Request, res: Response) => {
       hora,
       mesa,
       mesas_vinculadas,
+      grupo_mesa_id,
+      grupo_mesa_nome,
       comanda_pdv_id,
       area,
       adultos_pagantes,
@@ -5734,12 +5858,15 @@ app.post('/api/reservas/salvar', async (req: Request, res: Response) => {
       status,
       observacoes,
       unidade_id,
-      nova_mesa_criada
+      nova_mesa_criada,
+      criar_setor_automatico
     } = req.body;
 
-    if (!cliente) return res.status(400).json({ erro: 'Informe o nome do cliente da reserva.' });
+    const rawMesaFallback = String(mesa || nova_mesa_criada?.codigo || '').trim();
+    const clienteFinal = String(cliente || '').trim() || (rawMesaFallback ? `Reserva Mesa ${rawMesaFallback}` : 'Cliente Reserva Salão');
 
     let mesaFinalSalva = '';
+    let reservaSalvaObj: any = null;
 
     await executarComOutbox(
       () => {
@@ -5747,7 +5874,7 @@ app.post('/api/reservas/salvar', async (req: Request, res: Response) => {
           ? resolverTelefoneBanco(String(whatsapp), undefined, Number(unidade_id || 1)).telefoneResolvido
           : '';
 
-        const rawMesaInput = String(mesa ?? '').trim();
+        const rawMesaInput = String(mesa ?? nova_mesa_criada?.codigo ?? '').trim();
         const listaVinculadasRaw = Array.isArray(mesas_vinculadas)
           ? Array.from(
               new Set(
@@ -5764,49 +5891,111 @@ app.post('/api/reservas/salvar', async (req: Request, res: Response) => {
           : [];
         mesaFinalSalva = mesaPrincipal;
 
-        if (nova_mesa_criada && typeof nova_mesa_criada === 'object' && nova_mesa_criada.codigo) {
-          const codNova = String(nova_mesa_criada.codigo).trim();
-          const ambNova = String(nova_mesa_criada.ambienteNome || area || 'Salão Principal').trim();
-          const lugNova = Math.max(2, Number(nova_mesa_criada.lugares || 4));
-          const fmtNova = ['quadrada', 'redonda', 'retangular'].includes(nova_mesa_criada.formato)
-            ? nova_mesa_criada.formato
-            : 'quadrada';
+        const areaFinal = String(nova_mesa_criada?.ambienteNome || area || 'Salão Principal').trim();
 
-          if (!Array.isArray(db.erp_configs)) db.erp_configs = [];
-          const cfgIdx = db.erp_configs.findIndex((c: any) => c.chave === 'mapa_mesas_salao_layout');
-          if (cfgIdx >= 0 && (db.erp_configs[cfgIdx] as any)?.valor_json) {
-            const layoutAtual = (db.erp_configs[cfgIdx] as any).valor_json;
-            if (Array.isArray(layoutAtual.tables)) {
-              const jaTem = layoutAtual.tables.some(
-                (t: any) => String(t.codigo || '').trim().toUpperCase() === codNova.toUpperCase()
-              );
-              if (!jaTem) {
-                layoutAtual.tables.push({
-                  id: `tbl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-                  codigo: codNova,
-                  ambienteId: 'env_salao_principal',
-                  ambienteNome: ambNova,
-                  lugares: lugNova,
-                  formato: fmtNova,
-                  x: 80 + (layoutAtual.tables.length % 8) * 110,
-                  y: 140 + Math.floor(layoutAtual.tables.length / 8) * 100,
-                  width: 76,
-                  height: 74,
-                  rotation: 0
-                });
-              }
-            }
+        if (criar_setor_automatico || (nova_mesa_criada && areaFinal)) {
+          if (!Array.isArray(db.setores)) db.setores = [];
+          const jaSetor = db.setores.find(
+            (s: any) => !s.arquivado_legal && String(s.nome || '').trim().toLowerCase() === areaFinal.toLowerCase()
+          );
+          if (!jaSetor) {
+            db.setores.push({
+              id: nextId(db.setores),
+              nome: areaFinal,
+              descricao: 'Setor criado a partir do Mapa de Mesas e Reservas',
+              peso_rateio: 1.0,
+              arquivado_legal: false,
+              criado_em: new Date().toISOString()
+            });
           }
         }
 
+        if (nova_mesa_criada && typeof nova_mesa_criada === 'object' && nova_mesa_criada.codigo) {
+          const codNova = String(nova_mesa_criada.codigo).trim();
+          const ambNova = areaFinal;
+          const lugNova = Math.max(1, Number(nova_mesa_criada.lugares || 4));
+          const fmtNova = ['quadrada', 'redonda', 'retangular'].includes(nova_mesa_criada.formato)
+            ? nova_mesa_criada.formato
+            : lugNova >= 8
+            ? 'retangular'
+            : 'quadrada';
+
+          if (!Array.isArray(db.erp_configs)) db.erp_configs = [];
+          let cfgIdx = db.erp_configs.findIndex((c: any) => c.chave === 'mapa_mesas_salao_layout');
+          if (cfgIdx < 0) {
+            db.erp_configs.push({
+              id: nextId(db.erp_configs),
+              chave: 'mapa_mesas_salao_layout',
+              valor_json: {
+                environments: [
+                  {
+                    id: 'env_salao_principal',
+                    nome: ambNova,
+                    cor: '#D97706',
+                    x: 24,
+                    y: 24,
+                    width: 920,
+                    height: 360
+                  }
+                ],
+                tables: []
+              },
+              atualizado_em: new Date().toISOString()
+            } as any);
+            cfgIdx = db.erp_configs.length - 1;
+          }
+          const layoutAtual = (db.erp_configs[cfgIdx] as any).valor_json || { environments: [], tables: [] };
+          if (!Array.isArray(layoutAtual.environments)) layoutAtual.environments = [];
+          if (!Array.isArray(layoutAtual.tables)) layoutAtual.tables = [];
+
+          let envAlvo = layoutAtual.environments.find(
+            (e: any) => String(e.nome || '').trim().toLowerCase() === ambNova.toLowerCase()
+          );
+          if (!envAlvo) {
+            envAlvo = {
+              id: `env_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              nome: ambNova,
+              cor: '#D97706',
+              x: 24,
+              y: 24 + layoutAtual.environments.length * 380,
+              width: 920,
+              height: 340
+            };
+            layoutAtual.environments.push(envAlvo);
+          }
+
+          const jaTem = layoutAtual.tables.some(
+            (t: any) => String(t.codigo || '').trim().toUpperCase() === codNova.toUpperCase()
+          );
+          if (!jaTem) {
+            layoutAtual.tables.push({
+              id: `tbl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              codigo: codNova,
+              ambienteId: envAlvo.id,
+              ambienteNome: envAlvo.nome,
+              lugares: lugNova,
+              formato: fmtNova,
+              x: Number(envAlvo.x || 24) + 36 + (layoutAtual.tables.length % 6) * 130,
+              y: Number(envAlvo.y || 24) + 60 + Math.floor((layoutAtual.tables.length % 18) / 6) * 105,
+              width: lugNova >= 12 ? 150 : lugNova >= 8 ? 124 : 76,
+              height: lugNova >= 20 ? 96 : 74,
+              rotation: 0
+            });
+          }
+          (db.erp_configs[cfgIdx] as any).valor_json = layoutAtual;
+          (db.erp_configs[cfgIdx] as any).atualizado_em = new Date().toISOString();
+        }
+
         const dadosReserva: Record<string, any> = {
-          cliente,
+          cliente: clienteFinal,
           whatsapp: wppResolvido || whatsapp || '',
           data: data || getTodayISO(),
           hora: hora || '20:00',
           mesa: mesaPrincipal,
           mesas_vinculadas: listaVinculadas,
-          area: area || 'Salão Principal',
+          grupo_mesa_id: grupo_mesa_id || undefined,
+          grupo_mesa_nome: grupo_mesa_nome || undefined,
+          area: areaFinal,
           adultos_pagantes: Math.max(0, Number(adultos_pagantes ?? 1)),
           adultos_frequentadores: Math.max(0, Number(adultos_frequentadores ?? 0)),
           criancas_pagantes: Math.max(0, Number(criancas_pagantes ?? 0)),
@@ -5824,40 +6013,43 @@ app.post('/api/reservas/salvar', async (req: Request, res: Response) => {
           const idx = db.reservas.findIndex((r) => Number(r.id) === Number(id));
           if (idx >= 0) {
             db.reservas[idx] = { ...db.reservas[idx], ...dadosReserva };
+            reservaSalvaObj = db.reservas[idx];
           }
-        } else {
-          db.reservas.unshift({
+        }
+        if (!reservaSalvaObj) {
+          reservaSalvaObj = {
             id: nextId(db.reservas),
             ...dadosReserva,
             comanda_pdv_id: dadosReserva.comanda_pdv_id ?? null,
             arquivado_legal: false,
             criado_em: new Date().toISOString()
-          });
+          };
+          db.reservas.unshift(reservaSalvaObj);
         }
 
         upsertCadastroPessoaAutomatico({
-          nome: cliente,
+          nome: clienteFinal,
           whatsapp: wppResolvido || whatsapp || '',
           papel: 'cliente',
           empresa_id: Number(unidade_id || 1),
-          cargo_ou_ramo: `Cliente de Reserva (${area || 'Salão Principal'})`,
+          cargo_ou_ramo: `Cliente de Reserva (${areaFinal})`,
           observacoes:
             observacoes ||
             `Cadastrado automaticamente na reserva (${mesaPrincipal ? `Mesa ${mesaPrincipal}` : 'Sem mesa definida'})`
         });
       },
-      { agregado: 'RESERVAS', tipo: 'reserva.atualizada', payload: { cliente, data, hora, mesa: mesaFinalSalva, area } }
+      { agregado: 'RESERVAS', tipo: 'reserva.atualizada', payload: { cliente: clienteFinal, data, hora, mesa: mesaFinalSalva, area } }
     );
 
     const rotuloMesaLog = mesaFinalSalva || 'Sem mesa definida';
     await registrarAuditLog(
       'Hostess',
       'SALVAR_RESERVA_SALAO',
-      `Reserva de ${cliente} (${rotuloMesaLog}) — Adultos Pag:${adultos_pagantes}/Freq:${adultos_frequentadores}, Kids Pag:${criancas_pagantes}/Freq:${criancas_frequentadores}`,
+      `Reserva de ${clienteFinal} (${rotuloMesaLog}) — Adultos Pag:${adultos_pagantes}/Freq:${adultos_frequentadores}, Kids Pag:${criancas_pagantes}/Freq:${criancas_frequentadores}`,
       req.ip
     );
     const dispConsumer = await dispararLancamentoConsumerApi(Number(unidade_id || 1), 'MESA_COMANDA', {
-      cliente,
+      cliente: clienteFinal,
       whatsapp: whatsapp || '',
       data: data || getTodayISO(),
       hora: hora || '20:00',
@@ -5871,7 +6063,58 @@ app.post('/api/reservas/salvar', async (req: Request, res: Response) => {
       status: status || 'Confirmada',
       observacoes: observacoes || ''
     });
-    res.json({ ok: true, mesa: mesaFinalSalva, consumer_api: dispConsumer });
+    res.json({ ok: true, id: reservaSalvaObj?.id, reserva: reservaSalvaObj, mesa: mesaFinalSalva, consumer_api: dispConsumer });
+  } catch (e: any) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+app.post('/api/reservas/limpar-todas', async (req: Request, res: Response) => {
+  try {
+    const { zerar_ambientes_mapa, limpar_reservas, data_alvo } = req.body || {};
+    let totalReservasLimpas = 0;
+
+    await executarComOutbox(
+      () => {
+        if (limpar_reservas !== false && Array.isArray(db.reservas)) {
+          for (const r of db.reservas) {
+            if (r.arquivado_legal) continue;
+            if (data_alvo && String(r.data || '') !== String(data_alvo)) continue;
+            r.arquivado_legal = true;
+            totalReservasLimpas++;
+          }
+        }
+        if (zerar_ambientes_mapa) {
+          if (!Array.isArray(db.erp_configs)) db.erp_configs = [];
+          const cfgIdx = db.erp_configs.findIndex((c: any) => c.chave === 'mapa_mesas_salao_layout');
+          const emptyLayout = { environments: [], tables: [] };
+          if (cfgIdx >= 0) {
+            (db.erp_configs[cfgIdx] as any).valor_json = emptyLayout;
+            (db.erp_configs[cfgIdx] as any).atualizado_em = new Date().toISOString();
+          } else {
+            db.erp_configs.push({
+              id: nextId(db.erp_configs),
+              chave: 'mapa_mesas_salao_layout',
+              valor_json: emptyLayout,
+              atualizado_em: new Date().toISOString()
+            } as any);
+          }
+        }
+      },
+      {
+        agregado: 'RESERVAS',
+        tipo: 'reservas.limpeza_geral',
+        payload: { totalReservasLimpas, zerar_ambientes_mapa: Boolean(zerar_ambientes_mapa) }
+      }
+    );
+
+    await registrarAuditLog(
+      'Hostess',
+      'LIMPAR_RESERVAS_E_AMBIENTES',
+      `Limpeza executada: ${totalReservasLimpas} reserva(s) arquivada(s) | Mapa zerado: ${zerar_ambientes_mapa ? 'SIM' : 'NÃO'}`,
+      req.ip
+    );
+    res.json({ ok: true, total_reservas_limpas: totalReservasLimpas, mapa_zerado: Boolean(zerar_ambientes_mapa) });
   } catch (e: any) {
     res.status(500).json({ erro: e.message });
   }
@@ -8078,11 +8321,30 @@ app.get('/api/lgpd/google-sheets/baixar-planilha-mestre/:empresaId', (req: Reque
   res.send(xmlContent);
 });
 
+function verificarDriveRealmenteConectado(cfg: any): boolean {
+  if (!cfg || typeof cfg !== 'object') return false;
+  const hasRealFolderId = Boolean(
+    cfg.pasta_google_drive_id &&
+      String(cfg.pasta_google_drive_id).trim().length > 4 &&
+      !String(cfg.pasta_google_drive_id).includes('my-drive')
+  );
+  const hasRealSheetId = Boolean(
+    cfg.planilha_google_id &&
+      String(cfg.planilha_google_id).trim().length > 4
+  );
+  const hasRealWebhook = Boolean(
+    cfg.apps_script_webhook_url &&
+      String(cfg.apps_script_webhook_url).trim().startsWith('https://')
+  );
+  const hasRealOAuth = Boolean(cfg.google_oauth_conectado_real === true);
+  return hasRealFolderId || hasRealSheetId || hasRealWebhook || hasRealOAuth;
+}
+
 app.get('/api/lgpd/google-sheets/opcoes-publicas', (_req: Request, res: Response) => {
   res.json({
     ok: true,
     email_servico_compartilhamento: 'bd@nyctibi.us',
-    google_client_id: ''
+    google_client_id: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || ''
   });
 });
 
@@ -8114,10 +8376,8 @@ app.get('/api/lgpd/google-sheets/status/:empresaId', async (req: Request, res: R
       controlador_nome: emp.lgpd_custodia_config?.controlador_nome || emp.nome,
       controlador_documento: emp.lgpd_custodia_config?.controlador_documento || emp.cnpj || '',
       controlador_email: emp.lgpd_custodia_config?.controlador_email || '',
-      conta_google_vinculada:
-        emp.lgpd_custodia_config?.conta_google_vinculada ||
-        emp.lgpd_custodia_config?.controlador_email ||
-        '',
+      conta_google_vinculada: '',
+      google_oauth_conectado_real: false,
       provedor_nuvem_backup: emp.lgpd_custodia_config?.provedor_nuvem_backup || 'Google Drive',
       termo_lgpd_aceito: true,
       termo_lgpd_aceito_em: emp.lgpd_custodia_config?.termo_lgpd_aceito_em || emp.criado_em || new Date().toISOString(),
@@ -8125,23 +8385,33 @@ app.get('/api/lgpd/google-sheets/status/:empresaId', async (req: Request, res: R
       modo_conexao_drive: emp.lgpd_custodia_config?.modo_conexao_drive || 'botao_google',
       email_servico_compartilhamento: emailServicoSistema,
       pasta_google_drive_nome: estrutura.pastaRaizNome,
-      pasta_google_drive_url: emp.lgpd_custodia_config?.pasta_google_drive_url || 'https://drive.google.com/drive/my-drive',
-      pasta_google_drive_id: emp.lgpd_custodia_config?.pasta_google_drive_id || '',
+      pasta_google_drive_url: '',
+      pasta_google_drive_id: '',
       diretorio_workspace_id: estrutura.diretorioWorkspaceRel,
-      planilha_google_url: emp.lgpd_custodia_config?.planilha_google_url || '',
-      planilha_google_id: emp.lgpd_custodia_config?.planilha_google_id || '',
-      apps_script_webhook_url: emp.lgpd_custodia_config?.apps_script_webhook_url || '',
+      planilha_google_url: '',
+      planilha_google_id: '',
+      apps_script_webhook_url: '',
       chave_secreta_planilha: secretSheetToken,
       guarda_exclusiva_planilha_empresario: true,
       zero_guarda_operacional_vps: Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true),
       estrutura_criada_no_cadastro: true,
       estrutura_diretorios_planilhas: estrutura.diretorios,
-      status_conexao: emp.lgpd_custodia_config?.status_conexao || 'Ativa'
+      status_conexao: 'Não Conectado'
     };
     saveDbToDisk();
   }
+  const realConnected = verificarDriveRealmenteConectado(emp.lgpd_custodia_config);
+  if (!realConnected) {
+    emp.lgpd_custodia_config.google_oauth_conectado_real = false;
+    emp.lgpd_custodia_config.conta_google_vinculada = '';
+    if (emp.lgpd_custodia_config.pasta_google_drive_url === 'https://drive.google.com/drive/my-drive') {
+      emp.lgpd_custodia_config.pasta_google_drive_url = '';
+    }
+    emp.lgpd_custodia_config.status_conexao = 'Não Conectado';
+  }
   const cfg = {
     ...emp.lgpd_custodia_config,
+    google_conectado_real: realConnected,
     email_servico_compartilhamento: emailServicoSistema,
     zero_guarda_operacional_vps: Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true)
   };
@@ -8153,8 +8423,9 @@ app.get('/api/lgpd/google-sheets/status/:empresaId', async (req: Request, res: R
   res.json({
     ok: true,
     config: cfg,
+    google_conectado_real: realConnected,
     email_servico_compartilhamento: emailServicoSistema,
-    google_client_id: '',
+    google_client_id: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '',
     script_conector_apps_script: scriptConector,
     abas_padrao: [
       'Colaboradores_RH',
@@ -8166,6 +8437,31 @@ app.get('/api/lgpd/google-sheets/status/:empresaId', async (req: Request, res: R
       'Auditoria_LGPD'
     ]
   });
+});
+
+app.post('/api/lgpd/google-sheets/desconectar', async (req: Request, res: Response) => {
+  try {
+    const empId = Number(req.body?.empresa_id) || 1;
+    const emp = (db.empresas || []).find((e: any) => Number(e.id) === empId) || db.empresas?.[0];
+    if (!emp) {
+      res.status(404).json({ ok: false, erro: 'Empresa não localizada.' });
+      return;
+    }
+    if (emp.lgpd_custodia_config) {
+      emp.lgpd_custodia_config.conta_google_vinculada = '';
+      emp.lgpd_custodia_config.google_oauth_conectado_real = false;
+      emp.lgpd_custodia_config.pasta_google_drive_id = '';
+      emp.lgpd_custodia_config.pasta_google_drive_url = '';
+      emp.lgpd_custodia_config.planilha_google_id = '';
+      emp.lgpd_custodia_config.planilha_google_url = '';
+      emp.lgpd_custodia_config.apps_script_webhook_url = '';
+      emp.lgpd_custodia_config.status_conexao = 'Não Conectado';
+      saveDbToDisk();
+    }
+    res.json({ ok: true, config: emp.lgpd_custodia_config });
+  } catch (e: any) {
+    res.status(500).json({ ok: false, erro: e.message });
+  }
 });
 
 app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, res: Response) => {
@@ -8189,13 +8485,17 @@ app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, r
     const nomeEmpFinal = String(nome_empresa || emp?.nome || 'Minha Empresa').trim();
     const nomeCtrlFinal = String(controlador_nome || emp?.lgpd_custodia_config?.controlador_nome || nomeEmpFinal).trim();
     const docCtrlFinal = String(controlador_documento || emp?.cnpj || '').trim();
+    const tokenLimpo = String(google_access_token || '').trim();
+    const temTokenOAuthValido =
+      tokenLimpo.length > 20 && tokenLimpo !== 'CONECTADO_AUTOMATICO_BD_NYCTIBI_US';
     const emailCtrlFinal = String(
-      conta_google_vinculada ||
-        controlador_email ||
-        emp?.lgpd_custodia_config?.conta_google_vinculada ||
+      controlador_email ||
         emp?.lgpd_custodia_config?.controlador_email ||
         ''
     ).trim();
+    const contaGoogleFinal = temTokenOAuthValido
+      ? String(conta_google_vinculada || emailCtrlFinal || '').trim()
+      : String(conta_google_vinculada || '').trim();
     const provedorNuvemFinal = String(
       provedor_nuvem_backup || emp?.lgpd_custodia_config?.provedor_nuvem_backup || 'Google Drive'
     ).trim();
@@ -8209,9 +8509,9 @@ app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, r
       nomeEmpFinal,
       nomeCtrlFinal,
       docCtrlFinal,
-      emailCtrlFinal,
-      String(google_access_token || '').trim(),
-      pastaCompartilhadaUrl,
+      contaGoogleFinal || emailCtrlFinal,
+      temTokenOAuthValido ? tokenLimpo : '',
+      pastaCompartilhadaUrl === 'https://drive.google.com/drive/my-drive' ? '' : pastaCompartilhadaUrl,
       isZeroGuarda
     );
 
@@ -8246,6 +8546,14 @@ app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, r
 
     if (emp) {
       const prevCfg = emp.lgpd_custodia_config || {};
+      const nextFolderId = estrutura.pastaRaizDriveId || prevCfg.pasta_google_drive_id || '';
+      const nextSheetId = estrutura.planilhaMestreId || prevCfg.planilha_google_id || '';
+      const isRealConn = Boolean(
+        temTokenOAuthValido ||
+          (nextFolderId && !String(nextFolderId).includes('my-drive')) ||
+          nextSheetId ||
+          (webhookUrl && webhookUrl.startsWith('https://'))
+      );
       emp.lgpd_custodia_config = {
         ...prevCfg,
         empresa_id: emp.id,
@@ -8253,36 +8561,30 @@ app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, r
         controlador_nome: nomeCtrlFinal,
         controlador_documento: docCtrlFinal,
         controlador_email: emailCtrlFinal,
-        conta_google_vinculada: emailCtrlFinal,
+        conta_google_vinculada: isRealConn ? (contaGoogleFinal || emailCtrlFinal) : '',
+        google_oauth_conectado_real: isRealConn,
         provedor_nuvem_backup: provedorNuvemFinal,
         modo_conexao_drive: modo_conexao_drive || prevCfg.modo_conexao_drive || 'botao_google',
         email_servico_compartilhamento: 'bd@nyctibi.us',
         pasta_google_drive_nome: estrutura.pastaRaizNome,
         pasta_google_drive_url:
           estrutura.pastaRaizDriveUrl ||
-          pastaCompartilhadaUrl ||
+          (pastaCompartilhadaUrl !== 'https://drive.google.com/drive/my-drive' ? pastaCompartilhadaUrl : '') ||
           prevCfg.pasta_google_drive_url ||
-          'https://drive.google.com/drive/my-drive',
-        pasta_google_drive_id: estrutura.pastaRaizDriveId || prevCfg.pasta_google_drive_id || '',
+          '',
+        pasta_google_drive_id: nextFolderId,
         diretorio_workspace_id: estrutura.diretorioWorkspaceRel,
         planilha_google_url: estrutura.planilhaMestreUrl || prevCfg.planilha_google_url || '',
-        planilha_google_id: estrutura.planilhaMestreId || prevCfg.planilha_google_id || '',
+        planilha_google_id: nextSheetId,
+        apps_script_webhook_url: webhookUrl,
         zero_guarda_operacional_vps: Boolean(prevCfg.zero_guarda_operacional_vps === true),
         estrutura_criada_no_cadastro: true,
         estrutura_diretorios_planilhas: estrutura.diretorios,
-        ultima_sincronizacao_em: new Date().toISOString(),
-        status_conexao: 'Ativa',
-        estado_fechamento_local:
-          Boolean(
-            estrutura.pastaRaizDriveId ||
-              estrutura.planilhaMestreId ||
-              (emailCtrlFinal && emailCtrlFinal.includes('@')) ||
-              (prevCfg.apps_script_webhook_url && String(prevCfg.apps_script_webhook_url).startsWith('https://'))
-          )
-            ? null
-            : prevCfg.estado_fechamento_local || null
+        ultima_sincronizacao_em: isRealConn ? new Date().toISOString() : prevCfg.ultima_sincronizacao_em,
+        status_conexao: isRealConn ? 'Ativa' : 'Não Conectado',
+        estado_fechamento_local: isRealConn ? null : prevCfg.estado_fechamento_local || null
       };
-      if (!emp.lgpd_custodia_config.estado_fechamento_local) {
+      if (!emp.lgpd_custodia_config.estado_fechamento_local && isRealConn) {
         sseBroker.emit('sessao.ultimo_pc_sincronizado', { empresa_id: emp.id });
       }
       saveDbToDisk();
@@ -8293,8 +8595,7 @@ app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, r
       pasta_raiz_nome: estrutura.pastaRaizNome,
       pasta_google_drive_url:
         estrutura.pastaRaizDriveUrl ||
-        pastaCompartilhadaUrl ||
-        'https://drive.google.com/drive/my-drive',
+        (pastaCompartilhadaUrl !== 'https://drive.google.com/drive/my-drive' ? pastaCompartilhadaUrl : ''),
       planilha_google_url: estrutura.planilhaMestreUrl,
       diretorio_workspace_id: estrutura.diretorioWorkspaceRel,
       diretorios: estrutura.diretorios,
@@ -8328,6 +8629,9 @@ app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) =
     }
 
     const rawFolderUrl = String(pasta_google_drive_url ?? emp.lgpd_custodia_config?.pasta_google_drive_url ?? '').trim();
+    const cleanFolderUrl = rawFolderUrl === 'https://drive.google.com/drive/my-drive' ? '' : rawFolderUrl;
+    const folderIdMatch = cleanFolderUrl.match(/\/folders\/([a-zA-Z0-9-_]+)/);
+    const extractedFolderId = folderIdMatch ? folderIdMatch[1] : '';
     const rawSheetUrl = String(planilha_google_url ?? emp.lgpd_custodia_config?.planilha_google_url ?? '').trim();
     const rawWebhookUrl = String(apps_script_webhook_url ?? emp.lgpd_custodia_config?.apps_script_webhook_url ?? '').trim();
     const extractedMatch = rawSheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
@@ -8336,12 +8640,22 @@ app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) =
     const secretToken =
       prevCfg.chave_secreta_planilha ||
       `urutau_lgpd_${emp.id}_${crypto.randomBytes(6).toString('hex')}`;
-    const emailVinculadoFinal = String(
-      conta_google_vinculada ?? controlador_email ?? prevCfg.conta_google_vinculada ?? prevCfg.controlador_email ?? ''
+    const emailControladorFinal = String(
+      controlador_email ?? prevCfg.controlador_email ?? ''
     ).trim();
     const provedorFinal = String(
       provedor_nuvem_backup ?? prevCfg.provedor_nuvem_backup ?? 'Google Drive'
     ).trim();
+    const nextFolderId = extractedFolderId || prevCfg.pasta_google_drive_id || '';
+    const hasRealConnection = Boolean(
+      (nextFolderId && String(nextFolderId).trim().length > 4) ||
+        (extractedId && String(extractedId).trim().length > 4) ||
+        (rawWebhookUrl && rawWebhookUrl.startsWith('https://')) ||
+        prevCfg.google_oauth_conectado_real === true
+    );
+    const contaGoogleFinal = hasRealConnection
+      ? String(conta_google_vinculada ?? prevCfg.conta_google_vinculada ?? emailControladorFinal).trim()
+      : '';
 
     emp.lgpd_custodia_config = {
       ...prevCfg,
@@ -8349,15 +8663,17 @@ app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) =
       empresa_nome: emp.nome,
       controlador_nome: String(controlador_nome || prevCfg.controlador_nome || emp.nome).trim(),
       controlador_documento: String(controlador_documento ?? prevCfg.controlador_documento ?? emp.cnpj ?? '').trim(),
-      controlador_email: emailVinculadoFinal,
-      conta_google_vinculada: emailVinculadoFinal,
+      controlador_email: emailControladorFinal,
+      conta_google_vinculada: contaGoogleFinal,
+      google_oauth_conectado_real: hasRealConnection,
       provedor_nuvem_backup: provedorFinal,
       termo_lgpd_aceito: true,
       termo_lgpd_aceito_em: prevCfg.termo_lgpd_aceito_em || new Date().toISOString(),
       termo_versao: 'LGPD-BYOS-2026.1',
       modo_conexao_drive: modo_conexao_drive || prevCfg.modo_conexao_drive || 'botao_google',
       email_servico_compartilhamento: 'bd@nyctibi.us',
-      pasta_google_drive_url: rawFolderUrl || 'https://drive.google.com/drive/my-drive',
+      pasta_google_drive_url: cleanFolderUrl,
+      pasta_google_drive_id: nextFolderId,
       planilha_google_url: rawSheetUrl,
       planilha_google_id: extractedId,
       apps_script_webhook_url: rawWebhookUrl,
@@ -8367,23 +8683,15 @@ app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) =
       exportacao_nuvem_intervalo_minutos: 60,
       exportacao_nuvem_automatica_ativa: true,
       exportacao_local_fechamento_exe_ativa: true,
-      ultima_sincronizacao_em: new Date().toISOString(),
+      ultima_sincronizacao_em: hasRealConnection ? new Date().toISOString() : prevCfg.ultima_sincronizacao_em,
       proxima_exportacao_nuvem_em: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       ultimo_backup_local_fechamento_em:
         prevCfg.ultimo_backup_local_fechamento_em || new Date().toISOString(),
-      status_conexao: 'Ativa',
-      estado_fechamento_local:
-        Boolean(
-          (prevCfg.pasta_google_drive_id && String(prevCfg.pasta_google_drive_id).trim().length > 0) ||
-            (extractedId && String(extractedId).trim().length > 0) ||
-            (rawWebhookUrl && rawWebhookUrl.startsWith('https://')) ||
-            (emailVinculadoFinal && emailVinculadoFinal.includes('@'))
-        )
-          ? null
-          : prevCfg.estado_fechamento_local || null
+      status_conexao: hasRealConnection ? 'Ativa' : 'Não Conectado',
+      estado_fechamento_local: hasRealConnection ? null : prevCfg.estado_fechamento_local || null
     };
 
-    if (!emp.lgpd_custodia_config.estado_fechamento_local) {
+    if (!emp.lgpd_custodia_config.estado_fechamento_local && hasRealConnection) {
       sseBroker.emit('sessao.ultimo_pc_sincronizado', { empresa_id: emp.id });
     }
     saveDbToDisk();
@@ -8446,12 +8754,13 @@ async function executarExportacaoBackupEmpresa(
   if (!emp.lgpd_custodia_config) {
     emp.lgpd_custodia_config = {};
   }
+  const hasRealConn = verificarDriveRealmenteConectado(emp.lgpd_custodia_config);
   emp.lgpd_custodia_config.ultima_sincronizacao_em = agoraIso;
   emp.lgpd_custodia_config.proxima_exportacao_nuvem_em = proxima1hIso;
   emp.lgpd_custodia_config.exportacao_nuvem_intervalo_minutos = 60;
   emp.lgpd_custodia_config.exportacao_nuvem_automatica_ativa = true;
   emp.lgpd_custodia_config.exportacao_local_fechamento_exe_ativa = true;
-  emp.lgpd_custodia_config.status_conexao = 'Ativa';
+  emp.lgpd_custodia_config.status_conexao = hasRealConn ? 'Ativa' : 'Não Conectado';
   const zeroGuardaAtivo = Boolean(emp.lgpd_custodia_config.zero_guarda_operacional_vps === true);
   emp.lgpd_custodia_config.zero_guarda_operacional_vps = zeroGuardaAtivo;
   emp.lgpd_custodia_config.total_exportacoes_nuvem_1h =
@@ -8574,12 +8883,7 @@ app.post('/api/lgpd/google-sheets/exportar-fechamento-local', async (req: Reques
     const emp = (db?.empresas || []).find((e: any) => Number(e.id) === empId);
     const isZeroGuarda = Boolean(emp?.lgpd_custodia_config?.zero_guarda_operacional_vps === true);
     const cfgEmp = emp?.lgpd_custodia_config || {};
-    const driveConectadoEmp = Boolean(
-      (cfgEmp.pasta_google_drive_id && String(cfgEmp.pasta_google_drive_id).trim().length > 0) ||
-        (cfgEmp.planilha_google_id && String(cfgEmp.planilha_google_id).trim().length > 0) ||
-        (cfgEmp.apps_script_webhook_url && String(cfgEmp.apps_script_webhook_url).startsWith('https://')) ||
-        (cfgEmp.conta_google_vinculada && String(cfgEmp.conta_google_vinculada).includes('@'))
-    );
+    const driveConectadoEmp = verificarDriveRealmenteConectado(cfgEmp);
     const pcIdLimpo = String(bodyObj.pc_id || '').trim() || 'PC-LOCAL';
     const pcApelidoLimpo = String(bodyObj.pc_apelido || '').trim() || 'Computador Local';
     const agoraCheckpointIso = new Date().toISOString();
@@ -8668,12 +8972,7 @@ app.get('/api/lgpd/vps-processador/status/:empresaId', (req: Request, res: Respo
   const contagens = contarRegistrosOperacionaisNaVps(emp.id);
   const zeroGuarda = Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true);
   const cfg = emp.lgpd_custodia_config || {};
-  const driveConectado = Boolean(
-    (cfg.pasta_google_drive_id && String(cfg.pasta_google_drive_id).trim().length > 0) ||
-      (cfg.planilha_google_id && String(cfg.planilha_google_id).trim().length > 0) ||
-      (cfg.apps_script_webhook_url && String(cfg.apps_script_webhook_url).startsWith('https://')) ||
-      (cfg.conta_google_vinculada && String(cfg.conta_google_vinculada).includes('@'))
-  );
+  const driveConectado = verificarDriveRealmenteConectado(cfg);
   res.json({
     ok: true,
     empresa_id: emp.id,
@@ -11509,6 +11808,87 @@ app.get('/api/lan/ping', (_req: Request, res: Response) => {
     pendentes_outbox_lan: (db?.lan_outbox_sync || []).filter((o: any) => o.status === 'pendente').length,
     ts: new Date().toISOString()
   });
+});
+
+app.get('/api/lan/baixar-instalador-servidor-windows', (_req: Request, res: Response) => {
+  const vpsUrl = db?.lan_hub_config?.vps_remota_url || 'https://nyctibi.us';
+  const batScript = [
+    '@echo off',
+    'chcp 65001 >nul',
+    'title Urutau ERP - Servidor Local de Contingencia Wi-Fi (PC do Caixa)',
+    'color 0A',
+    'echo ============================================================================',
+    'echo   URUTAU ERP - SERVIDOR LOCAL DO CAIXA (WI-FI LAN + AUTO-ATUALIZADOR)',
+    'echo ============================================================================',
+    'echo.',
+    'netsh advfirewall firewall show rule name="Urutau ERP LAN 3000" >nul 2>&1',
+    'if %errorlevel% neq 0 (',
+    '  echo [1/4] Liberando porta 3000 no Firewall do Windows para celulares no Wi-Fi...',
+    '  netsh advfirewall firewall add rule name="Urutau ERP LAN 3000" dir=in action=allow protocol=TCP localport=3000 >nul 2>&1',
+    ') else (',
+    '  echo [1/4] Porta 3000 ja liberada no Firewall do Windows.',
+    ')',
+    'if exist ".git" (',
+    '  echo [2/4] Verificando atualizacoes automaticas do sistema (preservando banco local)...',
+    '  git pull --ff-only >nul 2>&1',
+    ') else (',
+    '  echo [2/4] Modo pasta local detectado (bancos SQLite e JSON preservados).',
+    ')',
+    'if not exist "node_modules" (',
+    '  echo [3/4] Instalando dependencias na primeira execucao...',
+    '  call npm install',
+    ')',
+    'if not exist "dist\\index.html" (',
+    '  echo [3/4] Compilando interface para operacao offline rapida...',
+    '  call npm run build',
+    ')',
+    'echo.',
+    'echo [4/4] Enderecos IP desta maquina no Wi-Fi para digitar nos celulares (Android / iOS):',
+    'for /f "tokens=2 delims=:" %%a in (\'ipconfig ^| findstr /i "IPv4"\') do echo   -^> http:%%a:3000',
+    'echo.',
+    `echo VPS Remota configurada para reconciliacao automatica: ${vpsUrl}`,
+    'echo Iniciando Urutau ERP na porta 3000...',
+    'set NODE_ENV=production',
+    'set PORT=3000',
+    'call npx tsx server.ts',
+    'pause'
+  ].join('\r\n');
+
+  res.setHeader('Content-Type', 'application/x-bat; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="Urutau_Servidor_Local_Caixa_Windows.bat"');
+  res.send(batScript);
+});
+
+app.get('/api/lan/baixar-instalador-servidor-linux', (_req: Request, res: Response) => {
+  const vpsUrl = db?.lan_hub_config?.vps_remota_url || 'https://nyctibi.us';
+  const shScript = [
+    '#!/usr/bin/env bash',
+    'set -e',
+    'echo "============================================================================"',
+    'echo "  URUTAU ERP - SERVIDOR LOCAL DO CAIXA LINUX (WI-FI LAN + AUTO-UPDATE)"',
+    'echo "============================================================================"',
+    'if command -v ufw >/dev/null 2>&1; then',
+    '  sudo ufw allow 3000/tcp >/dev/null 2>&1 || true',
+    'fi',
+    'if [ -d ".git" ]; then',
+    '  echo "[1/3] Atualizando codigo-fonte sem alterar bancos locais (SQLite / JSON)..."',
+    '  git pull --ff-only || true',
+    'fi',
+    'if [ ! -d "node_modules" ]; then',
+    '  echo "[2/3] Instalando dependencias..."',
+    '  npm install',
+    'fi',
+    'echo "[2/3] Atualizando build de producao offline..."',
+    'npm run build',
+    'IP_LOCAL=$(hostname -I 2>/dev/null | awk \'{print $1}\')',
+    'echo "[3/3] Acesse nos celulares Android/iOS pelo Wi-Fi em: http://${IP_LOCAL:-192.168.0.100}:3000"',
+    `echo "VPS Remota vinculada: ${vpsUrl}"`,
+    'NODE_ENV=production PORT=3000 npx tsx server.ts'
+  ].join('\n');
+
+  res.setHeader('Content-Type', 'application/x-sh; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="Urutau_Servidor_Local_Caixa_Linux.sh"');
+  res.send(shScript);
 });
 
 app.post('/api/lan/config', async (req: Request, res: Response) => {

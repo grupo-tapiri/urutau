@@ -239,8 +239,8 @@ export const DEFAULT_CATEGORIES: NavCategory[] = [
   },
   {
     id: 'governanca_sistema',
-    titulo: 'Admin',
-    corSimbolo: '#F43F5E',
+    titulo: 'Sistema & Ajustes',
+    corSimbolo: '#10B981',
     abas: ['config']
   }
 ];

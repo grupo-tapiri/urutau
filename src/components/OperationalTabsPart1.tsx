@@ -2434,7 +2434,7 @@ export function ReservasTab({
       return;
     }
     const amb = String(novaMesaForm.ambienteNome || form.area || 'Salão Principal').trim();
-    const lug = Math.max(2, Number(novaMesaForm.lugares || 4));
+    const lug = Math.min(200, Math.max(1, Number(novaMesaForm.lugares || 4)));
     const fmt = novaMesaForm.formato || 'quadrada';
 
     try {
@@ -2454,6 +2454,17 @@ export function ReservasTab({
       }
       localStorage.setItem('urutau_custom_select_options_v1', JSON.stringify(customMap));
     } catch {}
+
+    fetch('/api/setores/salvar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: amb,
+        descricao: 'Setor criado a partir do Mapa de Mesas e Reservas',
+        cor_identificacao: '#10B981',
+        empresa_id: Number(data.empresaAtivaId || data.unidades?.[0]?.id || 1)
+      })
+    }).catch(() => {});
 
     window.dispatchEvent(
       new CustomEvent('urutau-external-floor-plan-table-added', {
@@ -2504,6 +2515,17 @@ export function ReservasTab({
       }
       localStorage.setItem('urutau_custom_select_options_v1', JSON.stringify(customMap));
     } catch {}
+
+    fetch('/api/setores/salvar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nome: amb,
+        descricao: 'Setor criado a partir do Mapa de Mesas e Reservas',
+        cor_identificacao: '#10B981',
+        empresa_id: Number(data.empresaAtivaId || data.unidades?.[0]?.id || 1)
+      })
+    }).catch(() => {});
 
     window.dispatchEvent(
       new CustomEvent('urutau-external-floor-plan-table-added', {
@@ -3071,21 +3093,40 @@ export function ReservasTab({
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-300 mb-1">
-                    Capacidade (Lugares)
+                    Capacidade (Digite ou Escolha — ex: 40)
                   </label>
-                  <select
-                    value={novaMesaForm.lugares}
-                    onChange={(e) =>
-                      setNovaMesaForm((prev) => ({ ...prev, lugares: Number(e.target.value) }))
-                    }
-                    className="w-full px-2.5 py-1.5 bg-[#05100C] border border-slate-700 rounded text-xs font-mono text-white"
-                  >
-                    {[2, 3, 4, 6, 8, 10, 12].map((n) => (
-                      <option key={n} value={n}>
-                        {n} lugares
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      value={novaMesaForm.lugares}
+                      onChange={(e) =>
+                        setNovaMesaForm((prev) => ({
+                          ...prev,
+                          lugares: Math.min(200, Math.max(1, Number(e.target.value || 4)))
+                        }))
+                      }
+                      placeholder="Ex: 40"
+                      className="w-20 px-2 py-1.5 bg-[#05100C] border border-emerald-500/50 rounded text-xs font-mono font-bold text-emerald-300 text-center"
+                    />
+                    <select
+                      value={[2, 4, 6, 8, 10, 12, 20, 40].includes(novaMesaForm.lugares) ? novaMesaForm.lugares : ''}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setNovaMesaForm((prev) => ({ ...prev, lugares: Number(e.target.value) }));
+                        }
+                      }}
+                      className="flex-1 px-2 py-1.5 bg-[#05100C] border border-slate-700 rounded text-xs font-mono text-white"
+                    >
+                      <option value="">{novaMesaForm.lugares} lug.</option>
+                      {[2, 4, 6, 8, 10, 12, 20, 40].map((n) => (
+                        <option key={n} value={n}>
+                          {n} lugares
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-300 mb-1">

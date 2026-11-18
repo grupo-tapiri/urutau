@@ -891,13 +891,13 @@ export default function App() {
     setCadError('');
     const clientId = cadGoogleClientId.trim();
     if (!clientId) {
-      setCadGoogleToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+      setCadError('Para login direto com popup OAuth, o Client ID do SaaS precisa estar ativo ou utilize o compartilhamento de pasta com bd@nyctibi.us.');
       return;
     }
     const startOAuth = () => {
       const g = (window as any).google;
       if (!g?.accounts?.oauth2) {
-        setCadGoogleToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+        setCadError('Biblioteca Google Identity não pôde ser carregada no navegador.');
         return;
       }
       const tokenClient = g.accounts.oauth2.initTokenClient({
@@ -907,7 +907,7 @@ export default function App() {
           if (resp?.access_token) {
             setCadGoogleToken(resp.access_token);
           } else {
-            setCadGoogleToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+            setCadGoogleToken('');
           }
         }
       });
@@ -921,7 +921,7 @@ export default function App() {
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.onload = startOAuth;
-    script.onerror = () => setCadGoogleToken('CONECTADO_AUTOMATICO_BD_NYCTIBI_US');
+    script.onerror = () => setCadGoogleToken('');
     document.head.appendChild(script);
   };
 
@@ -3424,7 +3424,6 @@ export default function App() {
   const GESTOR_GOVERNANCE_TABS: TabId[] = [
     'permissoes',
     'auditoria',
-    'config',
     'notificacoes',
     'empresas',
     'modulos'
@@ -3433,8 +3432,7 @@ export default function App() {
   const isAdminExclusiveTab = (tabId: TabId): boolean =>
     ADMIN_EXCLUSIVE_TABS.includes(tabId);
 
-  const isAdminExclusiveCategory = (catId: string): boolean =>
-    catId === 'governanca_sistema';
+  const isAdminExclusiveCategory = (_catId: string): boolean => false;
 
   const isCurrentTabSystematicAdmin =
     isSuperAdminUser(currentUser) && isAdminExclusiveTab(activeTab);
@@ -4232,7 +4230,11 @@ export default function App() {
                   const isExpanded = true;
                   const isEditingThisCat = inlineEditingCatId === cat.id;
                   const isDragOverThisCat = dragOverCatId === cat.id;
-                  const cleanCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
+                  const rawCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
+                  const cleanCatTitle =
+                    cat.id === 'governanca_sistema' && rawCatTitle.trim().toLowerCase() === 'admin'
+                      ? 'Sistema & Ajustes'
+                      : rawCatTitle;
 
                   return (
                     <div
@@ -5437,7 +5439,11 @@ export default function App() {
                   if (visibleTabs.length === 0 && inlineEditingCatId !== cat.id) return null;
                   const isExpanded = true;
                   const isDragOverThisCat = dragOverCatId === cat.id;
-                  const cleanCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
+                  const rawCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
+                  const cleanCatTitle =
+                    cat.id === 'governanca_sistema' && rawCatTitle.trim().toLowerCase() === 'admin'
+                      ? 'Sistema & Ajustes'
+                      : rawCatTitle;
                   return (
                     <div
                       key={cat.id}
@@ -7234,13 +7240,13 @@ export default function App() {
                               usar_wpp_pessoal_como_bot: true,
                               whatsapp_bot_empresa: cadWhatsapp.trim(),
                               email: cadEmail.trim(),
-                              conta_google_vinculada: cadEmail.trim(),
+                              conta_google_vinculada: cadGoogleToken.trim() ? cadEmail.trim() : '',
                               provedor_nuvem_backup: cadProvedorNuvem,
                               cnpj: cadCnpj.trim(),
                               senha: cadSenha.trim(),
                               modo_conexao_drive: cadModoDrive,
                               pasta_google_drive_url: cadPastaDriveUrl.trim(),
-                              google_access_token: cadGoogleToken.trim() || 'CONECTADO_AUTOMATICO_BD_NYCTIBI_US',
+                              google_access_token: cadGoogleToken.trim(),
                               planilha_google_url: cadPlanilhaUrl.trim(),
                               termo_lgpd_aceito: true,
                               zero_guarda_operacional_vps: true,

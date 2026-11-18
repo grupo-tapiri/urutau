@@ -36,6 +36,11 @@ import {
 } from 'lucide-react';
 import { ComandaPdv } from '../types/erp';
 
+export interface FloorPoint2D {
+  x: number;
+  y: number;
+}
+
 export interface FloorEnvironmentZone {
   id: string;
   nome: string;
@@ -46,9 +51,11 @@ export interface FloorEnvironmentZone {
   height: number;
   rotation: number;
   tipoZona: 'ambiente' | 'bar' | 'palco' | 'entrada';
+  vertices?: FloorPoint2D[];
+  edgeControls?: FloorPoint2D[];
 }
 
-export type SeatCapacityOption = 2 | 3 | 4 | 6 | 8 | 10 | 12;
+export type SeatCapacityOption = number;
 
 export interface FloorTableSeatSet {
   id: string;
@@ -63,6 +70,9 @@ export interface FloorTableSeatSet {
   height: number;
   rotation: number;
   reservaVinculadaId?: number | null;
+  grupoId?: string | null;
+  grupoNome?: string | null;
+  mesasAgrupadas?: string[];
 }
 
 export interface FloorPlanLayoutState {
@@ -84,6 +94,8 @@ export interface SavedFloorPlanTemplate {
 export interface NewReservaAtTablePayload {
   mesa: string;
   mesas_vinculadas?: string[];
+  grupo_mesa_id?: string | null;
+  grupo_mesa_nome?: string | null;
   area: string;
   lugares: number;
   data?: string;
@@ -108,7 +120,66 @@ interface UrutauTableFloorPlanProps {
 const FLOOR_PLAN_STORAGE_KEY = 'urutau_reservas_floor_plan_v2';
 const FLOOR_PLAN_TEMPLATES_KEY = 'urutau_floor_plan_templates_v2';
 
-const SEAT_OPTIONS: SeatCapacityOption[] = [2, 3, 4, 6, 8, 10, 12];
+const SEAT_OPTIONS: SeatCapacityOption[] = [2, 4, 6, 8, 10, 12, 20, 40];
+
+export function getEnvVertices(env: FloorEnvironmentZone): FloorPoint2D[] {
+  const w = Math.max(80, Number(env.width || 300));
+  const h = Math.max(48, Number(env.height || 200));
+  if (Array.isArray(env.vertices) && env.vertices.length === 4) {
+    return env.vertices.map((pt) => ({
+      x: Number(pt?.x ?? 0),
+      y: Number(pt?.y ?? 0)
+    }));
+  }
+  return [
+    { x: 0, y: 0 },
+    { x: w, y: 0 },
+    { x: w, y: h },
+    { x: 0, y: h }
+  ];
+}
+
+export function getEnvEdgeControls(env: FloorEnvironmentZone, verts?: FloorPoint2D[]): FloorPoint2D[] {
+  const v = verts || getEnvVertices(env);
+  if (Array.isArray(env.edgeControls) && env.edgeControls.length === 4) {
+    return env.edgeControls.map((pt) => ({
+      x: Number(pt?.x ?? 0),
+      y: Number(pt?.y ?? 0)
+    }));
+  }
+  return [
+    { x: (v[0].x + v[1].x) / 2, y: (v[0].y + v[1].y) / 2 },
+    { x: (v[1].x + v[2].x) / 2, y: (v[1].y + v[2].y) / 2 },
+    { x: (v[2].x + v[3].x) / 2, y: (v[2].y + v[3].y) / 2 },
+    { x: (v[3].x + v[0].x) / 2, y: (v[3].y + v[0].y) / 2 }
+  ];
+}
+
+export function hasCustomEnvGeometry(env: FloorEnvironmentZone): boolean {
+  return (
+    (Array.isArray(env.vertices) && env.vertices.length === 4) ||
+    (Array.isArray(env.edgeControls) && env.edgeControls.length === 4)
+  );
+}
+
+export function buildEnvSvgPath(env: FloorEnvironmentZone): string {
+  const v = getEnvVertices(env);
+  const e = getEnvEdgeControls(env, v);
+  const seg = (idx: number) => {
+    const a = v[idx];
+    const b = v[(idx + 1) % 4];
+    const m = e[idx];
+    const midX = (a.x + b.x) / 2;
+    const midY = (a.y + b.y) / 2;
+    if (Math.hypot(m.x - midX, m.y - midY) < 1.5) {
+      return `L ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+    }
+    const cx = 2 * m.x - 0.5 * (a.x + b.x);
+    const cy = 2 * m.y - 0.5 * (a.y + b.y);
+    return `Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+  };
+  return `M ${v[0].x.toFixed(1)} ${v[0].y.toFixed(1)} ${seg(0)} ${seg(1)} ${seg(2)} ${seg(3)} Z`;
+}
 
 function getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
@@ -167,19 +238,25 @@ function getDefaultDimensionsForSeatCount(
   lugares: SeatCapacityOption,
   formato: 'quadrada' | 'redonda' | 'retangular'
 ): { width: number; height: number } {
+  const qtd = Math.max(1, Number(lugares || 4));
   if (formato === 'redonda') {
-    if (lugares <= 2) return { width: 68, height: 68 };
-    if (lugares <= 4) return { width: 78, height: 78 };
-    if (lugares <= 6) return { width: 92, height: 92 };
-    return { width: 108, height: 108 };
+    if (qtd <= 2) return { width: 68, height: 68 };
+    if (qtd <= 4) return { width: 78, height: 78 };
+    if (qtd <= 6) return { width: 92, height: 92 };
+    if (qtd <= 10) return { width: 112, height: 112 };
+    const diam = Math.min(240, 112 + Math.round((qtd - 10) * 3.5));
+    return { width: diam, height: diam };
   }
-  if (lugares <= 2) return { width: 68, height: 64 };
-  if (lugares === 3) return { width: 74, height: 68 };
-  if (lugares === 4) return formato === 'retangular' ? { width: 88, height: 68 } : { width: 76, height: 74 };
-  if (lugares === 6) return { width: 106, height: 74 };
-  if (lugares === 8) return { width: 126, height: 78 };
-  if (lugares === 10) return { width: 146, height: 82 };
-  return { width: 164, height: 86 };
+  if (qtd <= 2) return { width: 68, height: 64 };
+  if (qtd === 3) return { width: 74, height: 68 };
+  if (qtd === 4) return formato === 'retangular' ? { width: 88, height: 68 } : { width: 76, height: 74 };
+  if (qtd <= 6) return { width: 106, height: 74 };
+  if (qtd <= 8) return { width: 126, height: 78 };
+  if (qtd <= 10) return { width: 146, height: 82 };
+  if (qtd <= 12) return { width: 164, height: 86 };
+  const extraW = Math.min(340, 164 + Math.round((qtd - 12) * 5.2));
+  const extraH = Math.min(130, 86 + Math.round((qtd - 12) * 1.1));
+  return { width: extraW, height: extraH };
 }
 
 function computeReservaPax(r: any): number {
@@ -621,13 +698,19 @@ function sanitizeLoadedLayout(raw: any): FloorPlanLayoutState | null {
     width: Math.max(80, Number(e.width || 300)),
     height: Math.max(48, Number(e.height || 200)),
     rotation: Number(e.rotation || 0),
-    tipoZona: ['ambiente', 'bar', 'palco', 'entrada'].includes(e.tipoZona) ? e.tipoZona : 'ambiente'
+    tipoZona: ['ambiente', 'bar', 'palco', 'entrada'].includes(e.tipoZona) ? e.tipoZona : 'ambiente',
+    vertices:
+      Array.isArray(e.vertices) && e.vertices.length === 4
+        ? e.vertices.map((pt: any) => ({ x: Number(pt?.x ?? 0), y: Number(pt?.y ?? 0) }))
+        : undefined,
+    edgeControls:
+      Array.isArray(e.edgeControls) && e.edgeControls.length === 4
+        ? e.edgeControls.map((pt: any) => ({ x: Number(pt?.x ?? 0), y: Number(pt?.y ?? 0) }))
+        : undefined
   }));
   const tables: FloorTableSeatSet[] = raw.tables.map((t: any, idx: number) => {
-    const rawLug = Number(t.lugares || 4);
-    const lugares: SeatCapacityOption = (SEAT_OPTIONS.includes(rawLug as SeatCapacityOption)
-      ? rawLug
-      : 4) as SeatCapacityOption;
+    const rawLug = Math.round(Number(t.lugares || 4));
+    const lugares: SeatCapacityOption = Math.min(200, Math.max(1, Number.isFinite(rawLug) ? rawLug : 4));
     const formato: 'quadrada' | 'redonda' | 'retangular' = ['quadrada', 'redonda', 'retangular'].includes(t.formato)
       ? t.formato
       : 'quadrada';
@@ -644,7 +727,12 @@ function sanitizeLoadedLayout(raw: any): FloorPlanLayoutState | null {
       width: Math.max(52, Number(t.width || defDims.width)),
       height: Math.max(52, Number(t.height || defDims.height)),
       rotation: Number(t.rotation || 0),
-      reservaVinculadaId: t.reservaVinculadaId ?? null
+      reservaVinculadaId: t.reservaVinculadaId ?? null,
+      grupoId: t.grupoId || null,
+      grupoNome: t.grupoNome || null,
+      mesasAgrupadas: Array.isArray(t.mesasAgrupadas)
+        ? t.mesasAgrupadas.map((m: any) => String(m || '').trim()).filter(Boolean)
+        : undefined
     };
   });
   const candidate: FloorPlanLayoutState = {
@@ -662,7 +750,7 @@ function sanitizeLoadedLayout(raw: any): FloorPlanLayoutState | null {
 }
 
 function renderSeatTicks(table: FloorTableSeatSet): React.ReactNode[] {
-  const count = table.lugares;
+  const count = Math.min(24, Math.max(1, Number(table.lugares || 4)));
   const nodes: React.ReactNode[] = [];
   if (table.formato === 'redonda') {
     const radiusX = table.width / 2 + 5;
@@ -729,12 +817,17 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     try {
       const fromServer = configs.find((c) => c.chave === 'mapa_mesas_salao_layout')?.valor_json;
       const cleanServer = sanitizeLoadedLayout(fromServer);
-      if (cleanServer && cleanServer.tables.length > 0) return cleanServer;
+      if (cleanServer && (cleanServer.tables.length > 0 || cleanServer.environments.length > 0 || fromServer?.zerado_manual)) {
+        return cleanServer;
+      }
 
       const rawLocal = localStorage.getItem(FLOOR_PLAN_STORAGE_KEY);
       if (rawLocal) {
-        const cleanLocal = sanitizeLoadedLayout(JSON.parse(rawLocal));
-        if (cleanLocal && cleanLocal.tables.length > 0) return cleanLocal;
+        const parsedLocal = JSON.parse(rawLocal);
+        const cleanLocal = sanitizeLoadedLayout(parsedLocal);
+        if (cleanLocal && (cleanLocal.tables.length > 0 || cleanLocal.environments.length > 0)) {
+          return cleanLocal;
+        }
       }
     } catch {}
     return buildGrandeOperacao67Layout();
@@ -756,6 +849,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
   const [showMinimap, setShowMinimap] = useState<boolean>(true);
   const [savingLayout, setSavingLayout] = useState<boolean>(false);
   const [dirtyLayout, setDirtyLayout] = useState<boolean>(false);
+  const [grudarAoEncostarAtivo, setGrudarAoEncostarAtivo] = useState<boolean>(true);
 
   const [modoData, setModoData] = useState<'dia' | 'periodo'>('dia');
   const [diaSelecionado, setDiaSelecionado] = useState<string>(getTodayISO());
@@ -770,6 +864,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
   const [linkingReservaId, setLinkingReservaId] = useState<string>('');
   const [savingAction, setSavingAction] = useState<boolean>(false);
+  const [clearingAllReservas, setClearingAllReservas] = useState<boolean>(false);
   const [joinPickerOpen, setJoinPickerOpen] = useState<boolean>(false);
   const [joinReservaTargetId, setJoinReservaTargetId] = useState<number | null>(null);
   const [joinSelectedCodes, setJoinSelectedCodes] = useState<string[]>([]);
@@ -777,6 +872,16 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
   const [walkInNome, setWalkInNome] = useState<string>('');
   const [walkInPessoas, setWalkInPessoas] = useState<number>(2);
+
+  const [quickReservaOpen, setQuickReservaOpen] = useState<boolean>(false);
+  const [quickReservaNome, setQuickReservaNome] = useState<string>('');
+  const [quickReservaWhatsapp, setQuickReservaWhatsapp] = useState<string>('');
+  const [quickReservaHora, setQuickReservaHora] = useState<string>('20:00');
+  const [quickReservaPax, setQuickReservaPax] = useState<number>(4);
+
+  const [criandoSetorNaMesa, setCriandoSetorNaMesa] = useState<boolean>(false);
+  const [novoSetorMesaNome, setNovoSetorMesaNome] = useState<string>('');
+  const [salvandoSetorMesa, setSalvandoSetorMesa] = useState<boolean>(false);
 
   const [modalBatchOpen, setModalBatchOpen] = useState<boolean>(false);
   const [batchPrefix, setBatchPrefix] = useState<string>('M-');
@@ -809,7 +914,15 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
   const [smoothCameraTransition, setSmoothCameraTransition] = useState<boolean>(false);
 
   const gestureRef = useRef<{
-    type: 'none' | 'pan' | 'pinch' | 'item_move' | 'item_resize' | 'item_rotate';
+    type:
+      | 'none'
+      | 'pan'
+      | 'pinch'
+      | 'item_move'
+      | 'item_resize'
+      | 'item_rotate'
+      | 'env_vertex'
+      | 'env_edge';
     pointerId?: number;
     startClientX: number;
     startClientY: number;
@@ -828,6 +941,10 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     itemOrigH?: number;
     itemCenterX?: number;
     itemCenterY?: number;
+    vertexIndex?: number;
+    edgeIndex?: number;
+    origPointX?: number;
+    origPointY?: number;
   }>({
     type: 'none',
     startClientX: 0,
@@ -904,10 +1021,11 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
             (t) => normalizeTableCode(t.codigo) === normalizeTableCode(codeClean)
           );
           if (!alreadyExists && codeClean) {
-            const rawSeats = Number(detail.table.lugares || 4);
-            const validSeats: SeatCapacityOption = ([2, 3, 4, 6, 8, 10, 12].find(
-              (s) => s >= rawSeats
-            ) || 4) as SeatCapacityOption;
+            const rawSeats = Math.round(Number(detail.table.lugares || 4));
+            const validSeats: SeatCapacityOption = Math.min(
+              200,
+              Math.max(1, Number.isFinite(rawSeats) ? rawSeats : 4)
+            );
             const fmt: 'quadrada' | 'redonda' | 'retangular' =
               detail.table.formato && ['quadrada', 'redonda', 'retangular'].includes(detail.table.formato)
                 ? detail.table.formato
@@ -947,12 +1065,12 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
           environments: nextEnvironments,
           tables: nextTables
         };
-        fetch('/api/erp/config', {
+        fetch('/api/erp/configs/salvar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chave: 'mapa_mesas_salao_layout',
-            valor: nextLayout,
+            valor_json: nextLayout,
             empresa_id: empresaId
           })
         }).catch(() => {});
@@ -1072,17 +1190,33 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     );
   }, [pdvComandas]);
 
+  const getGluedGroupCodesForTable = useCallback(
+    (table: FloorTableSeatSet): string[] => {
+      if (Array.isArray(table.mesasAgrupadas) && table.mesasAgrupadas.length > 1) {
+        return Array.from(new Set(table.mesasAgrupadas));
+      }
+      if (table.grupoId) {
+        const siblings = layout.tables
+          .filter((t) => t.grupoId === table.grupoId)
+          .map((t) => t.codigo);
+        if (siblings.length > 1) return Array.from(new Set(siblings));
+      }
+      return [table.codigo];
+    },
+    [layout.tables]
+  );
+
   const reservasByTableId = useMemo(() => {
     const map: Record<string, any[]> = {};
     for (const t of layout.tables) {
-      const tNorm = normalizeTableCode(t.codigo);
+      const groupNorms = getGluedGroupCodesForTable(t).map(normalizeTableCode);
       map[t.id] = activeReservasInWindow.filter((r: any) => {
         const codes = getReservaJoinedCodes(r).map(normalizeTableCode);
-        return codes.includes(tNorm);
+        return codes.some((c) => groupNorms.includes(c));
       });
     }
     return map;
-  }, [activeReservasInWindow, layout.tables]);
+  }, [activeReservasInWindow, getGluedGroupCodesForTable, layout.tables]);
 
   const comandaByTableId = useMemo(() => {
     const map: Record<string, ComandaPdv | null> = {};
@@ -1130,7 +1264,9 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
       const list = reservasByTableId[table.id] || [];
       const comanda = comandaByTableId[table.id] || null;
       const primaryReserva = list[0] || null;
-      const joinedCount = primaryReserva ? getReservaJoinedCodes(primaryReserva).length : 1;
+      const gluedCodes = getGluedGroupCodesForTable(table);
+      const resCodes = primaryReserva ? getReservaJoinedCodes(primaryReserva) : [];
+      const joinedCount = Math.max(gluedCodes.length, resCodes.length, 1);
 
       if (comanda || (primaryReserva && String(primaryReserva.status || '').toLowerCase() === 'sentada')) {
         return {
@@ -1167,10 +1303,10 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
         label: 'Livre',
         primaryReserva: null,
         comanda: null,
-        joinedCount: 1
+        joinedCount
       };
     },
-    [comandaByTableId, reservasByTableId]
+    [comandaByTableId, getGluedGroupCodesForTable, reservasByTableId]
   );
 
   const salonSummary = useMemo(() => {
@@ -1217,6 +1353,40 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
       tableByNormCode.set(normalizeTableCode(t.codigo), t);
     }
 
+    const processedGroupIds = new Set<string>();
+    for (const t of layout.tables) {
+      if (t.grupoId && !processedGroupIds.has(t.grupoId)) {
+        processedGroupIds.add(t.grupoId);
+        const members = layout.tables.filter((m) => m.grupoId === t.grupoId);
+        if (members.length >= 2) {
+          const sorted = [...members].sort((a, b) => a.x - b.x || a.y - b.y);
+          const totalSeats = sorted.reduce((acc, item) => acc + Number(item.lugares || 0), 0);
+          for (let i = 0; i < sorted.length - 1; i++) {
+            const a = sorted[i];
+            const b = sorted[i + 1];
+            const x1 = a.x + a.width / 2;
+            const y1 = a.y + a.height / 2;
+            const x2 = b.x + b.width / 2;
+            const y2 = b.y + b.height / 2;
+            segments.push({
+              key: `glued_${t.grupoId}_${a.id}_${b.id}`,
+              x1,
+              y1,
+              x2,
+              y2,
+              midX: (x1 + x2) / 2,
+              midY: (y1 + y2) / 2,
+              label:
+                i === 0
+                  ? `${t.grupoNome || sorted.map((s) => s.codigo).join('+')} (${totalSeats}L)`
+                  : '',
+              isSeated: false
+            });
+          }
+        }
+      }
+    }
+
     for (const r of activeReservasInWindow) {
       const codes = getReservaJoinedCodes(r);
       if (codes.length < 2) continue;
@@ -1244,7 +1414,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
           y2,
           midX: (x1 + x2) / 2,
           midY: (y1 + y2) / 2,
-          label: i === 0 ? `${sorted.length}M (${totalJoinedSeats}L)` : '',
+          label: i === 0 ? `${r.grupo_mesa_nome || `${sorted.length}M`} (${totalJoinedSeats}L)` : '',
           isSeated
         });
       }
@@ -1257,6 +1427,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     if (!q) return [];
     return layout.tables.filter((t) => {
       if (t.codigo.toLowerCase().includes(q)) return true;
+      if (t.grupoNome && t.grupoNome.toLowerCase().includes(q)) return true;
       const digitsOnly = q.replace(/\D/g, '');
       if (digitsOnly && normalizeTableCode(t.codigo).replace(/\D/g, '') === digitsOnly) return true;
       const resList = reservasByTableId[t.id] || [];
@@ -1324,9 +1495,15 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
   useEffect(() => {
     if (selectedTable) {
-      setWalkInPessoas(Math.min(12, Math.max(1, selectedTable.lugares)));
+      const groupCodes = getGluedGroupCodesForTable(selectedTable);
+      const groupSeats = layout.tables
+        .filter((t) => groupCodes.includes(t.codigo))
+        .reduce((acc, t) => acc + Number(t.lugares || 0), 0);
+      setWalkInPessoas(Math.min(200, Math.max(1, groupSeats || selectedTable.lugares)));
+      setQuickReservaPax(Math.min(200, Math.max(1, groupSeats || selectedTable.lugares)));
       setWalkInNome('');
       setJoinPickerOpen(false);
+      setCriandoSetorNaMesa(false);
     }
   }, [selectedTable?.id]);
 
@@ -1363,6 +1540,210 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     } finally {
       setSavingLayout(false);
     }
+  };
+
+  const handleLimparTodasReservasEZerarAmbientes = async (zerarAmbientesMapa: boolean) => {
+    setClearingAllReservas(true);
+    try {
+      const res = await fetch('/api/reservas/limpar-todas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          zerar_ambientes_mapa: zerarAmbientesMapa,
+          empresa_id: empresaId
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.erro || 'Não foi possível limpar as reservas.');
+      }
+      if (zerarAmbientesMapa) {
+        const emptyLayout: FloorPlanLayoutState = {
+          canvasWidth: 1120,
+          canvasHeight: 680,
+          environments: [],
+          tables: []
+        };
+        setLayout(emptyLayout);
+        localStorage.setItem(FLOOR_PLAN_STORAGE_KEY, JSON.stringify(emptyLayout));
+        window.dispatchEvent(new Event('urutau-floor-plan-updated'));
+      } else {
+        setLayout((prev) => ({
+          ...prev,
+          tables: prev.tables.map((t) => ({ ...t, reservaVinculadaId: null }))
+        }));
+      }
+      setSelectedId(null);
+      setDrawerOpen(false);
+      setModalLimparOpen(false);
+      await onRefresh();
+      showAlert(
+        zerarAmbientesMapa ? 'Reservas & Ambientes Zerados' : 'Todas as Reservas Limpas',
+        zerarAmbientesMapa
+          ? 'Todas as reservas e ambientes do mapa foram zerados com sucesso.'
+          : `${json.reservas_limpas || 0} reserva(s) foram limpas e todas as mesas estão livres.`
+      );
+    } catch (e: any) {
+      showAlert('Erro ao Limpar', e?.message || 'Falha ao limpar reservas.');
+    } finally {
+      setClearingAllReservas(false);
+    }
+  };
+
+  const handleCriarSetorAPartirDaMesa = async () => {
+    const nomeLimpo = novoSetorMesaNome.trim();
+    if (!nomeLimpo) {
+      showAlert('Nome do Setor', 'Digite o nome do novo setor/ambiente.');
+      return;
+    }
+    setSalvandoSetorMesa(true);
+    try {
+      await fetch('/api/setores/salvar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: nomeLimpo,
+          peso_rateio: 1.0,
+          empresa_id: Number(empresaId || 1)
+        })
+      });
+
+      const newEnv: FloorEnvironmentZone = {
+        id: `env_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        nome: nomeLimpo,
+        corHex: '#10B981',
+        x: selectedTable ? Math.max(24, selectedTable.x - 40) : 60,
+        y: selectedTable ? Math.max(24, selectedTable.y - 60) : 120,
+        width: 460,
+        height: 340,
+        rotation: 0,
+        tipoZona: 'ambiente'
+      };
+
+      const nextLayout: FloorPlanLayoutState = {
+        ...layout,
+        environments: [...layout.environments, newEnv],
+        tables: layout.tables.map((t) =>
+          selectedTable && t.id === selectedTable.id
+            ? { ...t, ambienteId: newEnv.id, ambienteNome: newEnv.nome }
+            : t
+        )
+      };
+
+      setLayout(nextLayout);
+      setDirtyLayout(true);
+      setNovoSetorMesaNome('');
+      setCriandoSetorNaMesa(false);
+      await handleSaveLayoutToServer(nextLayout, true);
+      showAlert(
+        'Setor Criado e Vinculado',
+        `O setor "${nomeLimpo}" foi criado no sistema e vinculado à Mesa ${selectedTable?.codigo || ''}.`
+      );
+    } catch (e: any) {
+      showAlert('Erro ao Criar Setor', e?.message || 'Não foi possível criar o setor.');
+    } finally {
+      setSalvandoSetorMesa(false);
+    }
+  };
+
+  const handleSalvarReservaDiretoNoMapa = async () => {
+    if (!selectedTable) return;
+    setSavingAction(true);
+    try {
+      const groupCodes = getGluedGroupCodesForTable(selectedTable);
+      const groupTables = layout.tables.filter((t) => groupCodes.includes(t.codigo));
+      const totalGroupSeats = groupTables.reduce((acc, t) => acc + Number(t.lugares || 0), 0);
+      const paxNum = Math.max(1, Number(quickReservaPax || totalGroupSeats || selectedTable.lugares || 2));
+      const clienteNome =
+        quickReservaNome.trim() ||
+        `Reserva ${selectedTable.grupoNome || groupCodes.join('+')}`;
+
+      const resp = await fetch('/api/reservas/salvar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: null,
+          cliente: clienteNome,
+          whatsapp: quickReservaWhatsapp.trim(),
+          data: modoData === 'dia' ? diaSelecionado : periodoInicio,
+          hora: quickReservaHora || '20:00',
+          mesa: groupCodes[0] || selectedTable.codigo,
+          mesas_vinculadas: groupCodes,
+          grupo_mesa_id: selectedTable.grupoId || null,
+          grupo_mesa_nome: selectedTable.grupoNome || (groupCodes.length > 1 ? `Grupo ${groupCodes.join('+')}` : null),
+          area: selectedTable.ambienteNome,
+          adultos_pagantes: paxNum,
+          adultos_frequentadores: 0,
+          criancas_pagantes: 0,
+          criancas_frequentadores: 0,
+          status: 'Confirmada',
+          observacoes:
+            groupCodes.length > 1
+              ? `Mesas Agrupadas (${selectedTable.grupoNome || groupCodes.join(' + ')}) · ${totalGroupSeats} lugares`
+              : `Mesa ${selectedTable.codigo} (${selectedTable.lugares} lugares)`,
+          unidade_id: Number(unidadeId || 1),
+          nova_mesa_criada: {
+            codigo: selectedTable.codigo,
+            ambienteNome: selectedTable.ambienteNome,
+            lugares: selectedTable.lugares,
+            formato: selectedTable.formato
+          }
+        })
+      });
+      const json = await resp.json();
+      if (!resp.ok || !json?.ok) {
+        throw new Error(json?.erro || 'Não foi possível salvar a reserva.');
+      }
+      setQuickReservaNome('');
+      setQuickReservaWhatsapp('');
+      setQuickReservaOpen(false);
+      await handleSaveLayoutToServer(layout, true);
+      showAlert(
+        'Reserva Salva no Sistema',
+        `Reserva de "${clienteNome}" vinculada a ${groupCodes.join(' + ')} salva com sucesso!`
+      );
+    } catch (e: any) {
+      showAlert('Erro ao Salvar Reserva', e?.message || 'Não foi possível gravar a reserva.');
+    } finally {
+      setSavingAction(false);
+    }
+  };
+
+  const handleDesgrudarMesa = (table: FloorTableSeatSet) => {
+    const oldGroupId = table.grupoId;
+    setDirtyLayout(true);
+    setLayout((prev) => {
+      const remainingInGroup = oldGroupId
+        ? prev.tables.filter((t) => t.grupoId === oldGroupId && t.id !== table.id)
+        : [];
+      const remainingCodes = remainingInGroup.map((t) => t.codigo);
+      return {
+        ...prev,
+        tables: prev.tables.map((t) => {
+          if (t.id === table.id) {
+            return {
+              ...t,
+              grupoId: null,
+              grupoNome: null,
+              mesasAgrupadas: undefined,
+              x: t.x + 22,
+              y: t.y + 14
+            };
+          }
+          if (oldGroupId && t.grupoId === oldGroupId) {
+            if (remainingCodes.length <= 1) {
+              return { ...t, grupoId: null, grupoNome: null, mesasAgrupadas: undefined };
+            }
+            return {
+              ...t,
+              mesasAgrupadas: remainingCodes,
+              grupoNome: `Grupo ${remainingCodes.join('+')}`
+            };
+          }
+          return t;
+        })
+      };
+    });
   };
 
   const handleZoomStep = (delta: number) => {
@@ -1461,6 +1842,39 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     };
   };
 
+  const handlePointerDownEnvHandle = (
+    e: React.PointerEvent,
+    envId: string,
+    handleKind: 'vertex' | 'edge',
+    index: number
+  ) => {
+    if (gestureRef.current.type === 'pinch') return;
+    e.stopPropagation();
+    setSelectedId(envId);
+    const envObj = layout.environments.find((ev) => ev.id === envId);
+    if (!envObj) return;
+    const verts = getEnvVertices(envObj);
+    const edges = getEnvEdgeControls(envObj, verts);
+    const pt = handleKind === 'vertex' ? verts[index] : edges[index];
+    if (!pt) return;
+
+    (viewportRef.current as HTMLElement | null)?.setPointerCapture?.(e.pointerId);
+    gestureRef.current = {
+      ...gestureRef.current,
+      type: handleKind === 'vertex' ? 'env_vertex' : 'env_edge',
+      pointerId: e.pointerId,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      movedDistance: 0,
+      targetKind: 'env',
+      targetId: envId,
+      vertexIndex: handleKind === 'vertex' ? index : undefined,
+      edgeIndex: handleKind === 'edge' ? index : undefined,
+      origPointX: pt.x,
+      origPointY: pt.y
+    };
+  };
+
   const handlePointerDownItem = (
     e: React.PointerEvent,
     kind: 'table' | 'env',
@@ -1537,34 +1951,186 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     const dxWorld = dxScreen / camera.zoom;
     const dyWorld = dyScreen / camera.zoom;
 
+    if ((g.type === 'env_vertex' || g.type === 'env_edge') && g.targetId) {
+      setDirtyLayout(true);
+      const nextPtX = Math.round((g.origPointX || 0) + dxWorld);
+      const nextPtY = Math.round((g.origPointY || 0) + dyWorld);
+      setLayout((prev) => ({
+        ...prev,
+        environments: prev.environments.map((ev) => {
+          if (ev.id !== g.targetId) return ev;
+          const oldVerts = getEnvVertices(ev);
+          const oldEdges = getEnvEdgeControls(ev, oldVerts);
+          if (g.type === 'env_vertex' && typeof g.vertexIndex === 'number') {
+            const idx = g.vertexIndex;
+            const prevIdx = (idx + 3) % 4;
+            const nextVerts = oldVerts.map((v, i) =>
+              i === idx ? { x: nextPtX, y: nextPtY } : v
+            );
+            const nextEdges = oldEdges.map((ed, i) => {
+              if (i !== idx && i !== prevIdx) return ed;
+              const oldA = oldVerts[i];
+              const oldB = oldVerts[(i + 1) % 4];
+              const oldMidX = (oldA.x + oldB.x) / 2;
+              const oldMidY = (oldA.y + oldB.y) / 2;
+              const offsetX = ed.x - oldMidX;
+              const offsetY = ed.y - oldMidY;
+              const newA = nextVerts[i];
+              const newB = nextVerts[(i + 1) % 4];
+              return {
+                x: Math.round((newA.x + newB.x) / 2 + offsetX),
+                y: Math.round((newA.y + newB.y) / 2 + offsetY)
+              };
+            });
+            return {
+              ...ev,
+              vertices: nextVerts,
+              edgeControls: nextEdges
+            };
+          }
+          if (g.type === 'env_edge' && typeof g.edgeIndex === 'number') {
+            const idx = g.edgeIndex;
+            const nextEdges = oldEdges.map((ed, i) =>
+              i === idx ? { x: nextPtX, y: nextPtY } : ed
+            );
+            return {
+              ...ev,
+              vertices: oldVerts,
+              edgeControls: nextEdges
+            };
+          }
+          return ev;
+        })
+      }));
+      return;
+    }
+
     if (g.type === 'item_move' && g.targetId) {
       setDirtyLayout(true);
       const snap = 4;
-      const nextX = Math.max(8, Math.round(((g.itemOrigX || 0) + dxWorld) / snap) * snap);
-      const nextY = Math.max(8, Math.round(((g.itemOrigY || 0) + dyWorld) / snap) * snap);
+      let nextX = Math.max(8, Math.round(((g.itemOrigX || 0) + dxWorld) / snap) * snap);
+      let nextY = Math.max(8, Math.round(((g.itemOrigY || 0) + dyWorld) / snap) * snap);
 
       if (g.targetKind === 'table') {
         setLayout((prev) => {
-          const updatedTables = prev.tables.map((t) => {
-            if (t.id !== g.targetId) return t;
-            const cx = nextX + t.width / 2;
-            const cy = nextY + t.height / 2;
-            const matchingEnv = prev.environments.find(
-              (env) =>
-                env.tipoZona === 'ambiente' &&
-                cx >= env.x &&
-                cx <= env.x + env.width &&
-                cy >= env.y &&
-                cy <= env.y + env.height
+          const movingTable = prev.tables.find((t) => t.id === g.targetId);
+          if (!movingTable) return prev;
+
+          let snappedTarget: FloorTableSeatSet | null = null;
+          const SNAP_DIST = 16;
+
+          if (grudarAoEncostarAtivo) {
+            for (const other of prev.tables) {
+              if (other.id === movingTable.id) continue;
+              const overlapY =
+                nextY < other.y + other.height + SNAP_DIST &&
+                nextY + movingTable.height > other.y - SNAP_DIST;
+              const overlapX =
+                nextX < other.x + other.width + SNAP_DIST &&
+                nextX + movingTable.width > other.x - SNAP_DIST;
+
+              if (overlapY) {
+                const distRightToLeft = Math.abs(nextX + movingTable.width - other.x);
+                const distLeftToRight = Math.abs(nextX - (other.x + other.width));
+                if (distRightToLeft <= SNAP_DIST) {
+                  nextX = other.x - movingTable.width - 2;
+                  if (Math.abs(nextY - other.y) <= SNAP_DIST) nextY = other.y;
+                  snappedTarget = other;
+                  break;
+                }
+                if (distLeftToRight <= SNAP_DIST) {
+                  nextX = other.x + other.width + 2;
+                  if (Math.abs(nextY - other.y) <= SNAP_DIST) nextY = other.y;
+                  snappedTarget = other;
+                  break;
+                }
+              }
+              if (overlapX) {
+                const distBottomToTop = Math.abs(nextY + movingTable.height - other.y);
+                const distTopToBottom = Math.abs(nextY - (other.y + other.height));
+                if (distBottomToTop <= SNAP_DIST) {
+                  nextY = other.y - movingTable.height - 2;
+                  if (Math.abs(nextX - other.x) <= SNAP_DIST) nextX = other.x;
+                  snappedTarget = other;
+                  break;
+                }
+                if (distTopToBottom <= SNAP_DIST) {
+                  nextY = other.y + other.height + 2;
+                  if (Math.abs(nextX - other.x) <= SNAP_DIST) nextX = other.x;
+                  snappedTarget = other;
+                  break;
+                }
+              }
+            }
+          }
+
+          const cx = nextX + movingTable.width / 2;
+          const cy = nextY + movingTable.height / 2;
+          const matchingEnv = prev.environments.find(
+            (env) =>
+              env.tipoZona === 'ambiente' &&
+              cx >= env.x &&
+              cx <= env.x + env.width &&
+              cy >= env.y &&
+              cy <= env.y + env.height
+          );
+
+          let sharedGroupId = movingTable.grupoId || null;
+          let mergedCodes: string[] = [];
+          let sharedGroupName = movingTable.grupoNome || null;
+
+          if (snappedTarget) {
+            sharedGroupId =
+              snappedTarget.grupoId ||
+              movingTable.grupoId ||
+              `grp_${snappedTarget.codigo}_${movingTable.codigo}`;
+            const existingGroupTables = prev.tables.filter(
+              (t) =>
+                t.id === movingTable.id ||
+                t.id === snappedTarget!.id ||
+                (snappedTarget!.grupoId && t.grupoId === snappedTarget!.grupoId) ||
+                (movingTable.grupoId && t.grupoId === movingTable.grupoId)
             );
-            return {
-              ...t,
-              x: nextX,
-              y: nextY,
-              ambienteId: matchingEnv ? matchingEnv.id : t.ambienteId,
-              ambienteNome: matchingEnv ? matchingEnv.nome : t.ambienteNome
-            };
+            mergedCodes = Array.from(new Set(existingGroupTables.map((t) => t.codigo)));
+            sharedGroupName =
+              snappedTarget.grupoNome ||
+              movingTable.grupoNome ||
+              `Grupo ${mergedCodes.join('+')}`;
+          }
+
+          const updatedTables = prev.tables.map((t) => {
+            if (t.id === movingTable.id) {
+              return {
+                ...t,
+                x: nextX,
+                y: nextY,
+                ambienteId: matchingEnv ? matchingEnv.id : t.ambienteId,
+                ambienteNome: matchingEnv ? matchingEnv.nome : t.ambienteNome,
+                ...(snappedTarget
+                  ? {
+                      grupoId: sharedGroupId,
+                      grupoNome: sharedGroupName,
+                      mesasAgrupadas: mergedCodes
+                    }
+                  : {})
+              };
+            }
+            if (
+              snappedTarget &&
+              (t.id === snappedTarget.id ||
+                (snappedTarget.grupoId && t.grupoId === snappedTarget.grupoId) ||
+                (movingTable.grupoId && t.grupoId === movingTable.grupoId))
+            ) {
+              return {
+                ...t,
+                grupoId: sharedGroupId,
+                grupoNome: sharedGroupName,
+                mesasAgrupadas: mergedCodes
+              };
+            }
+            return t;
           });
+
           return {
             ...prev,
             canvasWidth: Math.max(prev.canvasWidth || 1200, nextX + 220),
@@ -1601,9 +2167,28 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
           ...prev,
           canvasWidth: Math.max(prev.canvasWidth || 1200, (g.itemOrigX || 0) + nextW + 80),
           canvasHeight: Math.max(prev.canvasHeight || 720, (g.itemOrigY || 0) + nextH + 80),
-          environments: prev.environments.map((ev) =>
-            ev.id === g.targetId ? { ...ev, width: nextW, height: nextH } : ev
-          )
+          environments: prev.environments.map((ev) => {
+            if (ev.id !== g.targetId) return ev;
+            const scaleX = nextW / Math.max(1, ev.width);
+            const scaleY = nextH / Math.max(1, ev.height);
+            return {
+              ...ev,
+              width: nextW,
+              height: nextH,
+              vertices: Array.isArray(ev.vertices)
+                ? ev.vertices.map((pt) => ({
+                    x: Math.round(pt.x * scaleX),
+                    y: Math.round(pt.y * scaleY)
+                  }))
+                : undefined,
+              edgeControls: Array.isArray(ev.edgeControls)
+                ? ev.edgeControls.map((pt) => ({
+                    x: Math.round(pt.x * scaleX),
+                    y: Math.round(pt.y * scaleY)
+                  }))
+                : undefined
+            };
+          })
         }));
       }
       return;
@@ -1925,13 +2510,16 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
     if (!alvo) return;
     setSavingAction(true);
     try {
+      const groupCodes = getGluedGroupCodesForTable(selectedTable);
       const resp = await fetch('/api/reservas/salvar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...alvo,
-          mesa: selectedTable.codigo,
-          mesas_vinculadas: [selectedTable.codigo],
+          mesa: groupCodes[0] || selectedTable.codigo,
+          mesas_vinculadas: groupCodes,
+          grupo_mesa_id: selectedTable.grupoId || null,
+          grupo_mesa_nome: selectedTable.grupoNome || null,
           area: selectedTable.ambienteNome
         })
       });
@@ -2395,6 +2983,16 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
           <button
             type="button"
+            onClick={() => setModalLimparOpen(true)}
+            className="min-h-[36px] px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-xs font-semibold text-rose-200 inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+            title="Limpar todas as reservas de ambientes e deixar zerado"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-300" />
+            <span>Limpar Reservas</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setModalModelosOpen(true)}
             className="min-h-[36px] px-2.5 py-1.5 rounded-lg bg-slate-950/80 hover:bg-white/10 border border-white/15 text-xs font-semibold text-slate-200 inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             title="Modelos de salão (incluindo 67 mesas)"
@@ -2530,6 +3128,20 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
             <button
               type="button"
+              onClick={() => setGrudarAoEncostarAtivo((v: boolean) => !v)}
+              className={`min-h-[34px] px-2.5 py-1 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                grudarAoEncostarAtivo
+                  ? 'bg-emerald-500/20 border-emerald-400/60 text-emerald-200'
+                  : 'bg-white/5 border-white/15 text-slate-400'
+              }`}
+              title="Quando ativo, encostar uma mesa na outra gruda e agrupa automaticamente as duas mesas"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span>{grudarAoEncostarAtivo ? 'Grudar ao Encostar: ON' : 'Grudar ao Encostar: OFF'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setModalDimensoesOpen(true)}
               className="min-h-[34px] px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-slate-200 text-xs font-mono tabular-nums cursor-pointer whitespace-nowrap"
             >
@@ -2542,7 +3154,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
               className="min-h-[34px] px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-200 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer whitespace-nowrap"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Limpar</span>
+              <span>Limpar Reservas / Planta</span>
             </button>
           </div>
 
@@ -2594,6 +3206,9 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
               (t) => t.ambienteId === env.id || t.ambienteNome === env.nome
             );
             const envSeats = envTables.reduce((acc, t) => acc + t.lugares, 0);
+            const verts = getEnvVertices(env);
+            const edges = getEnvEdgeControls(env);
+            const svgPathD = buildEnvSvgPath(env);
 
             return (
               <div
@@ -2604,18 +3219,74 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                   top: `${env.y}px`,
                   width: `${env.width}px`,
                   height: `${env.height}px`,
-                  transform: `rotate(${env.rotation || 0}deg)`,
-                  borderColor: isSelected ? '#F59E0B' : `${env.corHex}66`,
-                  backgroundColor:
-                    env.tipoZona === 'ambiente' ? `${env.corHex}10` : `${env.corHex}22`
+                  transform: `rotate(${env.rotation || 0}deg)`
                 }}
-                className={`absolute rounded-2xl border-2 transition-shadow ${
+                className={`absolute transition-shadow ${
                   editMode ? 'cursor-move' : 'pointer-events-auto'
-                } ${isSelected && editMode ? 'ring-2 ring-amber-400' : ''}`}
+                }`}
               >
+                <svg
+                  width={env.width}
+                  height={env.height}
+                  viewBox={`0 0 ${env.width} ${env.height}`}
+                  className="absolute inset-0 overflow-visible pointer-events-none"
+                >
+                  <path
+                    d={svgPathD}
+                    fill={env.tipoZona === 'ambiente' ? `${env.corHex}14` : `${env.corHex}26`}
+                    stroke={isSelected ? '#F59E0B' : `${env.corHex}88`}
+                    strokeWidth={isSelected ? 3 : 2}
+                    strokeLinejoin="round"
+                  />
+                  {editMode && isSelected && (
+                    <>
+                      {[0, 1, 2, 3].map((edgeIdx) => {
+                        const vStart = verts[edgeIdx];
+                        const vEnd = verts[(edgeIdx + 1) % 4];
+                        const ctrl = edges[edgeIdx];
+                        const pStartX = vStart.x * env.width;
+                        const pStartY = vStart.y * env.height;
+                        const pEndX = vEnd.x * env.width;
+                        const pEndY = vEnd.y * env.height;
+                        const cX = ctrl.x * env.width;
+                        const cY = ctrl.y * env.height;
+                        return (
+                          <g key={`guide_${edgeIdx}`}>
+                            <line
+                              x1={pStartX}
+                              y1={pStartY}
+                              x2={cX}
+                              y2={cY}
+                              stroke="#38BDF8"
+                              strokeWidth={1}
+                              strokeDasharray="3 3"
+                              opacity={0.7}
+                            />
+                            <line
+                              x1={cX}
+                              y1={cY}
+                              x2={pEndX}
+                              y2={pEndY}
+                              stroke="#38BDF8"
+                              strokeWidth={1}
+                              strokeDasharray="3 3"
+                              opacity={0.7}
+                            />
+                          </g>
+                        );
+                      })}
+                    </>
+                  )}
+                </svg>
+
                 <div
-                  style={{ backgroundColor: `${env.corHex}26`, borderColor: `${env.corHex}55` }}
-                  className="inline-flex items-center gap-2 px-3 py-1 rounded-tl-xl rounded-br-xl border-b border-r text-xs font-bold text-slate-100"
+                  style={{
+                    backgroundColor: `${env.corHex}2E`,
+                    borderColor: `${env.corHex}66`,
+                    left: `${Math.max(8, verts[0].x * env.width + 6)}px`,
+                    top: `${Math.max(6, verts[0].y * env.height + 6)}px`
+                  }}
+                  className="absolute inline-flex items-center gap-2 px-3 py-1 rounded-xl border text-xs font-bold text-slate-100 shadow-sm pointer-events-none"
                 >
                   <span>{env.nome}</span>
                   {env.tipoZona === 'ambiente' && (
@@ -2627,10 +3298,42 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
                 {editMode && isSelected && (
                   <>
+                    {verts.map((v, idx) => (
+                      <button
+                        key={`vertex_${idx}`}
+                        type="button"
+                        onPointerDown={(e) => handlePointerDownEnvHandle(e, env.id, 'vertex', idx)}
+                        style={{
+                          left: `${v.x * env.width}px`,
+                          top: `${v.y * env.height}px`
+                        }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-amber-400 hover:bg-amber-300 border-2 border-slate-950 text-slate-950 flex items-center justify-center shadow-lg cursor-crosshair z-30"
+                        title={`Mover Canto ${idx + 1} (diagonal independente)`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                      </button>
+                    ))}
+
+                    {edges.map((ed, idx) => (
+                      <button
+                        key={`edge_${idx}`}
+                        type="button"
+                        onPointerDown={(e) => handlePointerDownEnvHandle(e, env.id, 'edge', idx)}
+                        style={{
+                          left: `${ed.x * env.width}px`,
+                          top: `${ed.y * env.height}px`
+                        }}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-sky-400 hover:bg-sky-300 border-2 border-slate-950 text-slate-950 flex items-center justify-center shadow-lg cursor-pointer z-30"
+                        title={`Curvar ou Arredondar Meio da Parede ${idx + 1} (aresta independente)`}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                      </button>
+                    ))}
+
                     <button
                       type="button"
                       onPointerDown={(e) => handlePointerDownItem(e, 'env', env.id, 'rotate')}
-                      className="absolute -top-3.5 right-3 w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow cursor-grab"
+                      className="absolute -top-4 right-4 w-7 h-7 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow cursor-grab z-30"
                       title="Arraste para girar ambiente"
                     >
                       <RotateCw className="w-3.5 h-3.5" />
@@ -2638,8 +3341,8 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                     <button
                       type="button"
                       onPointerDown={(e) => handlePointerDownItem(e, 'env', env.id, 'resize')}
-                      className="absolute -bottom-3 -right-3 w-7 h-7 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center shadow cursor-nwse-resize"
-                      title="Arraste para redimensionar ambiente"
+                      className="absolute -bottom-4 -right-4 w-7 h-7 rounded-lg bg-emerald-500 text-slate-950 flex items-center justify-center shadow cursor-nwse-resize z-30"
+                      title="Arraste para escalar tamanho total do ambiente"
                     >
                       <Move className="w-3.5 h-3.5" />
                     </button>
@@ -2703,6 +3406,8 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
             const dimByFilter =
               areaFiltro !== 'Todas' &&
               table.ambienteNome !== areaFiltro;
+            const gluedCodes = getGluedGroupCodesForTable(table);
+            const isGlued = gluedCodes.length > 1;
 
             let surfaceClasses =
               'bg-emerald-950/90 border-emerald-500/75 text-emerald-50 hover:border-emerald-300';
@@ -2734,11 +3439,15 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                   if (op.primaryReserva) {
                     onOpenEditReserva(op.primaryReserva);
                   } else {
+                    const groupTotalSeats = gluedCodes.reduce((acc, code) => {
+                      const found = layout.tables.find((x) => normalizeTableCode(x.codigo) === normalizeTableCode(code));
+                      return acc + (found?.lugares || 0);
+                    }, 0) || table.lugares;
                     onOpenNewReservaAtTable({
-                      mesa: table.codigo,
-                      mesas_vinculadas: [table.codigo],
+                      mesa: gluedCodes[0] || table.codigo,
+                      mesas_vinculadas: gluedCodes,
                       area: table.ambienteNome,
-                      lugares: table.lugares,
+                      lugares: groupTotalSeats,
                       data: modoData === 'dia' ? diaSelecionado : periodoInicio
                     });
                   }
@@ -2753,6 +3462,8 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                 className={`absolute z-20 border-2 flex flex-col items-center justify-center px-1.5 py-1 text-center transition-opacity ${
                   table.formato === 'redonda' ? 'rounded-full' : 'rounded-xl'
                 } ${surfaceClasses} ${
+                  isGlued ? 'ring-2 ring-amber-400/80' : ''
+                } ${
                   isSelected ? 'ring-3 ring-white shadow-xl' : ''
                 } ${isHighlighted ? 'ring-4 ring-amber-300 scale-105' : ''} ${
                   dimByFilter ? 'opacity-30' : 'opacity-100'
@@ -2762,10 +3473,16 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
                 <div className="font-mono font-bold tabular-nums text-xs leading-none tracking-tight flex items-center gap-1">
                   <span>{table.codigo}</span>
-                  {op.joinedCount > 1 && (
+                  {(op.joinedCount > 1 || isGlued) && (
                     <Link2 className="w-3 h-3 text-amber-300 shrink-0" />
                   )}
                 </div>
+
+                {isGlued && !isCompactZoom && (
+                  <div className="text-[9px] font-mono text-amber-300 truncate max-w-full leading-tight">
+                    {table.grupoNome || gluedCodes.join('+')}
+                  </div>
+                )}
 
                 {isCompactZoom ? (
                   <div className="text-[10px] font-mono tabular-nums leading-tight mt-0.5 opacity-90">
@@ -3028,9 +3745,58 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
               {selectedTable && (() => {
                 const op = getTableOperationalState(selectedTable);
                 const linkedReservas = reservasByTableId[selectedTable.id] || [];
+                const gluedCodes = getGluedGroupCodesForTable(selectedTable);
+                const isGluedGroup = gluedCodes.length > 1;
+                const gluedTotalSeats = gluedCodes.reduce((acc, code) => {
+                  const found = layout.tables.find((x) => normalizeTableCode(x.codigo) === normalizeTableCode(code));
+                  return acc + (found?.lugares || 0);
+                }, 0) || selectedTable.lugares;
 
                 return (
                   <>
+                    {isGluedGroup && (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-400/45 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-300">
+                            <Link2 className="w-3.5 h-3.5" />
+                            <span>Mesas Grudadas / Agrupadas ({gluedCodes.length})</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDesgrudarMesa(selectedTable)}
+                            className="px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-[11px] font-semibold cursor-pointer"
+                          >
+                            Desgrudar Mesa
+                          </button>
+                        </div>
+                        <div className="text-[11px] font-mono text-slate-300">
+                          Mesas do Grupo: <strong className="text-white">{gluedCodes.join(' + ')}</strong> ({gluedTotalSeats} lugares somados)
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 mb-1">
+                            Nome do Agrupamento de Mesas
+                          </label>
+                          <input
+                            type="text"
+                            value={selectedTable.grupoNome || `Grupo ${gluedCodes.join('+')}`}
+                            onChange={(e) => {
+                              const novoNomeGrupo = e.target.value;
+                              setDirtyLayout(true);
+                              setLayout((prev) => ({
+                                ...prev,
+                                tables: prev.tables.map((t) =>
+                                  gluedCodes.some((c) => normalizeTableCode(c) === normalizeTableCode(t.codigo))
+                                    ? { ...t, grupoNome: novoNomeGrupo }
+                                    : t
+                                )
+                              }));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-amber-500/35 text-xs text-white"
+                          />
+                        </div>
+                      </div>
+                    )}
+
                     {op.comanda && (
                       <div className="p-3.5 rounded-xl bg-sky-500/10 border border-sky-400/40 space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
@@ -3079,24 +3845,94 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                         <span className="text-xs font-bold text-slate-200">
                           Reservas desta Mesa ({linkedReservas.length})
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsFullscreen(false);
-                            onOpenNewReservaAtTable({
-                              mesa: selectedTable.codigo,
-                              mesas_vinculadas: [selectedTable.codigo],
-                              area: selectedTable.ambienteNome,
-                              lugares: selectedTable.lugares,
-                              data: modoData === 'dia' ? diaSelecionado : periodoInicio
-                            });
-                          }}
-                          className="min-h-[38px] px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>Nova Reserva</span>
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setQuickReservaPax(gluedTotalSeats);
+                              setQuickReservaOpen((v: boolean) => !v);
+                            }}
+                            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Reserva Rápida</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsFullscreen(false);
+                              onOpenNewReservaAtTable({
+                                mesa: gluedCodes[0] || selectedTable.codigo,
+                                mesas_vinculadas: gluedCodes,
+                                area: selectedTable.ambienteNome,
+                                lugares: gluedTotalSeats,
+                                data: modoData === 'dia' ? diaSelecionado : periodoInicio
+                              });
+                            }}
+                            className="min-h-[34px] px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Ficha Completa</span>
+                          </button>
+                        </div>
                       </div>
+
+                      {quickReservaOpen && (
+                        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/40 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-emerald-300">
+                              Salvar Reserva Direto no Mapa ({gluedCodes.join(' + ')})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setQuickReservaOpen(false)}
+                              className="text-xs text-slate-400 hover:text-white cursor-pointer"
+                            >
+                              Fechar
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-2 text-xs">
+                            <input
+                              type="text"
+                              value={quickReservaNome}
+                              onChange={(e) => setQuickReservaNome(e.target.value)}
+                              placeholder="Nome do Cliente *"
+                              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white"
+                            />
+                            <div className="grid grid-cols-3 gap-2">
+                              <input
+                                type="text"
+                                value={quickReservaWhatsapp}
+                                onChange={(e) => setQuickReservaWhatsapp(e.target.value)}
+                                placeholder="WhatsApp"
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                              />
+                              <input
+                                type="time"
+                                value={quickReservaHora}
+                                onChange={(e) => setQuickReservaHora(e.target.value)}
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                              />
+                              <input
+                                type="number"
+                                min={1}
+                                max={200}
+                                value={quickReservaPax}
+                                onChange={(e) => setQuickReservaPax(Math.max(1, Number(e.target.value || 2)))}
+                                placeholder="Pessoas"
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={savingAction}
+                              onClick={handleSalvarReservaDiretoNoMapa}
+                              className="w-full min-h-[40px] rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold cursor-pointer"
+                            >
+                              {savingAction ? 'Salvando Reserva...' : `Salvar Reserva em ${gluedCodes.join(' + ')}`}
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {linkedReservas.length === 0 ? (
                         <div className="p-3 rounded-xl bg-slate-950/70 border border-white/10 space-y-3">
@@ -3130,7 +3966,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => setWalkInPessoas((p) => Math.min(30, p + 1))}
+                                    onClick={() => setWalkInPessoas((p) => Math.min(200, p + 1))}
                                     className="p-1 text-slate-300 hover:text-white cursor-pointer"
                                   >
                                     <Plus className="w-3.5 h-3.5" />
@@ -3325,7 +4161,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
 
                     <div className="pt-2 border-t border-white/10 space-y-1.5">
                       <label className="block text-xs text-slate-300 font-semibold">
-                        Alocar Reserva Existente nesta Mesa
+                        Alocar Reserva Existente nesta Mesa {isGluedGroup ? `ou Grupo (${gluedCodes.join('+')})` : ''}
                       </label>
                       <div className="flex gap-2">
                         <select
@@ -3351,131 +4187,201 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                       </div>
                     </div>
 
-                    {editMode && (
-                      <div className="pt-3 border-t border-white/10 space-y-3">
-                        <div className="text-xs font-bold text-amber-300">
-                          Geometria & Capacidade da Mesa
-                        </div>
+                    <div className="pt-3 border-t border-white/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-amber-300">
+                          Geometria, Setor & Capacidade da Mesa
+                        </span>
+                        {!editMode && (
+                          <button
+                            type="button"
+                            onClick={() => setEditMode(true)}
+                            className="text-[11px] font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                          >
+                            Destravar Edição
+                          </button>
+                        )}
+                      </div>
 
-                        <div className="grid grid-cols-2 gap-2.5 text-xs">
-                          <div>
-                            <label className="block text-[11px] text-slate-400 mb-1">Código</label>
+                      <div className="grid grid-cols-2 gap-2.5 text-xs">
+                        <div>
+                          <label className="block text-[11px] text-slate-400 mb-1">Código</label>
+                          <input
+                            type="text"
+                            value={selectedTable.codigo}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setDirtyLayout(true);
+                              setLayout((prev) => ({
+                                ...prev,
+                                tables: prev.tables.map((t) =>
+                                  t.id === selectedTable.id ? { ...t, codigo: val } : t
+                                )
+                              }));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[11px] text-slate-400">Setor</label>
+                            <button
+                              type="button"
+                              onClick={() => setCriandoSetorNaMesa((v: boolean) => !v)}
+                              className="text-[10px] font-bold text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                            >
+                              {criandoSetorNaMesa ? 'Fechar' : '+ Criar Setor'}
+                            </button>
+                          </div>
+                          <select
+                            value={selectedTable.ambienteId}
+                            onChange={(e) => {
+                              const envId = e.target.value;
+                              if (envId === '__NEW_SECTOR__') {
+                                setCriandoSetorNaMesa(true);
+                                return;
+                              }
+                              const envObj = ambienteZones.find((z) => z.id === envId);
+                              setDirtyLayout(true);
+                              setLayout((prev) => ({
+                                ...prev,
+                                tables: prev.tables.map((t) =>
+                                  t.id === selectedTable.id
+                                    ? {
+                                        ...t,
+                                        ambienteId: envId,
+                                        ambienteNome: envObj?.nome || t.ambienteNome
+                                      }
+                                    : t
+                                )
+                              }));
+                            }}
+                            className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white"
+                          >
+                            {ambienteZones.map((env) => (
+                              <option key={env.id} value={env.id}>
+                                {env.nome}
+                              </option>
+                            ))}
+                            <option value="__NEW_SECTOR__">+ Criar novo setor a partir desta mesa...</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {criandoSetorNaMesa && (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/40 space-y-2">
+                          <label className="block text-[11px] font-bold text-emerald-300">
+                            Criar Novo Setor / Ambiente a partir desta Mesa
+                          </label>
+                          <div className="flex gap-2">
                             <input
                               type="text"
-                              value={selectedTable.codigo}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setDirtyLayout(true);
-                                setLayout((prev) => ({
-                                  ...prev,
-                                  tables: prev.tables.map((t) =>
-                                    t.id === selectedTable.id ? { ...t, codigo: val } : t
-                                  )
-                                }));
-                              }}
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                              value={novoSetorMesaNome}
+                              onChange={(e) => setNovoSetorMesaNome(e.target.value)}
+                              placeholder="Ex: Deck Panorâmico, Mezanino..."
+                              className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-xs text-white"
                             />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] text-slate-400 mb-1">Setor</label>
-                            <select
-                              value={selectedTable.ambienteId}
-                              onChange={(e) => {
-                                const envId = e.target.value;
-                                const envObj = ambienteZones.find((z) => z.id === envId);
-                                setDirtyLayout(true);
-                                setLayout((prev) => ({
-                                  ...prev,
-                                  tables: prev.tables.map((t) =>
-                                    t.id === selectedTable.id
-                                      ? {
-                                          ...t,
-                                          ambienteId: envId,
-                                          ambienteNome: envObj?.nome || t.ambienteNome
-                                        }
-                                      : t
-                                  )
-                                }));
-                              }}
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-white/15 text-white"
-                            >
-                              {ambienteZones.map((env) => (
-                                <option key={env.id} value={env.id}>
-                                  {env.nome}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] text-slate-400 mb-1">
-                            Quantidade de Lugares
-                          </label>
-                          <div className="grid grid-cols-7 gap-1">
-                            {SEAT_OPTIONS.map((qtd) => (
-                              <button
-                                key={qtd}
-                                type="button"
-                                onClick={() => {
-                                  const dims = getDefaultDimensionsForSeatCount(qtd, selectedTable.formato);
-                                  setDirtyLayout(true);
-                                  setLayout((prev) => ({
-                                    ...prev,
-                                    tables: prev.tables.map((t) =>
-                                      t.id === selectedTable.id
-                                        ? { ...t, lugares: qtd, width: dims.width, height: dims.height }
-                                        : t
-                                    )
-                                  }));
-                                }}
-                                className={`py-1.5 rounded-lg text-xs font-mono tabular-nums font-bold border cursor-pointer ${
-                                  selectedTable.lugares === qtd
-                                    ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                                    : 'bg-slate-950 text-slate-300 border-white/10'
-                                }`}
-                              >
-                                {qtd}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {(
-                            [
-                              { id: 'quadrada', label: 'Quadrada' },
-                              { id: 'redonda', label: 'Redonda' },
-                              { id: 'retangular', label: 'Retangular' }
-                            ] as const
-                          ).map((fmt) => (
                             <button
-                              key={fmt.id}
+                              type="button"
+                              disabled={salvandoSetorMesa}
+                              onClick={handleCriarSetorAPartirDaMesa}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold cursor-pointer shrink-0"
+                            >
+                              {salvandoSetorMesa ? 'Criando...' : 'Criar Setor'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-[11px] text-slate-400">
+                            Quantidade de Lugares (Digite ou escolha — ex: 40)
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={200}
+                            value={selectedTable.lugares}
+                            onChange={(e) => {
+                              const qtd = Math.min(200, Math.max(1, Number(e.target.value || 1)));
+                              const dims = getDefaultDimensionsForSeatCount(qtd, selectedTable.formato);
+                              setDirtyLayout(true);
+                              setLayout((prev) => ({
+                                ...prev,
+                                tables: prev.tables.map((t) =>
+                                  t.id === selectedTable.id
+                                    ? { ...t, lugares: qtd, width: dims.width, height: dims.height }
+                                    : t
+                                )
+                              }));
+                            }}
+                            className="w-20 px-2 py-1 rounded-lg bg-slate-950 border border-emerald-500/50 text-xs font-mono font-bold text-emerald-300 text-center"
+                          />
+                        </div>
+                        <div className="grid grid-cols-8 gap-1">
+                          {SEAT_OPTIONS.map((qtd) => (
+                            <button
+                              key={qtd}
                               type="button"
                               onClick={() => {
-                                const dims = getDefaultDimensionsForSeatCount(selectedTable.lugares, fmt.id);
+                                const dims = getDefaultDimensionsForSeatCount(qtd, selectedTable.formato);
                                 setDirtyLayout(true);
                                 setLayout((prev) => ({
                                   ...prev,
                                   tables: prev.tables.map((t) =>
                                     t.id === selectedTable.id
-                                      ? { ...t, formato: fmt.id, width: dims.width, height: dims.height }
+                                      ? { ...t, lugares: qtd, width: dims.width, height: dims.height }
                                       : t
                                   )
                                 }));
                               }}
-                              className={`py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
-                                selectedTable.formato === fmt.id
-                                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                              className={`py-1.5 rounded-lg text-xs font-mono tabular-nums font-bold border cursor-pointer ${
+                                selectedTable.lugares === qtd
+                                  ? 'bg-emerald-500 text-slate-950 border-emerald-400'
                                   : 'bg-slate-950 text-slate-300 border-white/10'
                               }`}
                             >
-                              {fmt.label}
+                              {qtd}
                             </button>
                           ))}
                         </div>
                       </div>
-                    )}
+
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(
+                          [
+                            { id: 'quadrada', label: 'Quadrada' },
+                            { id: 'redonda', label: 'Redonda' },
+                            { id: 'retangular', label: 'Retangular' }
+                          ] as const
+                        ).map((fmt) => (
+                          <button
+                            key={fmt.id}
+                            type="button"
+                            onClick={() => {
+                              const dims = getDefaultDimensionsForSeatCount(selectedTable.lugares, fmt.id);
+                              setDirtyLayout(true);
+                              setLayout((prev) => ({
+                                ...prev,
+                                tables: prev.tables.map((t) =>
+                                  t.id === selectedTable.id
+                                    ? { ...t, formato: fmt.id, width: dims.width, height: dims.height }
+                                    : t
+                                )
+                              }));
+                            }}
+                            className={`py-1.5 rounded-lg text-xs font-semibold border cursor-pointer ${
+                              selectedTable.formato === fmt.id
+                                ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                                : 'bg-slate-950 text-slate-300 border-white/10'
+                            }`}
+                          >
+                            {fmt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </>
                 );
               })()}
@@ -3504,6 +4410,131 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
                       }}
                       className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-white/15 text-white"
                     />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950 border border-white/10 space-y-2">
+                    <div className="text-[11px] font-bold text-amber-300">
+                      Formato das Paredes (Diagonais, Chanfradas & Curvas/Arredondadas)
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Arraste os <strong className="text-amber-300">4 quadrados amarelos nos cantos</strong> para criar paredes diagonais independentes, ou arraste os <strong className="text-sky-300">4 círculos azuis no meio das paredes</strong> para curvar e arredondar cada lado.
+                    </p>
+                    <div className="grid grid-cols-2 gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDirtyLayout(true);
+                          setLayout((prev) => ({
+                            ...prev,
+                            environments: prev.environments.map((ev) =>
+                              ev.id === selectedEnvironment.id
+                                ? {
+                                    ...ev,
+                                    vertices: [
+                                      { x: 0.12, y: 0 },
+                                      { x: 1, y: 0.08 },
+                                      { x: 0.9, y: 1 },
+                                      { x: 0, y: 0.92 }
+                                    ],
+                                    edgeControls: [
+                                      { x: 0.56, y: 0.04 },
+                                      { x: 0.95, y: 0.54 },
+                                      { x: 0.45, y: 0.96 },
+                                      { x: 0.06, y: 0.46 }
+                                    ]
+                                  }
+                                : ev
+                            )
+                          }));
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Diagonal / Trapézio
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDirtyLayout(true);
+                          setLayout((prev) => ({
+                            ...prev,
+                            environments: prev.environments.map((ev) =>
+                              ev.id === selectedEnvironment.id
+                                ? {
+                                    ...ev,
+                                    vertices: [
+                                      { x: 0, y: 0 },
+                                      { x: 0.82, y: 0 },
+                                      { x: 1, y: 0.25 },
+                                      { x: 0, y: 1 }
+                                    ],
+                                    edgeControls: [
+                                      { x: 0.41, y: 0 },
+                                      { x: 0.96, y: 0.12 },
+                                      { x: 0.5, y: 0.62 },
+                                      { x: 0, y: 0.5 }
+                                    ]
+                                  }
+                                : ev
+                            )
+                          }));
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Esquina Diagonal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDirtyLayout(true);
+                          setLayout((prev) => ({
+                            ...prev,
+                            environments: prev.environments.map((ev) =>
+                              ev.id === selectedEnvironment.id
+                                ? {
+                                    ...ev,
+                                    vertices: [
+                                      { x: 0.05, y: 0.05 },
+                                      { x: 0.95, y: 0.05 },
+                                      { x: 0.95, y: 0.95 },
+                                      { x: 0.05, y: 0.95 }
+                                    ],
+                                    edgeControls: [
+                                      { x: 0.5, y: -0.08 },
+                                      { x: 1.08, y: 0.5 },
+                                      { x: 0.5, y: 1.08 },
+                                      { x: -0.08, y: 0.5 }
+                                    ]
+                                  }
+                                : ev
+                            )
+                          }));
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Curvo / Arredondado
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDirtyLayout(true);
+                          setLayout((prev) => ({
+                            ...prev,
+                            environments: prev.environments.map((ev) =>
+                              ev.id === selectedEnvironment.id
+                                ? {
+                                    ...ev,
+                                    vertices: undefined,
+                                    edgeControls: undefined
+                                  }
+                                : ev
+                            )
+                          }));
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/15 text-slate-200 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Resetar Retângulo
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
@@ -3694,18 +4725,35 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] text-slate-400 mb-1">Lugares por Mesa</label>
-                <select
-                  value={batchSeats}
-                  onChange={(e) => setBatchSeats(Number(e.target.value) as SeatCapacityOption)}
-                  className="w-full px-2.5 py-2 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
-                >
-                  {SEAT_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s} lugares ({batchCount * s} lugares no lote)
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-[11px] text-slate-400 mb-1">
+                  Lugares por Mesa (Digite ex: 40)
+                </label>
+                <div className="flex gap-1.5">
+                  <input
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={batchSeats}
+                    onChange={(e) =>
+                      setBatchSeats(Math.min(200, Math.max(1, Number(e.target.value || 4))))
+                    }
+                    className="w-24 px-2.5 py-2 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                  />
+                  <select
+                    value={SEAT_OPTIONS.includes(batchSeats) ? batchSeats : ''}
+                    onChange={(e) => {
+                      if (e.target.value) setBatchSeats(Number(e.target.value));
+                    }}
+                    className="flex-1 px-2 py-2 rounded-lg bg-slate-950 border border-white/15 font-mono text-white"
+                  >
+                    <option value="">Personalizado ({batchSeats} lug.)</option>
+                    {SEAT_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s} lug. ({batchCount * s} total)
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -4009,7 +5057,35 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
       {modalLimparOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-2xl bg-[#0B1217] border border-rose-500/45 p-5 shadow-2xl space-y-3">
-            <h3 className="text-base font-bold text-white">Redefinir ou Limpar Planta</h3>
+            <h3 className="text-base font-bold text-white">Limpar Reservas de Ambientes ou Redefinir Planta</h3>
+
+            <button
+              type="button"
+              disabled={savingAction}
+              onClick={() => handleLimparTodasReservasEZerarAmbientes(false)}
+              className="w-full p-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/50 text-left cursor-pointer"
+            >
+              <div className="text-xs font-bold text-rose-200">
+                Limpar Todas as Reservas dos Ambientes (Deixar Zerado)
+              </div>
+              <div className="text-[11px] text-slate-300 mt-0.5">
+                Zera todas as reservas ativas de todos os ambientes e libera 100% das mesas do salão imediatamente.
+              </div>
+            </button>
+
+            <button
+              type="button"
+              disabled={savingAction}
+              onClick={() => handleLimparTodasReservasEZerarAmbientes(true)}
+              className="w-full p-3 rounded-xl bg-slate-950 hover:bg-rose-500/15 border border-rose-500/35 text-left cursor-pointer"
+            >
+              <div className="text-xs font-bold text-rose-300">
+                Zerar Tudo (Limpar Todas as Reservas + Remover Ambientes e Mesas)
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                Limpa todas as reservas e deixa o mapa do salão completamente em branco para desenhar do zero.
+              </div>
+            </button>
 
             <button
               type="button"
@@ -4021,7 +5097,7 @@ export const UrutauTableFloorPlan: React.FC<UrutauTableFloorPlanProps> = ({
               }}
               className="w-full p-3 rounded-xl bg-slate-950 hover:bg-rose-500/10 border border-white/15 text-left cursor-pointer"
             >
-              <div className="text-xs font-bold text-rose-300">Remover Apenas as Mesas</div>
+              <div className="text-xs font-bold text-amber-300">Remover Apenas as Mesas da Planta</div>
               <div className="text-[11px] text-slate-400 mt-0.5">
                 Mantém os ambientes desenhados para gerar uma nova numeração em lote.
               </div>
