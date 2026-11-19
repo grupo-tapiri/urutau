@@ -1,6 +1,321 @@
 {
   "audit_logs": [
     {
+      "id": 30,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Italiamo",
+      "cargo": "Perfil da Empresa / Proprietário",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão autenticada com Argon2id",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:12:12.821Z"
+    },
+    {
+      "id": 29,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Italiamo",
+      "cargo": "Perfil da Empresa / Proprietário",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão autenticada com Argon2id",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:12:12.692Z"
+    },
+    {
+      "id": 28,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Me Gusta Parque da Pizza",
+      "cargo": "Perfil da Empresa / Proprietário",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão autenticada com Argon2id",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:12:12.572Z"
+    },
+    {
+      "id": 27,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "Diretor Operacional",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão de perfil autenticada",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:12:12.453Z"
+    },
+    {
+      "id": 26,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "Diretor Operacional",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão de perfil autenticada",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:12:11.981Z"
+    },
+    {
+      "id": 25,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "Diretor Operacional",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão de perfil autenticada",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:12:11.549Z"
+    },
+    {
+      "id": 24,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "richard",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:22.707Z"
+    },
+    {
+      "id": 23,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Italiamo",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:21.958Z"
+    },
+    {
+      "id": 22,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Italiamo",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:20.994Z"
+    },
+    {
+      "id": 21,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Me Gusta Parque da Pizza",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:20.014Z"
+    },
+    {
+      "id": 20,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:18.987Z"
+    },
+    {
+      "id": 19,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:18.166Z"
+    },
+    {
+      "id": 18,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "COLABORADOR",
+      "ambiente": "development",
+      "acao": "FALHA_LOGIN",
+      "detalhes": "Tentativa de autenticação com credencial inválida",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T01:11:17.334Z"
+    },
+    {
+      "id": 17,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "richard",
+      "cargo": "Empresário / Proprietário",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão autenticada com Argon2id",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T00:50:32.748Z"
+    },
+    {
+      "id": 16,
+      "id_empresa": 1,
+      "usuario_id": 1,
+      "usuario": "Admin Master",
+      "cargo": "Diretor Operacional",
+      "ambiente": "development",
+      "acao": "LOGIN_SUCESSO",
+      "detalhes": "Sessão de perfil autenticada",
+      "ip_origem": "127.0.0.1",
+      "tipo_telemetria": "EXECUCAO_SISTEMA",
+      "aba": "rateio",
+      "latitude": -1.4558,
+      "longitude": -48.5039,
+      "precisao_metros": 8,
+      "distancia_empresa_m": 12,
+      "dentro_empresa": true,
+      "em_turno": true,
+      "dispositivo": "Web/PWA",
+      "criado_em": "2026-11-19T00:50:32.630Z"
+    },
+    {
       "id": 15,
       "id_empresa": 1,
       "usuario_id": 1,
@@ -376,7 +691,67 @@
       "diaria_teto": 220,
       "bloqueios_freelancers": [],
       "arquivado_legal": false,
-      "criado_em": "2026-11-15T18:50:52.508Z"
+      "criado_em": "2026-11-15T18:50:52.508Z",
+      "lgpd_custodia_config": {
+        "controlador_email": "italiamocapicche@gmail.com"
+      }
+    },
+    {
+      "id": 2,
+      "nome": "Me Gusta Parque da Pizza",
+      "subdominio": "megusta",
+      "link_acesso": "https://megusta.nyctibi.us",
+      "brand_config": {
+        "companyName": "Me Gusta Parque da Pizza",
+        "logoDataUrl": "",
+        "companyColorHex": "#10B981",
+        "companySecondaryHex": "#F59E0B",
+        "companyTertiaryHex": "#06B6D4",
+        "urutauBaseHex": "#10B981",
+        "blendRatio": 0.7,
+        "effectivePrimaryHex": "#10B981",
+        "effectivePrimaryRgb": {
+          "r": 16,
+          "g": 185,
+          "b": 129
+        },
+        "effectiveSecondaryHex": "#F59E0B",
+        "effectiveTertiaryHex": "#06B6D4",
+        "modeloTracoPreferido": "padrao_xilogravura_olhar_marajoara"
+      },
+      "cnpj": "",
+      "waha_session_id": "waha_megusta",
+      "waha_numero": "5517981672663",
+      "bot_interno_numero": "5517981672663",
+      "bot_interno_status": "Desconectado",
+      "bot_interno_autenticado_real": false,
+      "wpp_comercial_numero": "",
+      "waha_status": "Desconectado",
+      "wpp_web_autenticado_real": false,
+      "whatsapp_pessoal_titular": "5517991483267",
+      "usar_wpp_pessoal_como_bot": false,
+      "nivel_acesso_licenca": "uso_completo",
+      "observacao_licenca": "",
+      "lgpd_custodia_config": {
+        "empresa_id": 2,
+        "empresa_nome": "Me Gusta Parque da Pizza",
+        "controlador_nome": "richard",
+        "controlador_email": "pessoal@richarddumont.com.br",
+        "conta_google_vinculada": "pessoal@richarddumont.com.br",
+        "status_conexao": "Ativa"
+      },
+      "alertas_equipe_config": {
+        "escalas": true,
+        "estoque": true,
+        "fechamento_caixa": true,
+        "ponto_gps": true
+      },
+      "cidade": "São José do Rio Preto - SP",
+      "ramo": "Pizzaria & Gastronomia",
+      "diaria_teto": 220,
+      "bloqueios_freelancers": [],
+      "arquivado_legal": false,
+      "criado_em": "2026-11-19T01:09:52.116Z"
     }
   ],
   "freelancers": [],
@@ -675,7 +1050,7 @@
   "cadastros_pessoas": [
     {
       "id": 2,
-      "nome": "richard",
+      "nome": "Me Gusta Parque da Pizza",
       "tipo_pessoa": "PF",
       "natureza": "PF",
       "documento": "",
@@ -686,13 +1061,13 @@
       ],
       "empresa_id": 1,
       "cidade": "Belém - PA",
-      "cargo_ou_ramo": "Empresário / Proprietário",
+      "cargo_ou_ramo": "Perfil da Empresa / Proprietário",
       "comunidade_wpp_autorizada": true,
       "interacao_sistema_bloqueada": false,
       "observacoes": "Cadastrado automaticamente via módulo GESTOR_CONTA",
       "arquivado_legal": false,
       "criado_em": "2026-11-15T18:50:52.509Z",
-      "usuario_sistema_id": 2
+      "usuario_sistema_id": 4
     },
     {
       "id": 1,
@@ -995,7 +1370,8 @@
       "cargo": "Empresário / Proprietário",
       "foto": "",
       "empresas_ids": [
-        1
+        1,
+        2
       ],
       "escala_fixa_json": "[1,2,3,4,5,6,0]",
       "senha_argon2id": "$argon2id$v=19$m=65536,t=3,p=4$331546614d972bae88e8d1262e43cd50$dfae1c9d152d909530a32177ed1f0dc2a7daeabc707a2ac4251fc73fd1799b956b36a68c3d2e51b8ae41633eb557b7be784119ca4cdaf09ef30b87b02427c43c",
@@ -1105,6 +1481,248 @@
       },
       "arquivado_legal": false,
       "criado_em": "2026-11-15T18:50:52.508Z"
+    },
+    {
+      "id": 3,
+      "nome": "Italiamo",
+      "telefone": "5517991483267",
+      "whatsapp_bot_vinculado": "5517981672663",
+      "email": "italiamocapicche@gmail.com",
+      "tipo": "Gestor da Empresa",
+      "cargo": "Perfil da Empresa / Proprietário",
+      "foto": "",
+      "empresas_ids": [
+        1
+      ],
+      "escala_fixa_json": "[1,2,3,4,5,6,0]",
+      "senha_argon2id": "$argon2id$v=19$m=65536,t=3,p=4$331546614d972bae88e8d1262e43cd50$dfae1c9d152d909530a32177ed1f0dc2a7daeabc707a2ac4251fc73fd1799b956b36a68c3d2e51b8ae41633eb557b7be784119ca4cdaf09ef30b87b02427c43c",
+      "permissoes_json": {
+        "total": false,
+        "gerenciar_subordinados": true,
+        "mudar_aparencia": true,
+        "escopo_colaboradores": "subordinados",
+        "modulos": {
+          "rateio": {
+            "ver": true,
+            "editar": true
+          },
+          "escalas": {
+            "ver": true,
+            "editar": true
+          },
+          "agenda": {
+            "ver": true,
+            "editar": true
+          },
+          "pdv": {
+            "ver": true,
+            "editar": true
+          },
+          "reservas": {
+            "ver": true,
+            "editar": true
+          },
+          "portais": {
+            "ver": true,
+            "editar": true
+          },
+          "chat": {
+            "ver": true,
+            "editar": true
+          },
+          "caixa": {
+            "ver": true,
+            "editar": true
+          },
+          "estoque": {
+            "ver": true,
+            "editar": true
+          },
+          "compras": {
+            "ver": true,
+            "editar": true
+          },
+          "cmv": {
+            "ver": true,
+            "editar": true
+          },
+          "cadastros": {
+            "ver": true,
+            "editar": true
+          },
+          "equipe": {
+            "ver": true,
+            "editar": true
+          },
+          "selecao": {
+            "ver": true,
+            "editar": true
+          },
+          "rh": {
+            "ver": true,
+            "editar": true
+          },
+          "unidades": {
+            "ver": true,
+            "editar": true
+          },
+          "setores": {
+            "ver": true,
+            "editar": true
+          },
+          "checklists": {
+            "ver": true,
+            "editar": true
+          },
+          "empresas": {
+            "ver": true,
+            "editar": true
+          },
+          "cargos": {
+            "ver": true,
+            "editar": true
+          },
+          "config": {
+            "ver": true,
+            "editar": true
+          },
+          "notificacoes": {
+            "ver": true,
+            "editar": true
+          },
+          "permissoes": {
+            "ver": true,
+            "editar": true
+          },
+          "auditoria": {
+            "ver": true,
+            "editar": true
+          }
+        }
+      },
+      "arquivado_legal": false,
+      "criado_em": "2026-11-19T01:09:52.116Z"
+    },
+    {
+      "id": 4,
+      "nome": "Me Gusta Parque da Pizza",
+      "telefone": "5517991483267",
+      "whatsapp_bot_vinculado": "5517981672663",
+      "email": "pessoal@richarddumont.com.br",
+      "tipo": "Gestor da Empresa",
+      "cargo": "Perfil da Empresa / Proprietário",
+      "foto": "",
+      "empresas_ids": [
+        2
+      ],
+      "escala_fixa_json": "[1,2,3,4,5,6,0]",
+      "senha_argon2id": "$argon2id$v=19$m=65536,t=3,p=4$331546614d972bae88e8d1262e43cd50$dfae1c9d152d909530a32177ed1f0dc2a7daeabc707a2ac4251fc73fd1799b956b36a68c3d2e51b8ae41633eb557b7be784119ca4cdaf09ef30b87b02427c43c",
+      "permissoes_json": {
+        "total": false,
+        "gerenciar_subordinados": true,
+        "mudar_aparencia": true,
+        "escopo_colaboradores": "subordinados",
+        "modulos": {
+          "rateio": {
+            "ver": true,
+            "editar": true
+          },
+          "escalas": {
+            "ver": true,
+            "editar": true
+          },
+          "agenda": {
+            "ver": true,
+            "editar": true
+          },
+          "pdv": {
+            "ver": true,
+            "editar": true
+          },
+          "reservas": {
+            "ver": true,
+            "editar": true
+          },
+          "portais": {
+            "ver": true,
+            "editar": true
+          },
+          "chat": {
+            "ver": true,
+            "editar": true
+          },
+          "caixa": {
+            "ver": true,
+            "editar": true
+          },
+          "estoque": {
+            "ver": true,
+            "editar": true
+          },
+          "compras": {
+            "ver": true,
+            "editar": true
+          },
+          "cmv": {
+            "ver": true,
+            "editar": true
+          },
+          "cadastros": {
+            "ver": true,
+            "editar": true
+          },
+          "equipe": {
+            "ver": true,
+            "editar": true
+          },
+          "selecao": {
+            "ver": true,
+            "editar": true
+          },
+          "rh": {
+            "ver": true,
+            "editar": true
+          },
+          "unidades": {
+            "ver": true,
+            "editar": true
+          },
+          "setores": {
+            "ver": true,
+            "editar": true
+          },
+          "checklists": {
+            "ver": true,
+            "editar": true
+          },
+          "empresas": {
+            "ver": true,
+            "editar": true
+          },
+          "cargos": {
+            "ver": true,
+            "editar": true
+          },
+          "config": {
+            "ver": true,
+            "editar": true
+          },
+          "notificacoes": {
+            "ver": true,
+            "editar": true
+          },
+          "permissoes": {
+            "ver": true,
+            "editar": true
+          },
+          "auditoria": {
+            "ver": true,
+            "editar": true
+          }
+        }
+      },
+      "arquivado_legal": false,
+      "criado_em": "2026-11-19T01:09:52.117Z"
     }
   ]
 }
