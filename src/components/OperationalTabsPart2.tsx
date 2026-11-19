@@ -10936,6 +10936,24 @@ export function CadastrosPessoasTab(props: CommonTabProps) {
               </div>
             )}
 
+            {(form.natureza === 'EMPRESA' || modalAutorizadoComunidade) && (
+              <div className="sm:col-span-2">
+                <label className="block text-xs text-slate-400 mb-1">
+                  {form.natureza === 'EMPRESA'
+                    ? 'Senha de Acesso da Empresa (para login com o perfil desta empresa — deixe em branco para manter a senha atual)'
+                    : 'Senha de Acesso ao Sistema (opcional — deixe em branco para manter a senha atual)'}
+                </label>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.senha_acesso || ''}
+                  onChange={(e) => setForm({ ...form, senha_acesso: e.target.value })}
+                  placeholder="Digite uma nova senha (mín. 4 caracteres) se desejar definir ou alterar..."
+                  className="w-full px-3 py-2 bg-[#05100C] border border-slate-800 rounded text-xs font-mono text-white"
+                />
+              </div>
+            )}
+
             <div className="sm:col-span-2">
               <label className="block text-xs text-slate-400 mb-1">
                 Localização (País, Estado e Cidade)

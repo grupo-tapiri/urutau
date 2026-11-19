@@ -3096,10 +3096,6 @@ export default function App() {
     savedDeviceUsers.forEach((u) => {
       if (!u || !u.nome) return;
       if (!isCurrentMaster && isSuperAdminUser(u)) return;
-      if (!isCurrentMaster && empAtivaId) {
-        const empIds = Array.isArray(u.empresas_ids) ? u.empresas_ids.map(Number) : [];
-        if (empIds.length > 0 && !empIds.includes(empAtivaId)) return;
-      }
       const k = makeKey(u);
       if (!removedSavedUserKeys.includes(k)) {
         map.set(k, u);
@@ -3109,7 +3105,11 @@ export default function App() {
     (erpData?.usuarios || []).forEach((u: any) => {
       if (!u || !u.nome) return;
       if (!isCurrentMaster && isSuperAdminUser(u)) return;
-      if (!isCurrentMaster && empAtivaId) {
+      const isPerfilEmpresaOuGestor =
+        String(u.tipo || '').toLowerCase().includes('gestor') ||
+        String(u.tipo || '').toLowerCase().includes('empres') ||
+        String(u.cargo || '').toLowerCase().includes('empres');
+      if (!isCurrentMaster && !isPerfilEmpresaOuGestor && empAtivaId) {
         const empIds = Array.isArray(u.empresas_ids) ? u.empresas_ids.map(Number) : [];
         if (empIds.length > 0 && !empIds.includes(empAtivaId)) return;
       }
@@ -3127,8 +3127,29 @@ export default function App() {
       }
     });
 
+    (erpData?.empresas || []).forEach((emp: any) => {
+      if (!emp || !emp.nome || emp.arquivado_legal) return;
+      const empNomeLower = String(emp.nome).trim().toLowerCase();
+      const jaTemPorNome = Array.from(map.values()).some(
+        (u: any) => String(u.nome || '').trim().toLowerCase() === empNomeLower
+      );
+      if (!jaTemPorNome) {
+        const k = `${300000 + Number(emp.id)}_${empNomeLower}`;
+        if (!removedSavedUserKeys.includes(k)) {
+          map.set(k, {
+            id: 300000 + Number(emp.id),
+            nome: emp.nome,
+            cargo: 'Perfil da Empresa / Proprietário',
+            tipo: 'Gestor da Empresa',
+            telefone: emp.whatsapp_pessoal_titular || emp.bot_interno_numero || emp.waha_numero || '',
+            empresas_ids: [Number(emp.id)]
+          });
+        }
+      }
+    });
+
     return Array.from(map.values());
-  }, [savedDeviceUsers, erpData?.usuarios, removedSavedUserKeys, currentUser, realOperatorUser, selectedEmpresaId]);
+  }, [savedDeviceUsers, erpData?.usuarios, erpData?.empresas, removedSavedUserKeys, currentUser, realOperatorUser, selectedEmpresaId]);
 
   const handleSaveUserToDeviceList = useCallback((userObj: any) => {
     if (!userObj || !userObj.nome) return;
@@ -3241,12 +3262,14 @@ export default function App() {
   const handleCreateAndLoginNewUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuickUserForm.nome.trim()) {
-      setSwitchAuthError('Informe o nome completo ou de exibição do novo usuário.');
+      setSwitchAuthError('Informe o nome completo ou de exibição do novo usuário ou empresa.');
       return;
     }
     setSwitchAuthError('');
     setSwitchAuthLoading(true);
     try {
+      const senhaFinal = newQuickUserForm.senha.trim() || '1234';
+      const empIdAlvo = selectedEmpresaId ? Number(selectedEmpresaId) : 1;
       const res = await fetch('/api/acessos/salvar-completo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -3255,8 +3278,9 @@ export default function App() {
           cargo: newQuickUserForm.cargo.trim() || 'Operador',
           tipo: newQuickUserForm.tipo || 'Colaborador',
           telefone: newQuickUserForm.telefone.trim(),
-          senha_plana: newQuickUserForm.senha.trim() || '1234',
-          empresas_ids: selectedEmpresaId ? [selectedEmpresaId] : [1]
+          senha: senhaFinal,
+          senha_plana: senhaFinal,
+          empresas_ids: [empIdAlvo]
         })
       });
       const json = await res.json();
@@ -3264,22 +3288,38 @@ export default function App() {
         setSwitchAuthError(json.erro || 'Não foi possível criar o novo usuário.');
         return;
       }
-      await fetchAllData();
-      const createdUser = json.usuario || {
+
+      const authRes = await fetch('/api/v31/auth/desbloquear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identificador: newQuickUserForm.nome.trim(),
+          codigo: senhaFinal
+        })
+      });
+      const authJson = await authRes.json().catch(() => ({}));
+      const createdUser = authJson?.usuario || json.usuario || {
         id: json.id || Date.now(),
         nome: newQuickUserForm.nome.trim(),
         cargo: newQuickUserForm.cargo.trim() || 'Operador',
         tipo: newQuickUserForm.tipo || 'Colaborador',
-        telefone: newQuickUserForm.telefone.trim()
+        telefone: newQuickUserForm.telefone.trim(),
+        empresas_ids: [empIdAlvo]
       };
       setCurrentUser(createdUser);
       setRealOperatorUser(createdUser);
+      setSelectedEmpresaId(authJson?.empresa_ativa_id || empIdAlvo);
+      if (authJson?.sessao_token) {
+        persistActiveSession(createdUser, authJson?.empresa_ativa_id || empIdAlvo, authJson.sessao_token);
+      }
       setSessionVerifiedByServer(true);
+      setIsSessionLocked(false);
       setIsUserAuthenticated(true);
       setUnlockIdentificador(createdUser.nome);
       if (newQuickUserForm.salvarNoDispositivo) {
         handleSaveUserToDeviceList(createdUser);
       }
+      await fetchAllData();
       setNewQuickUserForm({
         nome: '',
         cargo: 'Operador',
@@ -7930,6 +7970,7 @@ export default function App() {
                     }
                     className="w-full px-3 py-2 text-xs"
                   >
+                    <option value="Gestor da Empresa">Perfil de Empresa / Empresário</option>
                     <option value="Colaborador">Colaborador</option>
                     <option value="Gestor">Gestor de Unidade</option>
                     <option value="Administrador">Administrador</option>
