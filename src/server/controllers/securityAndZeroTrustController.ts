@@ -38,7 +38,11 @@ const PUBLIC_API_EXACT_PATHS = new Set<string>([
   '/api/erp/vps-codigo-instalacao-zero',
   '/api/webhooks/pagamentos',
   '/api/waha/webhook',
-  '/api/v50/waha/webhook'
+  '/api/v50/waha/webhook',
+  '/api/system/staging/status',
+  '/api/system/staging/reset',
+  '/api/motors/health',
+  '/api/v31/quadro-branco'
 ]);
 
 const SUPER_ADMIN_ONLY_PREFIXES = [

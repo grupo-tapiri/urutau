@@ -270,4 +270,46 @@ export class WebhookAndHardLimitService {
       return res.inserted;
     });
   }
+
+  public isStagingSandboxActive(): boolean {
+    const appEnv = String(process.env.APP_ENV || '').trim().toLowerCase();
+    const nodeEnv = String(process.env.NODE_ENV || '').trim().toLowerCase();
+    return appEnv === 'staging' || nodeEnv === 'staging';
+  }
+
+  public async dispatchExternalWebhookSafely(params: {
+    targetUrl: string;
+    payload: unknown;
+    headers?: Record<string, string>;
+  }): Promise<{ ok: boolean; sandboxBlocked: boolean; status?: number; message: string }> {
+    if (this.isStagingSandboxActive()) {
+      console.log('[STAGING SANDBOX] Disparo externo bloqueado com segurança');
+      return {
+        ok: true,
+        sandboxBlocked: true,
+        status: 200,
+        message: '[STAGING SANDBOX] Disparo externo bloqueado com segurança'
+      };
+    }
+
+    const rawBody = JSON.stringify(params.payload ?? {});
+    const signature = computeWebhookHmacHex(rawBody, this.webhookSecret);
+    const response = await fetch(params.targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Urutau-Webhook-Signature': `sha256=${signature}`,
+        ...(params.headers || {})
+      },
+      body: rawBody
+    });
+
+    return {
+      ok: response.ok,
+      sandboxBlocked: false,
+      status: response.status,
+      message: response.ok ? 'Webhook externo enviado com sucesso.' : `Falha HTTP ${response.status}`
+    };
+  }
 }
+

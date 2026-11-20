@@ -228,7 +228,14 @@ export class EmbeddedWhatsAppService {
               });
 
               if (resposta && typeof resposta === 'string' && this.socket) {
-                await this.socket.sendMessage(remoteJid, { text: resposta });
+                const isStaging =
+                  String(process.env.APP_ENV || '').trim().toLowerCase() === 'staging' ||
+                  String(process.env.NODE_ENV || '').trim().toLowerCase() === 'staging';
+                if (isStaging) {
+                  console.log('[STAGING SANDBOX] Disparo externo bloqueado com segurança');
+                } else {
+                  await this.socket.sendMessage(remoteJid, { text: resposta });
+                }
               }
             } catch (handlerErr: any) {
               console.error('Erro ao processar mensagem recebida no WhatsApp:', handlerErr?.message);
@@ -267,7 +274,19 @@ export class EmbeddedWhatsAppService {
   public async enviarMensagem(
     telefone: string,
     texto: string
-  ): Promise<{ ok: boolean; messageId?: string; erro?: string }> {
+  ): Promise<{ ok: boolean; messageId?: string; erro?: string; sandboxBlocked?: boolean }> {
+    const isStaging =
+      String(process.env.APP_ENV || '').trim().toLowerCase() === 'staging' ||
+      String(process.env.NODE_ENV || '').trim().toLowerCase() === 'staging';
+    if (isStaging) {
+      console.log('[STAGING SANDBOX] Disparo externo bloqueado com segurança');
+      return {
+        ok: true,
+        sandboxBlocked: true,
+        messageId: `staging_sandbox_${Date.now()}`
+      };
+    }
+
     if (!this.socket || this.status !== 'conectado') {
       return { ok: false, erro: 'WhatsApp não está conectado no momento.' };
     }

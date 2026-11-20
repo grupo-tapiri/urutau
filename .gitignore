@@ -8,4 +8,10 @@ coverage/
 !.env.example
 urutau_db.json
 data/
-
+/data
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.bak
+.gmp_cache/

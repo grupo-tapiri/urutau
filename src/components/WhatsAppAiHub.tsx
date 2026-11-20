@@ -338,6 +338,10 @@ export function WhatsAppAiHub({
         })
       });
       if (!res.ok) throw new Error('Falha ao enviar mensagem');
+      const resJson = await res.json().catch(() => ({}));
+      if (resJson?.sandboxBlocked) {
+        console.log('[STAGING SANDBOX] Disparo externo bloqueado com segurança');
+      }
       setTextoEnvio('');
       setNovoContatoNumero('');
       setNovoContatoNome('');

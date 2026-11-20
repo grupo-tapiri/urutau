@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { CustomTabOverride, DEFAULT_CATEGORIES, DEFAULT_TAB_META, NavCategory, TabId } from '../types/erp';
 import { UrutauEmblemSVG } from './UrutauShared';
+import { PersonalWhiteboardCanvas } from './PersonalWhiteboardCanvas';
 
 function parseHexToRgbTuple(hex: string): { r: number; g: number; b: number } {
   const clean = String(hex || '#10B981').replace('#', '').trim();
@@ -95,19 +96,20 @@ export interface ModuleCleanGuide {
 
 export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
   home: {
-    title: 'Início • Dashboard Operacional',
-    subtitle: 'Resumo executivo do dia, indicadores em tempo real, atalhos e central de alertas',
-    whatItDoes: 'Reúne os principais números de caixa, salão, reservas, estoque, atalhos e alertas operacionais em uma visão limpa e direta.',
+    title: 'Início • Dashboard & Quadro Branco Pessoal',
+    subtitle: 'Quadro branco pessoal do colaborador, indicadores do dia, atalhos e central de alertas',
+    whatItDoes: 'Reúne o Quadro Branco Pessoal interativo (post-its, pinos, cores e áreas por colaborador), os principais números de caixa, salão, reservas, estoque, atalhos e alertas operacionais.',
     steps: [
-      'Acompanhe o saldo do caixa, reservas do dia e alertas de estoque na etapa "1. Visão Geral".',
-      'Acesse qualquer área do sistema com 1 toque na etapa "2. Atalhos Rápidos".',
-      'Gerencie alertas, lembretes e atividades recentes na etapa "3. Alertas & Atividades".'
+      'Acompanhe o resumo do dia e use seu Quadro Branco Pessoal diretamente na etapa "1. Visão Geral & Quadro".',
+      'Abra a lousa dedicada em "2. Meu Quadro Branco" para criar post-its, fixar pinos, escolher cores e organizar seu turno.',
+      'Acesse qualquer módulo com 1 toque em "3. Atalhos Rápidos" ou veja alertas em "4. Alertas & Atividades".'
     ],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'visao-geral', label: '1. Visão Geral', shortDesc: 'Indicadores do dia, caixa, reservas e estoque' },
-      { id: 'stage_2', slug: 'atalhos-setor', label: '2. Atalhos Rápidos', shortDesc: 'Acesso direto aos módulos operacionais' },
-      { id: 'stage_3', slug: 'alertas-lembretes', label: '3. Alertas & Atividades', shortDesc: 'Central de alertas, lembretes e últimos registros' }
+      { id: 'stage_1', slug: 'visao-geral', label: '1. Visão Geral & Quadro', shortDesc: 'Indicadores do dia e quadro branco pessoal' },
+      { id: 'stage_2', slug: 'quadro-branco', label: '2. Meu Quadro Branco', shortDesc: 'Lousa pessoal com post-its, pinos, cores e áreas por colaborador' },
+      { id: 'stage_3', slug: 'atalhos-setor', label: '3. Atalhos Rápidos', shortDesc: 'Acesso direto aos módulos operacionais' },
+      { id: 'stage_4', slug: 'alertas-lembretes', label: '4. Alertas & Atividades', shortDesc: 'Central de alertas, lembretes e últimos registros' }
     ]
   },
   pdv: {
@@ -988,6 +990,13 @@ export const HomeDashboardHub: React.FC<{
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 shrink-0">
               <button
                 type="button"
+                onClick={() => onNavigateTab('home', 'quadro-branco')}
+                className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95 bg-amber-400 text-slate-950 border-amber-300 shadow"
+              >
+                Meu Quadro Branco
+              </button>
+              <button
+                type="button"
                 onClick={() => onNavigateTab('pdv', 'mesas-comandas')}
                 className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95"
                 style={pdvTheme.solidBtnStyle}
@@ -1347,9 +1356,23 @@ export const HomeDashboardHub: React.FC<{
             </button>
           </div>
         </div>
+
+        <PersonalWhiteboardCanvas
+          currentUser={currentUser}
+          usuarios={Array.isArray(data?.usuarios) ? data.usuarios : []}
+          accentHex="#10B981"
+        />
       </div>
 
       <div data-clean-stage="1" className="space-y-4">
+        <PersonalWhiteboardCanvas
+          currentUser={currentUser}
+          usuarios={Array.isArray(data?.usuarios) ? data.usuarios : []}
+          accentHex="#10B981"
+        />
+      </div>
+
+      <div data-clean-stage="2" className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
@@ -1443,7 +1466,7 @@ export const HomeDashboardHub: React.FC<{
         </div>
       </div>
 
-      <div data-clean-stage="2" className="space-y-6">
+      <div data-clean-stage="3" className="space-y-6">
         {alertasPanel}
         <div
           className="bg-[#112229] border rounded-xl p-4 sm:p-5 space-y-3"

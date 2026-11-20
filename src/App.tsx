@@ -124,6 +124,12 @@ import {
   downloadUrutauWindowsInstaller
 } from './components/UrutauWindowsExplorerModal';
 import { offlineSyncEngine } from './services/offlineSyncEngine';
+import {
+  ModuleIntegrityBoundary,
+  StagingEnvironmentTopBanner,
+  buildFaultIsolatedErpData,
+  resolveMotorNameForTab
+} from './motors';
 
 function buildPublicBootstrapErpData(empresasPub: any[] = [], configsPub: any[] = []): ERPCompleteData {
   const safeEmpresas = Array.isArray(empresasPub) ? empresasPub : [];
@@ -3503,7 +3509,12 @@ export default function App() {
     }
   }, [currentUser, activeTab]);
 
-  if (loading || !erpData) {
+  const isolatedErpData = React.useMemo(
+    () => (erpData ? buildFaultIsolatedErpData(erpData, resolveMotorNameForTab(activeTab)) : null),
+    [erpData, activeTab]
+  );
+
+  if (loading || !erpData || !isolatedErpData) {
     return (
       <div className="w-full min-h-screen bg-[#05100C] flex items-center justify-center p-6">
         <div className="flex items-center gap-3 text-[#F8FAFC] font-mono text-sm">
@@ -3562,7 +3573,7 @@ export default function App() {
   };
 
   const commonProps = {
-    data: { ...erpData, empresaAtivaId: selectedEmpresaId },
+    data: { ...isolatedErpData, empresaAtivaId: selectedEmpresaId },
     onRefresh: fetchAllData,
     onNavigateDeepLink: handleNavigateDeepLink,
     showAlert,
@@ -3728,6 +3739,7 @@ export default function App() {
             isCurrentTabSystematicAdmin ? 'systematic-admin-viewport' : 'bg-[#05100C]'
           }`}
         >
+      <StagingEnvironmentTopBanner onAfterReset={fetchAllData} />
       {estaSimulandoColaborador && (
         <div className="w-full bg-[#F59E0B] text-[#05100C] px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 z-50 shadow-md border-b border-black/20">
           <div className="flex items-center gap-2 text-xs font-bold min-w-0 truncate">
@@ -4994,9 +5006,15 @@ export default function App() {
                 onSubTabChange={(slug) => setActiveSubTabSlug(slug)}
                 tabOverrides={tabOverrides}
               >
+                <ModuleIntegrityBoundary
+                  key={`motor-boundary-${activeTab}`}
+                  motorName={resolveMotorNameForTab(activeTab)}
+                  moduleTitle={tabOverrides[activeTab]?.label || activeTab}
+                  onRetry={fetchAllData}
+                >
                 {activeTab === 'home' && (
                   <HomeDashboardHub
-                    data={erpData}
+                    data={isolatedErpData}
                     currentUser={currentUser}
                     companyName={brandConfig.companyName || empresaAtivaObj?.nome || 'Empresa'}
                     companySubdomain={
@@ -5153,6 +5171,7 @@ export default function App() {
                     </div>
                   </div>
                 )}
+                </ModuleIntegrityBoundary>
               </CleanModuleShell>
             </div>
           )}

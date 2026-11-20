@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../../..');
 const MIGRATIONS_DIR = path.join(ROOT_DIR, 'migrations');
 
-export type RuntimeEnvironment = 'production' | 'development' | 'test';
+export type RuntimeEnvironment = 'production' | 'staging' | 'development' | 'test';
 
 export interface MigrationRecord {
   version: string;
@@ -42,11 +42,52 @@ export interface QueryPlanAuditEntry {
   planDetails: string[];
 }
 
+export interface StagingMirrorReport {
+  ok: boolean;
+  appEnv: string;
+  sourceProdPath: string;
+  targetStagingPath: string;
+  sourceExists: boolean;
+  bytesCopied: number;
+  restoredAtUtc: string;
+}
+
+export function isStagingEnvironment(): boolean {
+  const appEnv = String(process.env.APP_ENV || '').trim().toLowerCase();
+  const nodeEnv = String(process.env.NODE_ENV || '').trim().toLowerCase();
+  return appEnv === 'staging' || nodeEnv === 'staging';
+}
+
 export function resolveRuntimeEnvironment(): RuntimeEnvironment {
-  const raw = String(process.env.NODE_ENV || 'development').trim().toLowerCase();
+  if (String(process.env.NODE_ENV || '').trim().toLowerCase() === 'test') {
+    return 'test';
+  }
+  if (isStagingEnvironment()) {
+    return 'staging';
+  }
+  const raw = String(process.env.APP_ENV || process.env.NODE_ENV || 'development')
+    .trim()
+    .toLowerCase();
   if (raw === 'production' || raw === 'prod') return 'production';
   if (raw === 'test') return 'test';
   return 'development';
+}
+
+export function resolveProdDatabaseFilePath(): string {
+  const configured = String(process.env.PROD_DATABASE_PATH || '').trim();
+  if (configured) {
+    return path.isAbsolute(configured) ? configured : path.resolve(ROOT_DIR, configured);
+  }
+  const prodVolumeCandidate = '/app/prod-data/urutau.db';
+  if (fs.existsSync(prodVolumeCandidate)) {
+    return prodVolumeCandidate;
+  }
+  const dataDir = path.join(ROOT_DIR, 'data');
+  const legacyProdCandidate = path.join(dataDir, 'urutau_acid_prod.sqlite');
+  if (fs.existsSync(legacyProdCandidate)) {
+    return legacyProdCandidate;
+  }
+  return path.join(dataDir, 'urutau.db');
 }
 
 export function resolveDatabaseFilePath(customPath?: string): string {
@@ -55,24 +96,43 @@ export function resolveDatabaseFilePath(customPath?: string): string {
     if (env === 'test' && customPath.includes('urutau_acid_prod')) {
       throw new Error('VIOLACAO_GOVERNANCA_AMBIENTE: Suite de testes bloqueada de acessar banco de producao.');
     }
-    return customPath;
+    const resolvedCustom = path.isAbsolute(customPath)
+      ? customPath
+      : path.resolve(ROOT_DIR, customPath);
+    fs.mkdirSync(path.dirname(resolvedCustom), { recursive: true, mode: 0o700 });
+    return resolvedCustom;
   }
+
   if (env === 'test') {
     const explicitTestPath = process.env.URUTAU_TEST_SQLITE_PATH;
     if (explicitTestPath) {
       if (explicitTestPath.includes('urutau_acid_prod')) {
         throw new Error('VIOLACAO_GOVERNANCA_AMBIENTE: URUTAU_TEST_SQLITE_PATH aponta para arquivo de producao.');
       }
+      fs.mkdirSync(path.dirname(explicitTestPath), { recursive: true, mode: 0o700 });
       return explicitTestPath;
     }
     return path.join(os.tmpdir(), `urutau_acid_test_${process.pid}.sqlite`);
   }
-  const dataDir = path.join(ROOT_DIR, 'data');
-  fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-  if (env === 'production') {
-    return path.join(dataDir, 'urutau_acid_prod.sqlite');
+
+  const configuredDbPath = String(process.env.DATABASE_PATH || '').trim();
+  if (configuredDbPath) {
+    const absPath = path.isAbsolute(configuredDbPath)
+      ? configuredDbPath
+      : path.resolve(ROOT_DIR, configuredDbPath);
+    fs.mkdirSync(path.dirname(absPath), { recursive: true, mode: 0o700 });
+    return absPath;
   }
-  return path.join(dataDir, 'urutau_acid_dev.sqlite');
+
+  if (env === 'staging') {
+    const stagingPath = path.join(os.tmpdir(), 'urutau-staging.db');
+    fs.mkdirSync(path.dirname(stagingPath), { recursive: true, mode: 0o700 });
+    return stagingPath;
+  }
+
+  const fallbackPath = path.resolve(ROOT_DIR, './data/urutau.db');
+  fs.mkdirSync(path.dirname(fallbackPath), { recursive: true, mode: 0o700 });
+  return fallbackPath;
 }
 
 export class TransactionalSqliteEngine {
@@ -372,4 +432,91 @@ export function resetSqliteEngineForTests(customPath?: string): TransactionalSql
   }
   singletonEngine = new TransactionalSqliteEngine(customPath);
   return singletonEngine;
+}
+
+export function cloneProductionDatabaseToStaging(options?: {
+  prodDbPath?: string;
+  stagingDbPath?: string;
+}): StagingMirrorReport {
+  if (!isStagingEnvironment()) {
+    throw new Error('OPERACAO_PROIBIDA_PRODUCAO: O espelhamento/reset de staging so pode ser executado quando APP_ENV=staging.');
+  }
+
+  const sourceProdPath = options?.prodDbPath
+    ? path.isAbsolute(options.prodDbPath)
+      ? options.prodDbPath
+      : path.resolve(ROOT_DIR, options.prodDbPath)
+    : resolveProdDatabaseFilePath();
+
+  const targetStagingPath = options?.stagingDbPath
+    ? path.isAbsolute(options.stagingDbPath)
+      ? options.stagingDbPath
+      : path.resolve(ROOT_DIR, options.stagingDbPath)
+    : resolveDatabaseFilePath();
+
+  if (path.resolve(sourceProdPath) === path.resolve(targetStagingPath)) {
+    throw new Error(
+      'VIOLACAO_ISOLAMENTO_STAGING: DATABASE_PATH de staging nao pode ser identico ao PROD_DATABASE_PATH.'
+    );
+  }
+
+  if (singletonEngine) {
+    try {
+      singletonEngine.close();
+    } catch {}
+    singletonEngine = null;
+  }
+
+  fs.mkdirSync(path.dirname(targetStagingPath), { recursive: true, mode: 0o700 });
+
+  for (const suffix of ['', '-wal', '-shm']) {
+    const candidate = `${targetStagingPath}${suffix}`;
+    if (fs.existsSync(candidate)) {
+      try {
+        fs.rmSync(candidate, { force: true });
+      } catch {}
+    }
+  }
+
+  let sourceExists = false;
+  let bytesCopied = 0;
+
+  if (fs.existsSync(sourceProdPath)) {
+    sourceExists = true;
+    try {
+      const readonlySource = new DatabaseSync(sourceProdPath, { readOnly: true });
+      try {
+        const escapedTarget = targetStagingPath.replace(/'/g, "''");
+        readonlySource.exec(`VACUUM INTO '${escapedTarget}'`);
+      } finally {
+        readonlySource.close();
+      }
+    } catch {
+      fs.copyFileSync(sourceProdPath, targetStagingPath);
+      if (fs.existsSync(`${sourceProdPath}-wal`)) {
+        fs.copyFileSync(`${sourceProdPath}-wal`, `${targetStagingPath}-wal`);
+      }
+      if (fs.existsSync(`${sourceProdPath}-shm`)) {
+        fs.copyFileSync(`${sourceProdPath}-shm`, `${targetStagingPath}-shm`);
+      }
+    }
+    if (fs.existsSync(targetStagingPath)) {
+      bytesCopied = fs.statSync(targetStagingPath).size;
+    }
+  }
+
+  singletonEngine = new TransactionalSqliteEngine(targetStagingPath);
+  if (fs.existsSync(targetStagingPath)) {
+    bytesCopied = fs.statSync(targetStagingPath).size;
+  }
+
+  return {
+    ok: true,
+    appEnv: String(process.env.APP_ENV || 'staging'),
+    sourceProdPath,
+    targetStagingPath,
+    sourceExists,
+    bytesCopied,
+    restoredAtUtc: new Date().toISOString()
+  };
 }
