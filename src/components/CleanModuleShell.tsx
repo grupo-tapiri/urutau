@@ -10,9 +10,8 @@ import {
   ExternalLink,
   Search
 } from 'lucide-react';
-import { CustomTabOverride, DEFAULT_CATEGORIES, DEFAULT_TAB_META, NavCategory, TabId } from '../types/erp';
+import { CustomTabOverride, DEFAULT_TAB_META, TabId } from '../types/erp';
 import { UrutauEmblemSVG } from './UrutauShared';
-import { PersonalWhiteboardCanvas } from './PersonalWhiteboardCanvas';
 
 function parseHexToRgbTuple(hex: string): { r: number; g: number; b: number } {
   const clean = String(hex || '#10B981').replace('#', '').trim();
@@ -54,25 +53,23 @@ export function getMenuColorTheme(
     rgb,
     label,
     solidBtnStyle: {
-      backgroundColor: hex,
+      backgroundColor: '#10B981',
       color: '#061014',
-      borderColor: hex,
-      boxShadow: `0 6px 18px -4px rgba(${rgb}, 0.42)`
+      borderColor: '#10B981'
     } as React.CSSProperties,
     softBtnStyle: {
-      backgroundColor: `rgba(${rgb}, 0.16)`,
-      color: hex,
-      borderColor: `rgba(${rgb}, 0.44)`
+      backgroundColor: '#181D28',
+      color: '#E2E8F0',
+      borderColor: 'rgba(148, 163, 184, 0.22)'
     } as React.CSSProperties,
     cardBoxStyle: {
-      backgroundColor: `rgba(${rgb}, 0.06)`,
-      borderColor: `rgba(${rgb}, 0.42)`,
-      boxShadow: `inset 0 2px 0 0 ${hex}`
+      backgroundColor: '#12161F',
+      borderColor: 'rgba(148, 163, 184, 0.14)'
     } as React.CSSProperties,
     badgeStyle: {
-      backgroundColor: `rgba(${rgb}, 0.18)`,
-      color: hex,
-      borderColor: `rgba(${rgb}, 0.38)`
+      backgroundColor: '#181D28',
+      color: '#CBD5E1',
+      borderColor: 'rgba(148, 163, 184, 0.18)'
     } as React.CSSProperties
   };
 }
@@ -96,20 +93,45 @@ export interface ModuleCleanGuide {
 
 export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
   home: {
-    title: 'Início • Dashboard & Quadro Branco Pessoal',
-    subtitle: 'Quadro branco pessoal do colaborador, indicadores do dia, atalhos e central de alertas',
-    whatItDoes: 'Reúne o Quadro Branco Pessoal interativo (post-its, pinos, cores e áreas por colaborador), os principais números de caixa, salão, reservas, estoque, atalhos e alertas operacionais.',
+    title: 'Início · Painel Operacional',
+    subtitle: 'Indicadores do dia, atalhos rápidos e central de alertas',
+    whatItDoes: 'Centraliza os principais números de caixa, salão, reservas, estoque, atalhos e alertas operacionais da empresa.',
     steps: [
-      'Acompanhe o resumo do dia e use seu Quadro Branco Pessoal diretamente na etapa "1. Visão Geral & Quadro".',
-      'Abra a lousa dedicada em "2. Meu Quadro Branco" para criar post-its, fixar pinos, escolher cores e organizar seu turno.',
-      'Acesse qualquer módulo com 1 toque em "3. Atalhos Rápidos" ou veja alertas em "4. Alertas & Atividades".'
+      'Acompanhe o resumo financeiro, salão e estoque em "1. Visão Geral".',
+      'Acesse qualquer módulo com 1 toque em "2. Atalhos Rápidos".',
+      'Consulte alertas e atividades recentes em "3. Alertas & Atividades".'
     ],
     mode: 'dom_stages',
     subTabs: [
-      { id: 'stage_1', slug: 'visao-geral', label: '1. Visão Geral & Quadro', shortDesc: 'Indicadores do dia e quadro branco pessoal' },
-      { id: 'stage_2', slug: 'quadro-branco', label: '2. Meu Quadro Branco', shortDesc: 'Lousa pessoal com post-its, pinos, cores e áreas por colaborador' },
-      { id: 'stage_3', slug: 'atalhos-setor', label: '3. Atalhos Rápidos', shortDesc: 'Acesso direto aos módulos operacionais' },
-      { id: 'stage_4', slug: 'alertas-lembretes', label: '4. Alertas & Atividades', shortDesc: 'Central de alertas, lembretes e últimos registros' }
+      { id: 'stage_1', slug: 'visao-geral', label: '1. Visão Geral', shortDesc: 'Indicadores essenciais do dia' },
+      { id: 'stage_2', slug: 'atalhos-setor', label: '2. Atalhos Rápidos', shortDesc: 'Acesso direto aos módulos operacionais' },
+      { id: 'stage_3', slug: 'alertas-lembretes', label: '3. Alertas & Atividades', shortDesc: 'Central de alertas, lembretes e últimos registros' }
+    ]
+  },
+  quadro_branco: {
+    title: 'Quadro Branco Pessoal',
+    subtitle: 'Lousa dedicada em tela cheia para post-its, pinos, cores e organização de turno',
+    whatItDoes: 'Espaço visual dedicado e isolado para cada colaborador organizar tarefas, post-its, pinos e zonas de trabalho sem poluir o painel principal.',
+    steps: [
+      'Adicione post-its, pinos e áreas personalizadas diretamente na lousa.',
+      'Use o zoom, grade e abas para estruturar seu turno de trabalho.'
+    ],
+    mode: 'dom_stages',
+    subTabs: [
+      { id: 'stage_1', slug: 'lousa', label: '1. Lousa em Tela Cheia', shortDesc: 'Quadro branco pessoal interativo' }
+    ]
+  },
+  aprovacoes: {
+    title: 'Aprovações, Quarentena LGPD & Acessos',
+    subtitle: 'Gestão de novos cadastros pendentes, vínculos de empresa e delegação de equipe',
+    whatItDoes: 'Permite ao Admin Master aprovar cadastros em quarentena vinculando empresa e cargo, e ao Proprietário da Empresa convidar e aprovar sua própria equipe.',
+    steps: [
+      'Revise os usuários em quarentena (pending_approval) com aceite LGPD registrado.',
+      'Vincule a empresa e a função (company_owner, Gerente de RH, Garçom, Caixa) e aprove o acesso.'
+    ],
+    mode: 'dom_stages',
+    subTabs: [
+      { id: 'stage_1', slug: 'fila-pendentes', label: '1. Fila de Aprovações', shortDesc: 'Cadastros pendentes e gestão de acessos' }
     ]
   },
   pdv: {
@@ -661,65 +683,40 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
         showDetailedDescriptions ? 'urutau-show-all-legends' : 'urutau-clean-mode'
       }`}
     >
-      <div
-        className="bg-[#112229] border rounded-xl overflow-hidden flex flex-col max-w-full"
-        style={{
-          borderColor: `rgba(${activeMenuTheme.rgb}, 0.38)`,
-          boxShadow: `inset 0 2px 0 0 ${activeMenuTheme.hex}`
-        }}
-      >
-        <div className="grafismo-amazonico-frieze opacity-80" />
-        <div className="p-3 sm:px-4 sm:py-3 flex flex-col gap-3">
+      <div className="bg-[#12161F] border border-slate-800 rounded-xl overflow-hidden flex flex-col max-w-full">
+        <div className="px-4 py-3 flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: activeMenuTheme.hex,
-                    boxShadow: `0 0 8px ${activeMenuTheme.hex}`
-                  }}
-                />
-                <h1 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">
+                <h1 className="text-base sm:text-lg font-semibold text-slate-100 tracking-tight truncate">
                   {customLabel || guide.title}
                 </h1>
-                <span
-                  className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider border"
-                  style={activeMenuTheme.badgeStyle}
-                >
-                  {activeMenuTheme.label}
-                </span>
-                <span className="hidden md:inline-block text-slate-500">·</span>
-                <span className="hidden md:inline-block text-xs text-slate-300 truncate max-w-md">
+                <span className="hidden md:inline-block text-slate-600" aria-hidden="true">·</span>
+                <span className="hidden md:inline-block text-xs text-slate-400 truncate max-w-md">
                   {showTopSubTabs && activeSubTabMeta ? activeSubTabMeta.shortDesc : guide.subtitle}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setHelpOpen((prev) => !prev)}
-                className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors min-h-[36px]"
-                style={
+                className={`px-3 py-1.5 rounded-lg border text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors min-h-[36px] ${
                   helpOpen
-                    ? activeMenuTheme.softBtnStyle
-                    : {
-                        backgroundColor: 'rgba(8, 17, 21, 0.85)',
-                        borderColor: `rgba(${activeMenuTheme.rgb}, 0.32)`,
-                        color: '#E2E8F0'
-                      }
-                }
+                    ? 'bg-[#181D28] border-slate-600 text-white'
+                    : 'bg-[#0E1117] border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+                }`}
                 title="Como usar esta tela passo a passo"
               >
-                <HelpCircle className="w-3.5 h-3.5" style={{ color: activeMenuTheme.hex }} />
+                <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
                 <span className="hidden sm:inline">Como usar</span>
               </button>
             </div>
           </div>
 
           {showTopSubTabs && (
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-1.5 p-1.5 rounded-lg bg-[#081115] border border-white/[0.07] w-full max-w-full">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-1 p-1 rounded-lg bg-[#0E1117] border border-slate-800 w-full max-w-full">
               {guide.subTabs.map((sub, idx) => {
                 const isSelected = !showAllStages && selectedStageIndex === idx;
                 return (
@@ -728,12 +725,11 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                     type="button"
                     onClick={() => handleSelectStage(idx)}
                     title={sub.shortDesc}
-                    className={`w-full sm:w-auto min-h-[40px] px-2.5 py-1.5 rounded-md text-xs font-semibold flex items-center justify-center text-center leading-tight cursor-pointer transition-all ${
+                    className={`w-full sm:w-auto min-h-[36px] px-3 py-1.5 rounded-md text-xs font-medium flex items-center justify-center text-center leading-tight cursor-pointer transition-colors ${
                       isSelected
-                        ? 'font-bold shadow-sm'
-                        : 'bg-[#112229]/80 sm:bg-transparent text-slate-300 hover:text-white hover:bg-white/[0.06]'
+                        ? 'bg-[#181D28] text-white border border-slate-700'
+                        : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                     }`}
-                    style={isSelected ? activeMenuTheme.solidBtnStyle : undefined}
                   >
                     <span className="line-clamp-2 sm:whitespace-nowrap">{sub.label}</span>
                   </button>
@@ -745,10 +741,10 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                   type="button"
                   onClick={() => setShowAllStages((prev) => !prev)}
                   title="Ver todas as seções desta tela na mesma página"
-                  className={`w-full sm:w-auto min-h-[40px] px-2.5 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                  className={`w-full sm:w-auto min-h-[36px] px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1 cursor-pointer transition-colors ${
                     showAllStages
-                      ? 'bg-white/15 text-white'
-                      : 'bg-[#112229]/80 sm:bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.04]'
+                      ? 'bg-[#181D28] text-white border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                   }`}
                 >
                   <Layers className="w-3.5 h-3.5 shrink-0" />
@@ -940,49 +936,26 @@ export const HomeDashboardHub: React.FC<{
   return (
     <div className="space-y-5 w-full">
       <div data-clean-stage="0" className="space-y-5">
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#0F242A] via-[#112229] to-[#0B191E] border border-[#10B981]/35 rounded-xl shadow-lg">
-          <div className="grafismo-amazonico-frieze opacity-90" />
-
-          <svg
-            className="pointer-events-none select-none absolute right-0 bottom-0 w-72 h-48 opacity-15 text-[#10B981]"
-            viewBox="0 0 320 200"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M320 200C260 190 210 150 185 90C235 100 280 130 320 200Z"
-              fill="currentColor"
-            />
-            <path
-              d="M320 165C270 140 235 95 225 35C265 55 300 100 320 165Z"
-              fill="#06B6D4"
-            />
-            <path
-              d="M275 200C220 185 170 155 135 110C185 115 235 145 275 200Z"
-              fill="#F59E0B"
-            />
-          </svg>
-
-          <div className="relative z-10 p-4 sm:p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+        <div className="bg-[#12161F] border border-slate-800 rounded-xl">
+          <div className="p-4 sm:p-5 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5 min-w-0">
               <div className="shrink-0 hidden sm:flex flex-col items-center">
                 <UrutauEmblemSVG
                   pose="sentinel"
-                  className="w-14 h-14"
+                  className="w-12 h-12"
                 />
               </div>
               <div className="space-y-1 min-w-0">
-                <div className="inline-flex flex-wrap items-center gap-2 text-[11px] font-mono font-bold uppercase tracking-wider text-[#10B981]">
-                  <span>Painel Central • {companyName || 'Empresa Ativa'}</span>
-                  <span className="px-2 py-0.5 rounded-full bg-[#10B981]/15 border border-[#10B981]/35 text-[#6EE7B7] text-[10px]">
-                    Bioma Amazônico • Igapó Noturno
-                  </span>
+                <div className="text-xs text-slate-400">
+                  <span>Painel Central</span>
+                  <span className="mx-1.5 text-slate-600" aria-hidden="true">·</span>
+                  <span>{companyName || 'Empresa Ativa'}</span>
                 </div>
-                <h2 className="text-base sm:text-lg font-bold text-white">
+                <h2 className="text-base sm:text-lg font-semibold text-white">
                   Olá, {currentUser?.nome || 'Operador'} ({currentUser?.cargo || currentUser?.tipo || 'Gestão'})
                 </h2>
-                <p className="text-xs text-slate-300">
-                  Todos os botões e caixas abaixo refletem automaticamente as cores configuradas para cada menu lateral.
+                <p className="text-xs text-slate-400">
+                  Resumo operacional consolidado do turno atual.
                 </p>
               </div>
             </div>
@@ -990,42 +963,31 @@ export const HomeDashboardHub: React.FC<{
             <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => onNavigateTab('home', 'quadro-branco')}
-                className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95 bg-amber-400 text-slate-950 border-amber-300 shadow"
-              >
-                Meu Quadro Branco
-              </button>
-              <button
-                type="button"
                 onClick={() => onNavigateTab('pdv', 'mesas-comandas')}
-                className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95"
-                style={pdvTheme.solidBtnStyle}
+                className="px-4 py-2 rounded-lg text-xs font-semibold min-h-[38px] cursor-pointer transition-colors bg-[#10B981] hover:bg-[#34D399] text-[#061014] whitespace-nowrap"
               >
                 Abrir {pdvTheme.label}
               </button>
               <button
                 type="button"
+                onClick={() => onNavigateTab('quadro_branco')}
+                className="px-3.5 py-2 rounded-lg border border-slate-700 bg-[#181D28] hover:bg-slate-800 text-slate-100 text-xs font-medium min-h-[38px] cursor-pointer transition-colors whitespace-nowrap"
+              >
+                Quadro Branco
+              </button>
+              <button
+                type="button"
                 onClick={() => onNavigateTab('reservas', 'mapa-salao')}
-                className="px-3.5 py-2.5 rounded-lg border text-xs font-black min-h-[40px] cursor-pointer transition-transform active:scale-95"
-                style={reservasTheme.solidBtnStyle}
+                className="px-3.5 py-2 rounded-lg border border-slate-700 bg-[#181D28] hover:bg-slate-800 text-slate-100 text-xs font-medium min-h-[38px] cursor-pointer transition-colors whitespace-nowrap"
               >
                 Mapa de {reservasTheme.label}
               </button>
               <button
                 type="button"
                 onClick={() => onNavigateTab('caixa', 'fluxo-turno')}
-                className="px-3.5 py-2.5 rounded-lg border text-xs font-bold min-h-[40px] cursor-pointer transition-transform active:scale-95"
-                style={caixaTheme.softBtnStyle}
+                className="px-3.5 py-2 rounded-lg border border-slate-700 bg-[#181D28] hover:bg-slate-800 text-slate-100 text-xs font-medium min-h-[38px] cursor-pointer transition-colors whitespace-nowrap"
               >
                 Fluxo de {caixaTheme.label}
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigateTab('cadastros', 'base-geral')}
-                className="px-3.5 py-2.5 rounded-lg border text-xs font-bold min-h-[40px] cursor-pointer transition-transform active:scale-95"
-                style={cadastrosTheme.softBtnStyle}
-              >
-                {cadastrosTheme.label}
               </button>
             </div>
           </div>
@@ -1357,22 +1319,9 @@ export const HomeDashboardHub: React.FC<{
           </div>
         </div>
 
-        <PersonalWhiteboardCanvas
-          currentUser={currentUser}
-          usuarios={Array.isArray(data?.usuarios) ? data.usuarios : []}
-          accentHex="#10B981"
-        />
       </div>
 
       <div data-clean-stage="1" className="space-y-4">
-        <PersonalWhiteboardCanvas
-          currentUser={currentUser}
-          usuarios={Array.isArray(data?.usuarios) ? data.usuarios : []}
-          accentHex="#10B981"
-        />
-      </div>
-
-      <div data-clean-stage="2" className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             {
@@ -1466,7 +1415,7 @@ export const HomeDashboardHub: React.FC<{
         </div>
       </div>
 
-      <div data-clean-stage="3" className="space-y-6">
+      <div data-clean-stage="2" className="space-y-6">
         {alertasPanel}
         <div
           className="bg-[#112229] border rounded-xl p-4 sm:p-5 space-y-3"

@@ -19,6 +19,10 @@ import {
   HardLimitExceededError
 } from '../src/server/services/webhookAndHardLimitService.ts';
 import { computeSmartRetentionPlan } from '../scripts/postgres-gdrive-backup.ts';
+import {
+  exportTenantLogicalBackup,
+  restoreTenant
+} from '../src/server/services/tenantLogicalBackupService.ts';
 
 let httpServer: http.Server;
 let baseUrl = '';
@@ -572,5 +576,204 @@ describe('Suite E2E de Seguranca Zero-Trust, Transacoes ACID, Concorrencia & Ide
     assert.ok(plan.keepIds.has('d1_old_night'));
     assert.ok(plan.keepIds.has('d2_old_late'));
     assert.deepEqual(plan.deleteIds.sort(), ['d1_old_morning', 'd2_old_noon']);
+  });
+
+  it('8. LGPD, Quarentena (pending_approval), Aprovacao Admin Master e Delegacao Restrita de company_owner', async () => {
+    const semTermos = await sendJson('/api/auth/register', {
+      method: 'POST',
+      body: {
+        nome: 'Novo Usuario Sem Termos',
+        email: 'semtermos@teste.com',
+        senha: 'senha1234',
+        termsAccepted: false
+      }
+    });
+    assert.equal(semTermos.status, 400);
+    assert.equal(semTermos.json.codigo, 'LGPD_TERMS_REQUIRED');
+
+    const regOk = await sendJson('/api/auth/register', {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '198.51.100.42' },
+      body: {
+        nome: 'Carlos Proprietario Novo',
+        email: 'carlos.owner@urutau.test',
+        telefone: '5591988887777',
+        senha: 'senhaOwner2026',
+        termsAccepted: true
+      }
+    });
+    assert.equal(regOk.status, 201);
+    assert.equal(regOk.json.pending_approval, true);
+    assert.equal(regOk.json.sessao_token, null);
+    assert.equal(regOk.json.usuario.approval_status, 'pending_approval');
+    assert.equal(regOk.json.usuario.terms_accepted, true);
+    assert.equal(regOk.json.usuario.terms_accepted_ip, '198.51.100.42');
+    assert.ok(regOk.json.usuario.terms_accepted_at_utc);
+
+    const newUserId = Number(regOk.json.usuario.id);
+
+    const loginQuarentena = await sendJson('/api/v31/auth/desbloquear', {
+      method: 'POST',
+      body: {
+        identificador: 'carlos.owner@urutau.test',
+        codigo: 'senhaOwner2026'
+      }
+    });
+    assert.equal(loginQuarentena.status, 200);
+    assert.equal(loginQuarentena.json.pending_approval, true);
+    assert.equal(loginQuarentena.json.sessao_token, null);
+
+    const pendingListMaster = await sendJson('/api/access/pending', {
+      token: superAdminToken
+    });
+    assert.equal(pendingListMaster.status, 200);
+    assert.equal(pendingListMaster.json.scope, 'admin_master');
+    assert.ok(
+      pendingListMaster.json.pendingUsers.some((u: any) => Number(u.id) === newUserId)
+    );
+
+    const approveRes = await sendJson('/api/access/approve', {
+      method: 'POST',
+      token: superAdminToken,
+      body: {
+        userId: newUserId,
+        companyId: 1,
+        role: 'company_owner'
+      }
+    });
+    assert.equal(approveRes.status, 200);
+    assert.equal(approveRes.json.usuario.approval_status, 'approved');
+    assert.equal(approveRes.json.usuario.role, 'company_owner');
+    assert.deepEqual(approveRes.json.usuario.empresas_ids, [1]);
+
+    const loginAprovado = await sendJson('/api/v31/auth/desbloquear', {
+      method: 'POST',
+      body: {
+        identificador: 'carlos.owner@urutau.test',
+        codigo: 'senhaOwner2026'
+      }
+    });
+    assert.equal(loginAprovado.status, 200);
+    assert.ok(loginAprovado.json.sessao_token);
+    const ownerEmp1Token = String(loginAprovado.json.sessao_token);
+
+    const inviteOwnCompany = await sendJson('/api/access/invite-member', {
+      method: 'POST',
+      token: ownerEmp1Token,
+      body: {
+        nome: 'Joao Garcom Empresa 1',
+        email: 'joao.garcom@urutau.test',
+        senha: 'garcom2026',
+        role: 'waiter',
+        companyId: 1
+      }
+    });
+    assert.equal(inviteOwnCompany.status, 201);
+    assert.equal(inviteOwnCompany.json.usuario.approval_status, 'approved');
+    assert.equal(inviteOwnCompany.json.usuario.role, 'waiter');
+
+    const inviteOtherCompany = await sendJson('/api/access/invite-member', {
+      method: 'POST',
+      token: ownerEmp1Token,
+      body: {
+        nome: 'Invasor Empresa 2',
+        email: 'invasor.emp2@urutau.test',
+        senha: 'invasor2026',
+        role: 'waiter',
+        companyId: 2
+      }
+    });
+    assert.equal(inviteOtherCompany.status, 403);
+  });
+
+  it('9. Backup Alta Frequencia (15 min): na virada da hora (14:00) remove fracionados da hora anterior (13:15, 13:30, 13:45) e mantem hora atual', () => {
+    const nowMs = Date.parse('2026-11-20T14:20:00.000Z');
+    const files = [
+      { id: 'b_1300', name: 'urutau-pg-backup-2026-11-20T13-00-00Z.sql.gz', mimeType: 'application/gzip', size: '100', createdTime: '2026-11-20T13:00:00.000Z' },
+      { id: 'b_1315', name: 'urutau-pg-backup-2026-11-20T13-15-00Z.sql.gz', mimeType: 'application/gzip', size: '100', createdTime: '2026-11-20T13:15:00.000Z' },
+      { id: 'b_1330', name: 'urutau-pg-backup-2026-11-20T13-30-00Z.sql.gz', mimeType: 'application/gzip', size: '100', createdTime: '2026-11-20T13:30:00.000Z' },
+      { id: 'b_1345', name: 'urutau-pg-backup-2026-11-20T13-45-00Z.sql.gz', mimeType: 'application/gzip', size: '100', createdTime: '2026-11-20T13:45:00.000Z' },
+      { id: 'b_1400', name: 'urutau-pg-backup-2026-11-20T14-00-00Z.sql.gz', mimeType: 'application/gzip', size: '100', createdTime: '2026-11-20T14:00:00.000Z' },
+      { id: 'b_1415', name: 'urutau-pg-backup-2026-11-20T14-15-00Z.sql.gz', mimeType: 'application/gzip', size: '100', createdTime: '2026-11-20T14:15:00.000Z' }
+    ];
+
+    const plan = computeSmartRetentionPlan(files, nowMs);
+    assert.ok(plan.keepIds.has('b_1300'));
+    assert.ok(plan.keepIds.has('b_1400'));
+    assert.ok(plan.keepIds.has('b_1415'));
+    assert.equal(plan.prunedFractionalPreviousHours, 3);
+    assert.deepEqual(plan.deleteIds.sort(), ['b_1315', 'b_1330', 'b_1345']);
+  });
+
+  it('10. Dump Logico por Tenant e restoreTenant(companyId, backupFile) restaura apenas Empresa 1 sem afetar Empresa 2', async () => {
+    const tmpBackupDir = fs.mkdtempSync(path.join(os.tmpdir(), 'urutau-tenant-backup-'));
+    const mockDb: any = {
+      empresas: [
+        { id: 1, nome: 'Restaurante Paraense Original' },
+        { id: 2, nome: 'Bistro Empresa 2 Intacto' }
+      ],
+      caixa: [
+        { id: 101, empresa_id: 1, descricao: 'Venda Original Emp 1', valor: 250 },
+        { id: 201, empresa_id: 2, descricao: 'Venda Original Emp 2', valor: 500 }
+      ],
+      reservas: [
+        { id: 301, empresa_id: 1, cliente: 'Mesa VIP Emp 1' },
+        { id: 401, empresa_id: 2, cliente: 'Mesa VIP Emp 2' }
+      ],
+      unidades: [],
+      setores: [],
+      estoque: [],
+      pdv_produtos: [],
+      pdv_comandas: [],
+      agenda: [],
+      checklists: [],
+      cadastros_pessoas: []
+    };
+
+    try {
+      const exported = await exportTenantLogicalBackup(1, {
+        outputDir: tmpBackupDir,
+        uploadToDrive: false,
+        legacyDb: mockDb
+      });
+      assert.equal(exported.ok, true);
+      assert.equal(exported.companyId, 1);
+      assert.ok(fs.existsSync(exported.filePath));
+
+      mockDb.empresas[0].nome = 'EMPRESA 1 ACIDENTALMENTE APAGADA';
+      mockDb.caixa = [
+        { id: 201, empresa_id: 2, descricao: 'Venda Original Emp 2', valor: 500 },
+        { id: 202, empresa_id: 2, descricao: 'Nova Venda Emp 2 Pos-Backup', valor: 999 }
+      ];
+      mockDb.reservas = [
+        { id: 401, empresa_id: 2, cliente: 'Mesa VIP Emp 2' }
+      ];
+
+      await assert.rejects(
+        () => restoreTenant(2, exported.filePath, { allowedBaseDir: tmpBackupDir, legacyDb: mockDb }),
+        /Bloqueio de seguranca multi-tenant/
+      );
+
+      const restored = await restoreTenant(1, exported.filePath, {
+        allowedBaseDir: tmpBackupDir,
+        legacyDb: mockDb
+      });
+      assert.equal(restored.ok, true);
+      assert.equal(restored.companyId, 1);
+
+      const emp1After = mockDb.empresas.find((e: any) => e.id === 1);
+      const emp2After = mockDb.empresas.find((e: any) => e.id === 2);
+      assert.equal(emp1After.nome, 'Restaurante Paraense Original');
+      assert.equal(emp2After.nome, 'Bistro Empresa 2 Intacto');
+
+      const caixaEmp1 = mockDb.caixa.filter((c: any) => c.empresa_id === 1);
+      const caixaEmp2 = mockDb.caixa.filter((c: any) => c.empresa_id === 2);
+      assert.equal(caixaEmp1.length, 1);
+      assert.equal(caixaEmp1[0].descricao, 'Venda Original Emp 1');
+      assert.equal(caixaEmp2.length, 2);
+      assert.ok(caixaEmp2.some((c: any) => c.descricao === 'Nova Venda Emp 2 Pos-Backup'));
+    } finally {
+      fs.rmSync(tmpBackupDir, { recursive: true, force: true });
+    }
   });
 });

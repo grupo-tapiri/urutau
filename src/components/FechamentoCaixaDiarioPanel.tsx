@@ -9,7 +9,10 @@ import {
   Eye,
   Calendar,
   ArrowUpRight,
-  Search
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   CategoriaFechamentoCaixa,
@@ -142,6 +145,7 @@ export function FechamentoCaixaDiarioPanel({
   >('apenas_manual_complementar');
   const [salvarFontesComoPadrao, setSalvarFontesComoPadrao] = useState<boolean>(true);
   const [salvando, setSalvando] = useState<boolean>(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false);
 
   const [novaCatOpen, setNovaCatOpen] = useState<boolean>(false);
   const [novaCatForm, setNovaCatForm] = useState<{
@@ -743,7 +747,7 @@ export function FechamentoCaixaDiarioPanel({
   };
 
   return (
-    <div className="bg-[#0E141D] border-2 border-emerald-500/35 rounded-xl p-4 sm:p-5 space-y-5 shadow-xl">
+    <div className="bg-[#12161F] border border-slate-800 rounded-xl p-4 sm:p-5 space-y-5">
       <datalist id="urutau-caixa-categorias-datalist">
         {categoriasExistentesNoCaixa.map((cat) => (
           <option key={cat} value={cat} />
@@ -752,73 +756,96 @@ export function FechamentoCaixaDiarioPanel({
 
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              FECHAMENTO DE CAIXA DIÁRIO &amp; REGISTRO EM MASSA POR CATEGORIA
-            </span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+            <span>Fechamento de Caixa Diário</span>
             {fechamentoCarregadoId && (
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                FECHAMENTO DE {dataFechamento} JÁ SALVO (#{fechamentoCarregadoId})
-              </span>
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="font-mono text-amber-400">
+                  Salvo em {dataFechamento} (#{fechamentoCarregadoId})
+                </span>
+              </>
             )}
           </div>
-          <h3 className="text-base sm:text-lg font-bold text-white">
-            Levantamento Diário de Entradas &amp; Saídas (Sistema, Manual ou Mesclado)
+          <h3 className="text-base sm:text-lg font-semibold text-white">
+            Levantamento Diário de Entradas e Saídas
           </h3>
-          <p className="text-xs text-slate-300 max-w-3xl">
-            Aponte de onde puxar cada categoria do sistema (ex: Delivery, 10% Gorjeta do Garçom, Despesas com Entregadores), digite valores manuais ou mescle ambos (Sistema + Manual) e faça o registro em massa no Livro Caixa.
+          <p className="text-xs text-slate-400 max-w-3xl">
+            Confira os valores apurados pelo sistema, informe ajustes manuais quando necessário e conclua o fechamento no Livro Caixa.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setAbaInterna('preenchimento')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
-              abaInterna === 'preenchimento'
-                ? 'bg-emerald-500 text-slate-950'
-                : 'bg-[#090D14] text-slate-300 hover:text-white border border-slate-800'
-            }`}
-          >
-            1. Preenchimento Diário &amp; Registro em Massa
-          </button>
-          <button
-            type="button"
-            onClick={() => setAbaInterna('relatorios')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
-              abaInterna === 'relatorios'
-                ? 'bg-amber-500 text-slate-950'
-                : 'bg-[#090D14] text-slate-300 hover:text-white border border-slate-800'
-            }`}
-          >
-            2. Levantamento de Relatórios por Categoria ({(data.fechamentosCaixaDiarios || []).length})
-          </button>
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-[#0E1117] border border-slate-800">
+            <button
+              type="button"
+              onClick={() => setAbaInterna('preenchimento')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors whitespace-nowrap ${
+                abaInterna === 'preenchimento'
+                  ? 'bg-[#181D28] text-white border border-slate-700'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              1. Preenchimento Diário
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbaInterna('relatorios')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors whitespace-nowrap ${
+                abaInterna === 'relatorios'
+                  ? 'bg-[#181D28] text-white border border-slate-700'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              2. Relatórios ({(data.fechamentosCaixaDiarios || []).length})
+            </button>
+          </div>
+
+          {abaInterna === 'preenchimento' && (
+            <button
+              type="button"
+              onClick={() => setShowAdvancedOptions((prev) => !prev)}
+              className={`px-3 py-2 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 border cursor-pointer transition-colors whitespace-nowrap ${
+                showAdvancedOptions
+                  ? 'bg-[#181D28] border-slate-600 text-white'
+                  : 'bg-[#0E1117] border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Opções Avançadas</span>
+              {showAdvancedOptions ? (
+                <ChevronUp className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {abaInterna === 'preenchimento' ? (
         <div className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#090D14] border border-slate-800 rounded-xl p-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-[#0E1117] border border-slate-800 rounded-xl p-3.5">
             <div>
-              <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">
+              <label className="block text-xs text-slate-400 mb-1">
                 Data do Fechamento
               </label>
               <input
                 type="date"
                 value={dataFechamento}
                 onChange={(e) => setDataFechamento(e.target.value)}
-                className="w-full px-3 py-2 bg-[#11151E] border border-slate-700 rounded-lg text-xs font-mono font-bold text-emerald-300"
+                className="w-full px-3 py-2 bg-[#12161F] border border-slate-700 rounded-lg text-xs font-mono font-semibold text-white"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">
+              <label className="block text-xs text-slate-400 mb-1">
                 Turno / Referência
               </label>
               <select
                 value={turnoFechamento}
                 onChange={(e) => setTurnoFechamento(e.target.value)}
-                className="w-full px-3 py-2 bg-[#11151E] border border-slate-700 rounded-lg text-xs text-slate-100"
+                className="w-full px-3 py-2 bg-[#12161F] border border-slate-700 rounded-lg text-xs text-slate-100"
               >
                 <option value="Fechamento Geral do Dia">Fechamento Geral do Dia</option>
                 <option value="Turno Almoço / Diurno">Turno Almoço / Diurno</option>
@@ -826,48 +853,54 @@ export function FechamentoCaixaDiarioPanel({
               </select>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">
-                Unidade do Caixa
-              </label>
-              <select
-                value={unidadeId}
-                onChange={(e) => setUnidadeId(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-[#11151E] border border-slate-700 rounded-lg text-xs text-slate-100"
-              >
-                {unidadesPermitidas.map((u: any) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {showAdvancedOptions && (
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">
+                  Unidade do Caixa
+                </label>
+                <select
+                  value={unidadeId}
+                  onChange={(e) => setUnidadeId(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-[#12161F] border border-slate-700 rounded-lg text-xs text-slate-100"
+                >
+                  {unidadesPermitidas.map((u: any) => (
+                    <option key={u.id} value={u.id}>
+                      {u.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            <div className="flex flex-col justify-end gap-1.5">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNovaCatOpen(!novaCatOpen)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Nova Categoria</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={handleSalvarModeloCategoriasPadrao}
-                  className="px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 cursor-pointer"
-                  title="Deixar pré-salvo de onde o sistema puxa os valores de cada categoria"
-                >
-                  Pré-Salvar Fontes
-                </button>
+            <div className={`flex flex-col justify-end gap-1.5 ${showAdvancedOptions ? '' : 'sm:col-span-2'}`}>
+              <div className="flex items-center justify-end gap-2">
+                {showAdvancedOptions && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setNovaCatOpen(!novaCatOpen)}
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-[#181D28] hover:bg-slate-800 text-slate-100 border border-slate-700 cursor-pointer whitespace-nowrap"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Nova Categoria</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={salvando}
+                      onClick={handleSalvarModeloCategoriasPadrao}
+                      className="px-3 py-2 rounded-lg text-xs font-medium bg-[#181D28] hover:bg-slate-800 text-slate-200 border border-slate-700 cursor-pointer whitespace-nowrap"
+                      title="Deixar pré-salvo de onde o sistema puxa os valores de cada categoria"
+                    >
+                      Pré-Salvar Fontes
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {novaCatOpen && (
-            <div className="p-4 rounded-xl bg-[#091318] border-2 border-amber-500/40 space-y-3">
+          {showAdvancedOptions && novaCatOpen && (
+            <div className="p-4 rounded-xl bg-[#0E1117] border border-slate-700 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300">
                   Criar Nova Categoria Pré-Salva para o Fechamento de Caixa
@@ -997,173 +1030,188 @@ export function FechamentoCaixaDiarioPanel({
               return (
                 <div
                   key={item.categoria_id}
-                  className={`p-3.5 rounded-xl border transition-all space-y-3 ${
-                    item.tipo === 'Entrada'
-                      ? 'bg-[#091216] border-emerald-500/25'
-                      : 'bg-[#140C10] border-rose-500/25'
-                  }`}
+                  className="p-3.5 rounded-xl bg-[#0E1117] border border-slate-800 transition-colors space-y-3"
                 >
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
-                    <div className="lg:col-span-3 space-y-1.5">
+                  <div className={`grid grid-cols-1 gap-3 items-start ${showAdvancedOptions ? 'lg:grid-cols-12' : 'lg:grid-cols-12'}`}>
+                    <div className={showAdvancedOptions ? 'lg:col-span-3 space-y-1.5' : 'lg:col-span-5 space-y-1'}>
                       <div className="flex items-center justify-between gap-2">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                            item.tipo === 'Entrada'
-                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          className={`text-[11px] font-mono font-semibold ${
+                            item.tipo === 'Entrada' ? 'text-emerald-400' : 'text-rose-400'
                           }`}
                         >
-                          {item.tipo === 'Entrada' ? 'ENTRADA (+)' : 'SAÍDA (-)'}
+                          {item.tipo === 'Entrada' ? 'Entrada (+)' : 'Saída (-)'}
                         </span>
 
-                        <div className="flex items-center gap-1.5">
-                          <select
-                            value={item.tipo}
-                            onChange={(e: any) =>
-                              atualizarItemRelatorio(item.categoria_id, { tipo: e.target.value })
-                            }
-                            className="px-1.5 py-0.5 bg-black/40 border border-slate-700 rounded text-[10px] text-slate-300"
-                          >
-                            <option value="Entrada">Entrada</option>
-                            <option value="Saída">Saída</option>
-                          </select>
-                          <button
-                            type="button"
-                            onClick={() => handleExcluirCategoria(item)}
-                            className="p-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/30 cursor-pointer"
-                            title="Excluir categoria do relatório"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <input
-                        type="text"
-                        value={item.nome}
-                        onChange={(e) =>
-                          atualizarItemRelatorio(item.categoria_id, { nome: e.target.value })
-                        }
-                        className="w-full px-2.5 py-1.5 bg-black/40 border border-slate-800 rounded text-xs font-bold text-white"
-                      />
-
-                      <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={item.lancar_no_caixa}
-                          onChange={(e) =>
-                            atualizarItemRelatorio(item.categoria_id, {
-                              lancar_no_caixa: e.target.checked
-                            })
-                          }
-                          className="accent-emerald-500"
-                        />
-                        <span>Incluir no registro em massa do Caixa</span>
-                      </label>
-                    </div>
-
-                    <div className="lg:col-span-3 space-y-1.5">
-                      <label className="block text-[10px] font-mono uppercase text-slate-400">
-                        1. Apontar de Onde Puxar no Sistema (Pré-Salvo)
-                      </label>
-                      <select
-                        value={item.fonte_sistema}
-                        onChange={(e: any) =>
-                          atualizarItemRelatorio(item.categoria_id, {
-                            fonte_sistema: e.target.value
-                          })
-                        }
-                        className="w-full px-2.5 py-1.5 bg-[#0B0D11] border border-slate-700 rounded text-xs text-cyan-200"
-                      >
-                        {FONTES_SISTEMA_LABELS.map((f) => (
-                          <option key={f.value} value={f.value}>
-                            {f.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      {item.fonte_sistema !== 'MANUAL_PURO' &&
-                        item.fonte_sistema !== 'CAIXA_TODAS_ENTRADAS' &&
-                        item.fonte_sistema !== 'CAIXA_TODAS_SAIDAS' && (
+                        {showAdvancedOptions && (
                           <div className="flex items-center gap-1.5">
-                            <input
-                              type="text"
-                              list="urutau-caixa-categorias-datalist"
-                              value={item.filtro_origem}
-                              onChange={(e) =>
-                                atualizarItemRelatorio(item.categoria_id, {
-                                  filtro_origem: e.target.value
-                                })
+                            <select
+                              value={item.tipo}
+                              onChange={(e: any) =>
+                                atualizarItemRelatorio(item.categoria_id, { tipo: e.target.value })
                               }
-                              placeholder="Categoria/termo alvo no Caixa..."
-                              className="flex-1 px-2.5 py-1 bg-[#0B0D11] border border-slate-800 rounded text-[11px] font-mono text-amber-300"
-                            />
+                              className="px-1.5 py-0.5 bg-[#12161F] border border-slate-700 rounded text-[10px] text-slate-300"
+                            >
+                              <option value="Entrada">Entrada</option>
+                              <option value="Saída">Saída</option>
+                            </select>
                             <button
                               type="button"
-                              onClick={() =>
-                                setDetalheOrigemAbertoCatId(
-                                  isDetalheAberto ? null : item.categoria_id
-                                )
-                              }
-                              className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-mono text-cyan-300 cursor-pointer whitespace-nowrap"
+                              onClick={() => handleExcluirCategoria(item)}
+                              className="p-1 rounded bg-[#181D28] hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-700 cursor-pointer"
+                              title="Excluir categoria do relatório"
                             >
-                              {apuracaoDetalhada.qtd} lanç. ({formatBRL(item.valor_sistema)})
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         )}
+                      </div>
+
+                      {showAdvancedOptions ? (
+                        <input
+                          type="text"
+                          value={item.nome}
+                          onChange={(e) =>
+                            atualizarItemRelatorio(item.categoria_id, { nome: e.target.value })
+                          }
+                          className="w-full px-2.5 py-1.5 bg-[#12161F] border border-slate-800 rounded text-xs font-semibold text-white"
+                        />
+                      ) : (
+                        <div className="text-sm font-medium text-slate-100">{item.nome}</div>
+                      )}
+
+                      {showAdvancedOptions && (
+                        <label className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={item.lancar_no_caixa}
+                            onChange={(e) =>
+                              atualizarItemRelatorio(item.categoria_id, {
+                                lancar_no_caixa: e.target.checked
+                              })
+                            }
+                            className="accent-emerald-500"
+                          />
+                          <span>Incluir no registro em massa do Caixa</span>
+                        </label>
+                      )}
                     </div>
 
-                    <div className="lg:col-span-3 space-y-1.5">
-                      <label className="block text-[10px] font-mono uppercase text-slate-400">
-                        2. Modo de Valor &amp; Digitação Manual
-                      </label>
-                      <div className="grid grid-cols-3 gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
+                    {showAdvancedOptions && (
+                      <div className="lg:col-span-3 space-y-1.5">
+                        <label className="block text-[11px] text-slate-400">
+                          Origem no Sistema
+                        </label>
+                        <select
+                          value={item.fonte_sistema}
+                          onChange={(e: any) =>
                             atualizarItemRelatorio(item.categoria_id, {
-                              modo_preenchimento: 'sistema'
+                              fonte_sistema: e.target.value
                             })
                           }
-                          className={`py-1 px-1.5 rounded text-[10px] font-bold cursor-pointer ${
-                            item.modo_preenchimento === 'sistema'
-                              ? 'bg-cyan-400 text-slate-950'
-                              : 'bg-slate-800/80 text-slate-300 hover:text-white'
-                          }`}
+                          className="w-full px-2.5 py-1.5 bg-[#12161F] border border-slate-700 rounded text-xs text-slate-200"
                         >
-                          Só Sistema
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            atualizarItemRelatorio(item.categoria_id, {
-                              modo_preenchimento: 'manual'
-                            })
-                          }
-                          className={`py-1 px-1.5 rounded text-[10px] font-bold cursor-pointer ${
-                            item.modo_preenchimento === 'manual'
-                              ? 'bg-amber-500 text-slate-950'
-                              : 'bg-slate-800/80 text-slate-300 hover:text-white'
-                          }`}
-                        >
-                          Só Manual
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            atualizarItemRelatorio(item.categoria_id, {
-                              modo_preenchimento: 'mesclado'
-                            })
-                          }
-                          className={`py-1 px-1.5 rounded text-[10px] font-bold cursor-pointer ${
-                            item.modo_preenchimento === 'mesclado'
-                              ? 'bg-emerald-500 text-slate-950'
-                              : 'bg-slate-800/80 text-slate-300 hover:text-white'
-                          }`}
-                        >
-                          Mesclar Ambos
-                        </button>
+                          {FONTES_SISTEMA_LABELS.map((f) => (
+                            <option key={f.value} value={f.value}>
+                              {f.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        {item.fonte_sistema !== 'MANUAL_PURO' &&
+                          item.fonte_sistema !== 'CAIXA_TODAS_ENTRADAS' &&
+                          item.fonte_sistema !== 'CAIXA_TODAS_SAIDAS' && (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                list="urutau-caixa-categorias-datalist"
+                                value={item.filtro_origem}
+                                onChange={(e) =>
+                                  atualizarItemRelatorio(item.categoria_id, {
+                                    filtro_origem: e.target.value
+                                  })
+                                }
+                                placeholder="Categoria/termo alvo..."
+                                className="flex-1 px-2.5 py-1 bg-[#12161F] border border-slate-800 rounded text-[11px] font-mono text-slate-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setDetalheOrigemAbertoCatId(
+                                    isDetalheAberto ? null : item.categoria_id
+                                  )
+                                }
+                                className="px-2 py-1 rounded bg-[#181D28] hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-700 cursor-pointer whitespace-nowrap"
+                              >
+                                {apuracaoDetalhada.qtd} lanç.
+                              </button>
+                            </div>
+                          )}
                       </div>
+                    )}
+
+                    <div className={showAdvancedOptions ? 'lg:col-span-3 space-y-1.5' : 'lg:col-span-4 space-y-1.5'}>
+                      {showAdvancedOptions ? (
+                        <>
+                          <label className="block text-[11px] text-slate-400">
+                            Modo e Valor Manual
+                          </label>
+                          <div className="grid grid-cols-3 gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                atualizarItemRelatorio(item.categoria_id, {
+                                  modo_preenchimento: 'sistema'
+                                })
+                              }
+                              className={`py-1 px-1.5 rounded text-[10px] font-medium cursor-pointer border ${
+                                item.modo_preenchimento === 'sistema'
+                                  ? 'bg-[#181D28] text-white border-slate-500'
+                                  : 'bg-[#12161F] text-slate-400 border-slate-800 hover:text-white'
+                              }`}
+                            >
+                              Sistema
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                atualizarItemRelatorio(item.categoria_id, {
+                                  modo_preenchimento: 'manual'
+                                })
+                              }
+                              className={`py-1 px-1.5 rounded text-[10px] font-medium cursor-pointer border ${
+                                item.modo_preenchimento === 'manual'
+                                  ? 'bg-[#181D28] text-white border-slate-500'
+                                  : 'bg-[#12161F] text-slate-400 border-slate-800 hover:text-white'
+                              }`}
+                            >
+                              Manual
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                atualizarItemRelatorio(item.categoria_id, {
+                                  modo_preenchimento: 'mesclado'
+                                })
+                              }
+                              className={`py-1 px-1.5 rounded text-[10px] font-medium cursor-pointer border ${
+                                item.modo_preenchimento === 'mesclado'
+                                  ? 'bg-[#181D28] text-white border-slate-500'
+                                  : 'bg-[#12161F] text-slate-400 border-slate-800 hover:text-white'
+                              }`}
+                            >
+                              Mesclado
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between text-[11px] text-slate-400">
+                          <span>Ajuste Manual</span>
+                          <span className="font-mono tabular-nums">
+                            Sistema: {formatBRL(item.valor_sistema)}
+                          </span>
+                        </div>
+                      )}
 
                       {item.modo_preenchimento !== 'sistema' ? (
                         <div className="grid grid-cols-2 gap-1.5 pt-0.5">
@@ -1173,12 +1221,8 @@ export function FechamentoCaixaDiarioPanel({
                             onChange={(e) =>
                               handleExpressaoManualItem(item.categoria_id, e.target.value)
                             }
-                            placeholder={
-                              item.modo_preenchimento === 'mesclado'
-                                ? 'Somar à mão (ex: 120+50)'
-                                : 'Valor/conta (ex: 450+80)'
-                            }
-                            className="px-2 py-1 bg-[#0B0D11] border border-amber-500/40 rounded text-xs font-mono text-amber-300"
+                            placeholder="Ex: 120+50"
+                            className="px-2.5 py-1.5 bg-[#12161F] border border-slate-700 rounded text-xs font-mono text-slate-200"
                           />
                           <input
                             type="number"
@@ -1190,33 +1234,25 @@ export function FechamentoCaixaDiarioPanel({
                                 expressao_manual: e.target.value
                               })
                             }
-                            placeholder="R$ Manual"
-                            className="px-2 py-1 bg-[#0B0D11] border border-slate-700 rounded text-xs font-mono font-bold text-white"
+                            placeholder="R$ 0,00"
+                            className="px-2.5 py-1.5 bg-[#12161F] border border-slate-700 rounded text-xs font-mono font-semibold text-white"
                           />
                         </div>
                       ) : (
-                        <div className="px-2.5 py-1.5 rounded bg-black/30 border border-slate-800 text-[11px] text-cyan-300 font-mono">
-                          Usando 100% valor do sistema ({formatBRL(item.valor_sistema)})
+                        <div className="px-2.5 py-1.5 rounded bg-[#12161F] border border-slate-800 text-[11px] text-slate-300 font-mono tabular-nums">
+                          Automático: {formatBRL(item.valor_sistema)}
                         </div>
                       )}
                     </div>
 
                     <div className="lg:col-span-3 space-y-1.5 flex flex-col justify-between">
-                      <div className="p-2.5 rounded-lg bg-black/50 border border-white/10 space-y-1">
+                      <div className="p-2.5 rounded-lg bg-[#12161F] border border-slate-800 space-y-0.5">
                         <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                          <span>
-                            {item.modo_preenchimento === 'mesclado'
-                              ? `Sis ${formatBRL(item.valor_sistema)} + Man ${formatBRL(
-                                  item.valor_manual
-                                )}`
-                              : item.modo_preenchimento === 'sistema'
-                              ? 'Valor Puxado do Sistema'
-                              : 'Valor Digitado Manualmente'}
-                          </span>
-                          <span className="uppercase font-bold text-slate-300">Total Dia</span>
+                          <span>Total do Dia</span>
+                          <span className="tabular-nums">{apuracaoDetalhada.qtd} lanç.</span>
                         </div>
                         <div
-                          className={`text-base font-mono font-black text-right tabular-nums ${
+                          className={`text-base font-mono font-bold text-right tabular-nums ${
                             item.tipo === 'Entrada' ? 'text-emerald-400' : 'text-rose-400'
                           }`}
                         >
@@ -1225,15 +1261,17 @@ export function FechamentoCaixaDiarioPanel({
                         </div>
                       </div>
 
-                      <input
-                        type="text"
-                        value={item.observacao || ''}
-                        onChange={(e) =>
-                          atualizarItemRelatorio(item.categoria_id, { observacao: e.target.value })
-                        }
-                        placeholder="Observação opcional da categoria..."
-                        className="w-full px-2.5 py-1 bg-black/30 border border-slate-800 rounded text-[11px] text-slate-300"
-                      />
+                      {showAdvancedOptions && (
+                        <input
+                          type="text"
+                          value={item.observacao || ''}
+                          onChange={(e) =>
+                            atualizarItemRelatorio(item.categoria_id, { observacao: e.target.value })
+                          }
+                          placeholder="Observação opcional..."
+                          className="w-full px-2.5 py-1 bg-[#12161F] border border-slate-800 rounded text-[11px] text-slate-300"
+                        />
+                      )}
                     </div>
                   </div>
 
@@ -1294,110 +1332,120 @@ export function FechamentoCaixaDiarioPanel({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="p-3.5 rounded-xl bg-[#091512] border border-emerald-500/40 space-y-1">
-              <div className="text-xs font-bold text-emerald-300">
-                Total Entradas no Fechamento ({dataFechamento})
+            <div className="p-3.5 rounded-xl bg-[#0E1117] border border-slate-800 space-y-1">
+              <div className="text-xs font-medium text-slate-400">
+                Total Entradas ({dataFechamento})
               </div>
-              <div className="text-lg font-mono font-black text-emerald-400 tabular-nums">
+              <div className="text-lg font-mono font-bold text-emerald-400 tabular-nums">
                 {formatBRL(totaisFechamentoAtual.entradas)}
               </div>
-              <div className="text-[11px] font-mono text-slate-400">
-                Sistema: {formatBRL(totaisFechamentoAtual.entradasSistema)} • Manual:{' '}
+              <div className="text-[11px] font-mono text-slate-400 tabular-nums">
+                Sistema: {formatBRL(totaisFechamentoAtual.entradasSistema)} · Manual:{' '}
                 {formatBRL(totaisFechamentoAtual.entradasManual)}
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#180B10] border border-rose-500/40 space-y-1">
-              <div className="text-xs font-bold text-rose-300">
-                Total Saídas no Fechamento ({dataFechamento})
+            <div className="p-3.5 rounded-xl bg-[#0E1117] border border-slate-800 space-y-1">
+              <div className="text-xs font-medium text-slate-400">
+                Total Saídas ({dataFechamento})
               </div>
-              <div className="text-lg font-mono font-black text-rose-400 tabular-nums">
+              <div className="text-lg font-mono font-bold text-rose-400 tabular-nums">
                 {formatBRL(totaisFechamentoAtual.saidas)}
               </div>
-              <div className="text-[11px] font-mono text-slate-400">
-                Sistema: {formatBRL(totaisFechamentoAtual.saidasSistema)} • Manual:{' '}
+              <div className="text-[11px] font-mono text-slate-400 tabular-nums">
+                Sistema: {formatBRL(totaisFechamentoAtual.saidasSistema)} · Manual:{' '}
                 {formatBRL(totaisFechamentoAtual.saidasManual)}
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#14120A] border border-amber-500/40 space-y-1">
-              <div className="text-xs font-bold text-amber-300">
-                Saldo Líquido Apurado no Fechamento
+            <div className="p-3.5 rounded-xl bg-[#0E1117] border border-slate-800 space-y-1">
+              <div className="text-xs font-medium text-slate-400">
+                Saldo Líquido Apurado
               </div>
-              <div className="text-lg font-mono font-black text-amber-400 tabular-nums">
+              <div className="text-lg font-mono font-bold text-white tabular-nums">
                 {formatBRL(totaisFechamentoAtual.saldo)}
               </div>
-              <div className="text-[11px] font-mono text-slate-400">
-                {itensRelatorio.filter((i) => i.lancar_no_caixa).length} categorias marcadas para o Caixa
+              <div className="text-[11px] font-mono text-slate-400 tabular-nums">
+                {itensRelatorio.filter((i) => i.lancar_no_caixa).length} categorias ativas no fechamento
               </div>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#090D14] border border-slate-800 space-y-3">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  Observações Gerais do Fechamento do Dia (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={observacoesGerais}
-                  onChange={(e) => setObservacoesGerais(e.target.value)}
-                  placeholder="Ex: Conferência realizada pela equipe do turno da noite sem divergências..."
-                  className="w-full px-3 py-2 bg-[#11151E] border border-slate-700 rounded-lg text-xs text-white"
-                />
-              </div>
+          <div className="p-4 rounded-xl bg-[#0E1117] border border-slate-800 space-y-3">
+            {showAdvancedOptions && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">
+                    Observações Gerais do Fechamento (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={observacoesGerais}
+                    onChange={(e) => setObservacoesGerais(e.target.value)}
+                    placeholder="Ex: Conferência realizada sem divergências..."
+                    className="w-full px-3 py-2 bg-[#12161F] border border-slate-700 rounded-lg text-xs text-white"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">
-                  Regra ao Registrar em Massa no Livro Caixa
-                </label>
-                <select
-                  value={modoLancamentoMassa}
-                  onChange={(e: any) => setModoLancamentoMassa(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#11151E] border border-slate-700 rounded-lg text-xs text-amber-300 font-semibold"
-                >
-                  <option value="apenas_manual_complementar">
-                    Lançar no Caixa apenas valores digitados à mão e fontes externas (Não duplica o que já está no Caixa)
-                  </option>
-                  <option value="valor_final_consolidado">
-                    Lançar no Caixa o valor final consolidado de cada categoria marcada
-                  </option>
-                </select>
+                <div>
+                  <label className="block text-xs text-slate-400 mb-1">
+                    Regra ao Registrar em Massa no Livro Caixa
+                  </label>
+                  <select
+                    value={modoLancamentoMassa}
+                    onChange={(e: any) => setModoLancamentoMassa(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#12161F] border border-slate-700 rounded-lg text-xs text-slate-200 font-medium"
+                  >
+                    <option value="apenas_manual_complementar">
+                      Lançar apenas valores manuais e fontes externas (evita duplicidade)
+                    </option>
+                    <option value="valor_final_consolidado">
+                      Lançar valor final consolidado de cada categoria marcada
+                    </option>
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800">
-              <label className="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={salvarFontesComoPadrao}
-                  onChange={(e) => setSalvarFontesComoPadrao(e.target.checked)}
-                  className="accent-emerald-500"
-                />
-                <span>
-                  Deixar pré-salvas as fontes e modos escolhidos acima para os próximos dias
-                </span>
-              </label>
+            <div className={`flex flex-wrap items-center justify-between gap-3 ${showAdvancedOptions ? 'pt-2 border-t border-slate-800' : ''}`}>
+              {showAdvancedOptions ? (
+                <label className="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={salvarFontesComoPadrao}
+                    onChange={(e) => setSalvarFontesComoPadrao(e.target.checked)}
+                    className="accent-emerald-500"
+                  />
+                  <span>
+                    Manter fontes e modos configurados como padrão para os próximos dias
+                  </span>
+                </label>
+              ) : (
+                <div className="text-xs text-slate-400">
+                  Use <strong className="text-slate-200">Opções Avançadas</strong> para ajustar fontes do sistema, categorias e regras de lançamento.
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={() => handleSalvarFechamentoDiario(false)}
-                  className="px-4 py-2.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 cursor-pointer disabled:opacity-50"
-                >
-                  Apenas Salvar Relatório Diário (Anotação)
-                </button>
+                {showAdvancedOptions && (
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={() => handleSalvarFechamentoDiario(false)}
+                    className="px-4 py-2 rounded-lg text-xs font-medium bg-[#181D28] hover:bg-slate-800 text-slate-200 border border-slate-700 cursor-pointer disabled:opacity-50"
+                  >
+                    Apenas Salvar Relatório (Anotação)
+                  </button>
+                )}
 
                 <button
                   type="button"
                   disabled={salvando}
                   onClick={() => handleSalvarFechamentoDiario(true)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-bold bg-[#10B981] hover:bg-[#34D399] text-[#061014] cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 >
                   <Check className="w-4 h-4" />
-                  <span>Salvar Fechamento &amp; Registrar em Massa no Livro Caixa</span>
+                  <span>Salvar Fechamento e Registrar no Caixa</span>
                 </button>
               </div>
             </div>

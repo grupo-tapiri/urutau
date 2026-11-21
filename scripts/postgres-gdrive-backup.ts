@@ -15,13 +15,21 @@ import {
   uploadBufferToDrive
 } from '../src/server/services/googleDriveServiceAccount.ts';
 import { isStagingEnvironment, resolveDatabaseUrl } from '../src/server/db/postgresEngine.ts';
+import {
+  exportAllTenantsLogicalBackups,
+  TenantBackupExportResult
+} from '../src/server/services/tenantLogicalBackupService.ts';
 
 const BACKUP_NAME_PREFIX = 'urutau-pg-backup-';
 const HOURS_48_MS = 48 * 60 * 60 * 1000;
+const ONE_HOUR_MS = 60 * 60 * 1000;
 
 export interface SmartRetentionSummary {
   totalEvaluated: number;
   keptRecent48h: number;
+  keptHourly48h: number;
+  keptFractionalCurrentHour: number;
+  prunedFractionalPreviousHours: number;
   keptDailyArchive: number;
   deletedIds: string[];
 }
@@ -36,17 +44,31 @@ export interface PostgresGdriveBackupReport {
   sha256?: string;
   durationMs: number;
   retention?: SmartRetentionSummary;
+  tenantLogicalBackups?: TenantBackupExportResult[];
   executedAtUtc: string;
+}
+
+function isTopOfHourTimestamp(createdMs: number): boolean {
+  const minute = new Date(createdMs).getUTCMinutes();
+  return minute < 5;
 }
 
 export function computeSmartRetentionPlan(
   files: DriveListedFile[],
   nowMs: number = Date.now()
-): { keepIds: Set<string>; deleteIds: string[]; keptRecent48h: number; keptDailyArchive: number } {
+): {
+  keepIds: Set<string>;
+  deleteIds: string[];
+  keptRecent48h: number;
+  keptHourly48h: number;
+  keptFractionalCurrentHour: number;
+  prunedFractionalPreviousHours: number;
+  keptDailyArchive: number;
+} {
   const cutoff48h = nowMs - HOURS_48_MS;
   const keepIds = new Set<string>();
+  const recentFiles: Array<{ file: DriveListedFile; createdMs: number; hourBucket: number; isTopOfHour: boolean }> = [];
   const olderByDay = new Map<string, DriveListedFile[]>();
-  let keptRecent48h = 0;
 
   for (const file of files) {
     if (!file.name.startsWith(BACKUP_NAME_PREFIX) || !file.name.endsWith('.sql.gz')) {
@@ -59,8 +81,13 @@ export function computeSmartRetentionPlan(
     }
 
     if (createdMs >= cutoff48h) {
-      keepIds.add(file.id);
-      keptRecent48h += 1;
+      const hourBucket = Math.floor(createdMs / ONE_HOUR_MS) * ONE_HOUR_MS;
+      recentFiles.push({
+        file,
+        createdMs,
+        hourBucket,
+        isTopOfHour: isTopOfHourTimestamp(createdMs)
+      });
     } else {
       const utcDay = new Date(createdMs).toISOString().slice(0, 10);
       const bucket = olderByDay.get(utcDay) || [];
@@ -68,6 +95,58 @@ export function computeSmartRetentionPlan(
       olderByDay.set(utcDay, bucket);
     }
   }
+
+  const fullHourByBucket = new Map<number, { file: DriveListedFile; createdMs: number }>();
+  let latestFullHourBucket = -1;
+
+  for (const entry of recentFiles) {
+    if (entry.isTopOfHour) {
+      if (entry.hourBucket > latestFullHourBucket) {
+        latestFullHourBucket = entry.hourBucket;
+      }
+      const existing = fullHourByBucket.get(entry.hourBucket);
+      if (!existing || entry.createdMs > existing.createdMs) {
+        fullHourByBucket.set(entry.hourBucket, { file: entry.file, createdMs: entry.createdMs });
+      }
+    }
+  }
+
+  let keptHourly48h = 0;
+  for (const [, bestHourly] of fullHourByBucket.entries()) {
+    keepIds.add(bestHourly.file.id);
+    keptHourly48h += 1;
+  }
+
+  let keptFractionalCurrentHour = 0;
+  let prunedFractionalPreviousHours = 0;
+
+  for (const entry of recentFiles) {
+    if (entry.isTopOfHour) continue;
+
+    if (latestFullHourBucket >= 0 && entry.hourBucket < latestFullHourBucket) {
+      prunedFractionalPreviousHours += 1;
+      continue;
+    }
+
+    const currentHourBucket = Math.floor(nowMs / ONE_HOUR_MS) * ONE_HOUR_MS;
+    if (latestFullHourBucket < 0 && entry.hourBucket < currentHourBucket) {
+      const sameHourBest = recentFiles
+        .filter((x) => x.hourBucket === entry.hourBucket)
+        .sort((a, b) => b.createdMs - a.createdMs)[0];
+      if (sameHourBest && sameHourBest.file.id === entry.file.id) {
+        keepIds.add(entry.file.id);
+        keptHourly48h += 1;
+      } else {
+        prunedFractionalPreviousHours += 1;
+      }
+      continue;
+    }
+
+    keepIds.add(entry.file.id);
+    keptFractionalCurrentHour += 1;
+  }
+
+  const keptRecent48h = keptHourly48h + keptFractionalCurrentHour;
 
   let keptDailyArchive = 0;
   for (const [, dayFiles] of olderByDay.entries()) {
@@ -89,7 +168,15 @@ export function computeSmartRetentionPlan(
     )
     .map((f) => f.id);
 
-  return { keepIds, deleteIds, keptRecent48h, keptDailyArchive };
+  return {
+    keepIds,
+    deleteIds,
+    keptRecent48h,
+    keptHourly48h,
+    keptFractionalCurrentHour,
+    prunedFractionalPreviousHours,
+    keptDailyArchive
+  };
 }
 
 export async function applySmartRetentionPolicy(folderId: string): Promise<SmartRetentionSummary> {
@@ -113,6 +200,9 @@ export async function applySmartRetentionPolicy(folderId: string): Promise<Smart
   return {
     totalEvaluated: listed.length,
     keptRecent48h: plan.keptRecent48h,
+    keptHourly48h: plan.keptHourly48h,
+    keptFractionalCurrentHour: plan.keptFractionalCurrentHour,
+    prunedFractionalPreviousHours: plan.prunedFractionalPreviousHours,
     keptDailyArchive: plan.keptDailyArchive,
     deletedIds
   };
@@ -230,7 +320,14 @@ export async function executeHourlyPostgresBackup(): Promise<PostgresGdriveBacku
       buffer.fill(0);
     }
 
-    const retention = await applySmartRetentionPolicy(backupFolderId);
+    const [retention, tenantLogicalBackups] = await Promise.all([
+      applySmartRetentionPolicy(backupFolderId),
+      exportAllTenantsLogicalBackups({
+        uploadToDrive: true,
+        driveFolderId:
+          String(process.env.GOOGLE_DRIVE_TENANT_BACKUP_FOLDER_ID || '').trim() || backupFolderId
+      }).catch(() => [] as TenantBackupExportResult[])
+    ]);
 
     return {
       ok: true,
@@ -240,6 +337,7 @@ export async function executeHourlyPostgresBackup(): Promise<PostgresGdriveBacku
       sha256,
       durationMs: Date.now() - startMs,
       retention,
+      tenantLogicalBackups,
       executedAtUtc
     };
   } finally {

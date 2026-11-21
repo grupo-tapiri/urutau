@@ -17,6 +17,7 @@ import {
   WebhookAndHardLimitService
 } from '../services/webhookAndHardLimitService.ts';
 import { getBackupSchedulerStatus } from '../services/postgresBackupScheduler.ts';
+import { isUserQuarantined } from '../services/accessApprovalService.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,6 +35,7 @@ const PUBLIC_API_EXACT_PATHS = new Set<string>([
   '/api/v50/auth/setup-status',
   '/api/v50/auth/solicitar-token-wpp',
   '/api/v50/auth/validar-token-wpp',
+  '/api/auth/register',
   '/api/erp/onboarding-empresario',
   '/api/lgpd/google-sheets/opcoes-publicas',
   '/api/erp/vps-codigo-instalacao-zero',
@@ -197,6 +199,20 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
         ok: false,
         codigo: 'NAO_AUTENTICADO',
         erro: 'Sessao ausente, expirada ou invalida. Autentique-se novamente para acessar este recurso.'
+      });
+      return;
+    }
+
+    const legacyDbSnapshot = getLegacyDb();
+    const matchedLegacyUser = Array.isArray(legacyDbSnapshot?.usuarios)
+      ? legacyDbSnapshot.usuarios.find((u: any) => Number(u.id) === Number(sessao.uid))
+      : null;
+    if (matchedLegacyUser && isUserQuarantined(matchedLegacyUser)) {
+      res.status(403).json({
+        ok: false,
+        codigo: 'PENDING_APPROVAL',
+        approval_status: matchedLegacyUser.approval_status || 'pending_approval',
+        erro: 'Aguardando aprovação do Administrador.'
       });
       return;
     }

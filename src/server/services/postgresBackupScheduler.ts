@@ -17,7 +17,7 @@ export interface BackupWorkerStatus {
 let activeWorker: Worker | null = null;
 const workerStatus: BackupWorkerStatus = {
   active: false,
-  schedule: String(process.env.BACKUP_CRON_SCHEDULE || '0 * * * *'),
+  schedule: String(process.env.BACKUP_CRON_SCHEDULE || '*/15 * * * *'),
   startedAtUtc: null,
   lastRunAtUtc: null,
   lastReport: null,
@@ -36,7 +36,7 @@ export function startPostgresBackupWorkerThread(): Worker | null {
   }
 
   const workerScriptPath = path.resolve(__dirname, '../workers/postgresBackupWorker.ts');
-  const schedule = String(process.env.BACKUP_CRON_SCHEDULE || '0 * * * *').trim();
+  const schedule = String(process.env.BACKUP_CRON_SCHEDULE || '*/15 * * * *').trim();
 
   try {
     const worker = new Worker(workerScriptPath, {

@@ -2,8 +2,8 @@ import { parentPort, workerData } from 'worker_threads';
 import cron from 'node-cron';
 import { executeHourlyPostgresBackup } from '../../../scripts/postgres-gdrive-backup.ts';
 
-const scheduleExpr = String(workerData?.schedule || process.env.BACKUP_CRON_SCHEDULE || '0 * * * *').trim();
-const validSchedule = cron.validate(scheduleExpr) ? scheduleExpr : '0 * * * *';
+const scheduleExpr = String(workerData?.schedule || process.env.BACKUP_CRON_SCHEDULE || '*/15 * * * *').trim();
+const validSchedule = cron.validate(scheduleExpr) ? scheduleExpr : '*/15 * * * *';
 
 let isRunningBackup = false;
 

@@ -9,6 +9,7 @@
     "start": "tsx server.ts",
     "start:staging": "bun run scripts/start-staging.ts",
     "backup:postgres": "tsx scripts/postgres-gdrive-backup.ts",
+    "restore:tenant": "tsx scripts/restore-tenant.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",

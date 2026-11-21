@@ -39,6 +39,33 @@ export const COLD_STORAGE_ASSET_TYPES = new Set<UploadAssetType>([
   'spreadsheet'
 ]);
 
+const UPLOAD_TYPE_ALIAS_MAP: Record<string, UploadAssetType> = {
+  product_photo: 'product_photo',
+  menu_photo: 'product_photo',
+  foto_cardapio: 'product_photo',
+  foto_produto: 'product_photo',
+  profile_picture: 'profile_picture',
+  avatar: 'profile_picture',
+  foto_perfil: 'profile_picture',
+  hr_document: 'hr_document',
+  holerite: 'hr_document',
+  curriculo: 'hr_document',
+  atestado: 'hr_document',
+  pdf: 'hr_document',
+  documento_rh: 'hr_document',
+  chat_attachment: 'chat_attachment',
+  anexo_chat: 'chat_attachment',
+  spreadsheet: 'spreadsheet',
+  excel: 'spreadsheet',
+  planilha: 'spreadsheet',
+  csv: 'spreadsheet'
+};
+
+export function normalizeUploadAssetType(value: string): UploadAssetType | null {
+  const clean = String(value || '').trim().toLowerCase();
+  return UPLOAD_TYPE_ALIAS_MAP[clean] || null;
+}
+
 const ALLOWED_COLD_MIME_TYPES = new Set<string>([
   'application/pdf',
   'application/vnd.ms-excel',
@@ -669,7 +696,8 @@ export function registerHybridStorageRoutes(params: {
 
         const storageSvc = getStorageService();
         const rawUploadType = String(req.body?.uploadType || req.body?.upload_type || '').trim();
-        if (!isValidUploadAssetType(rawUploadType)) {
+        const normalizedUploadType = normalizeUploadAssetType(rawUploadType);
+        if (!normalizedUploadType) {
           throw new StorageValidationError(
             'Informe uploadType valido (product_photo, profile_picture, hr_document, chat_attachment, spreadsheet).'
           );
@@ -703,7 +731,7 @@ export function registerHybridStorageRoutes(params: {
         const saved = await storageSvc.uploadAsset({
           companyId: requestedCompanyId,
           uploadedByUid: sessao.uid,
-          uploadType: rawUploadType,
+          uploadType: normalizedUploadType,
           originalName,
           mimeType,
           buffer: fileBuffer
@@ -738,7 +766,7 @@ export function registerHybridStorageRoutes(params: {
       storageSvc.assertTenantAccess(sessao, targetCompanyId);
 
       const rawType = req.query.uploadType ? String(req.query.uploadType).trim() : undefined;
-      const filterType = rawType && isValidUploadAssetType(rawType) ? rawType : undefined;
+      const filterType = rawType ? normalizeUploadAssetType(rawType) || undefined : undefined;
       const files = await storageSvc.listFilesForCompany(targetCompanyId, filterType);
 
       res.json({

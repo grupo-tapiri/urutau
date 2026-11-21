@@ -1445,6 +1445,10 @@ export function TabIconSVG({
     switch (tab) {
       case 'home':
         return <LayoutGrid className={className} />;
+      case 'quadro_branco':
+        return <Layers className={className} />;
+      case 'aprovacoes':
+        return <ShieldCheck className={className} />;
       case 'empresas':
         return <Network className={className} />;
       case 'freelancers':

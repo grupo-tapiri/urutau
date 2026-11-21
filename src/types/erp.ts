@@ -1,5 +1,7 @@
 export type TabId =
   | 'home'
+  | 'quadro_branco'
+  | 'aprovacoes'
   | 'empresas'
   | 'freelancers'
   | 'cadastros'
@@ -162,6 +164,8 @@ export const MENU_SYMBOL_COLOR_PALETTE = [
 
 export const DEFAULT_TAB_META: Record<TabId, TabMeta> = {
   home: { id: 'home', label: 'Início', categoriaId: 'salao_atendimento', descricaoCurta: 'Visão geral, indicadores e alertas', iconName: 'LayoutGrid', iconColor: '#10B981' },
+  quadro_branco: { id: 'quadro_branco', label: 'Quadro Branco', categoriaId: 'salao_atendimento', descricaoCurta: 'Lousa pessoal em tela cheia com post-its, pinos e áreas', iconName: 'Layers', iconColor: '#94A3B8' },
+  aprovacoes: { id: 'aprovacoes', label: 'Aprovações', categoriaId: 'governanca_sistema', descricaoCurta: 'Fila de quarentena LGPD, vínculos de empresas e delegação de equipe', iconName: 'Shield', iconColor: '#F59E0B' },
   empresas: { id: 'empresas', label: 'Empresas', categoriaId: 'estrutura_qualidade', descricaoCurta: '', iconName: 'Network', iconColor: '#10B981' },
   freelancers: { id: 'freelancers', label: 'Freelancers', categoriaId: 'rh_selecao', descricaoCurta: '', iconName: 'Sparkles', iconColor: '#F59E0B' },
   cadastros: { id: 'cadastros', label: 'Cadastros', categoriaId: 'rh_selecao', descricaoCurta: 'PF/PJ, Clientes, Fornecedores e Equipe', iconName: 'UserPlus', iconColor: '#8B5CF6' },
@@ -210,38 +214,38 @@ export const DEFAULT_CATEGORIES: NavCategory[] = [
   {
     id: 'salao_atendimento',
     titulo: 'Salão',
-    corSimbolo: '#10B981',
-    abas: ['home', 'pdv', 'checklists', 'chat']
+    corSimbolo: '#94A3B8',
+    abas: ['home', 'quadro_branco', 'pdv', 'checklists', 'chat']
   },
   {
     id: 'operacao_escalas',
     titulo: 'Operação',
-    corSimbolo: '#F59E0B',
+    corSimbolo: '#94A3B8',
     abas: ['escalas', 'agenda', 'reservas', 'portais']
   },
   {
     id: 'financeiro_caixa',
     titulo: 'Financeiro',
-    corSimbolo: '#22C55E',
+    corSimbolo: '#94A3B8',
     abas: ['caixa', 'estoque', 'cmv']
   },
   {
     id: 'rh_selecao',
     titulo: 'RH & Vagas',
-    corSimbolo: '#EC4899',
+    corSimbolo: '#94A3B8',
     abas: ['rh', 'cadastros', 'permissoes']
   },
   {
     id: 'estrutura_qualidade',
     titulo: 'Estrutura',
-    corSimbolo: '#38BDF8',
+    corSimbolo: '#94A3B8',
     abas: ['equipe', 'unidades', 'setores', 'cargos']
   },
   {
     id: 'governanca_sistema',
     titulo: 'Sistema & Ajustes',
-    corSimbolo: '#10B981',
-    abas: ['config']
+    corSimbolo: '#94A3B8',
+    abas: ['aprovacoes', 'config']
   }
 ];
 

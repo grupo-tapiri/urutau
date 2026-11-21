@@ -28,6 +28,13 @@ import {
   HybridStorageService,
   registerHybridStorageRoutes
 } from './src/server/services/hybridStorageService.ts';
+import {
+  extractClientIp,
+  isUserQuarantined,
+  registerAccessApprovalRoutes,
+  syncAccessApprovalRecordToPostgres
+} from './src/server/services/accessApprovalService.ts';
+import { registerTenantBackupRoutes } from './src/server/services/tenantLogicalBackupService.ts';
 import { startPostgresBackupWorkerThread } from './src/server/services/postgresBackupScheduler.ts';
 import {
   handleDomainErrorResponse,
@@ -317,6 +324,21 @@ registerZeroTrustMiddlewareAndRoutes({
 registerHybridStorageRoutes({
   app,
   getStorageService: () => hybridStorageService
+});
+
+registerAccessApprovalRoutes({
+  app,
+  getLegacyDb: () => db,
+  saveLegacyDb: () => saveDbToDisk(),
+  hashPassword: gerarHashArgon2id,
+  registerAuditLog: registrarAuditLog
+});
+
+registerTenantBackupRoutes({
+  app,
+  getLegacyDb: () => db,
+  saveLegacyDb: () => saveDbToDisk(),
+  registerAuditLog: registrarAuditLog
 });
 
 registerAllIsolatedMotors(app, {
@@ -2765,9 +2787,26 @@ app.post(['/api/v31/auth/desbloquear', '/api/v31/auth/validar-acesso'], async (r
         }
         if (okUser) {
           limparFalhasAutenticacao(req, cleanId);
-          await registrarAuditLog(cand.nome, 'LOGIN_SUCESSO', 'Sessão autenticada com Argon2id', req.ip, cand.cargo);
           const copia = { ...cand };
           delete copia.senha_argon2id;
+          if (isUserQuarantined(cand)) {
+            await registrarAuditLog(
+              cand.nome,
+              'LOGIN_BLOQUEADO_QUARENTENA',
+              `Tentativa de login bloqueada: status ${cand.approval_status || 'pending_approval'}.`,
+              extractClientIp(req),
+              cand.cargo
+            );
+            return res.json({
+              ok: true,
+              pending_approval: true,
+              approval_status: cand.approval_status || 'pending_approval',
+              sessao_token: null,
+              usuario: copia,
+              mensagem: 'Aguardando aprovação do Administrador.'
+            });
+          }
+          await registrarAuditLog(cand.nome, 'LOGIN_SUCESSO', 'Sessão autenticada com Argon2id', req.ip, cand.cargo);
           const empresaAtivaId =
             empMatchExplicitaId ||
             (Array.isArray(copia.empresas_ids) && copia.empresas_ids.length > 0
@@ -3718,6 +3757,17 @@ app.post('/api/v50/auth/validar-token-wpp', async (req: Request, res: Response) 
     const copia = { ...user };
     delete copia.senha_argon2id;
 
+    if (isUserQuarantined(user)) {
+      return res.json({
+        ok: true,
+        pending_approval: true,
+        approval_status: user.approval_status || 'pending_approval',
+        sessao_token: null,
+        usuario: copia,
+        mensagem: 'Aguardando aprovação do Administrador.'
+      });
+    }
+
     const sessaoToken = emitirSessaoAssinada(res, copia, item.empresa_id);
 
     await registrarAuditLog(
@@ -4432,6 +4482,19 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
       res.status(400).json({ ok: false, erro: 'Defina uma senha de acesso com pelo menos 4 caracteres.' });
       return;
     }
+    const termosAceitos = Boolean(
+      req.body?.terms_accepted ?? req.body?.termsAccepted ?? req.body?.termo_uso_aceito ?? req.body?.termo_lgpd_aceito
+    );
+    if (!termosAceitos) {
+      res.status(400).json({
+        ok: false,
+        codigo: 'LGPD_TERMS_REQUIRED',
+        erro: 'É obrigatório aceitar os Termos de Uso e a Política de Privacidade (LGPD) para concluir o cadastro.'
+      });
+      return;
+    }
+    const termsAcceptedAtUtc = new Date().toISOString();
+    const termsAcceptedIp = extractClientIp(req);
 
     const resolvidoPessoal = resolverTelefoneBanco(String(whatsapp));
     const telefonePessoalFinal =
@@ -4652,6 +4715,12 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
           email: String(email || '').trim(),
           tipo: 'Gestor da Empresa',
           cargo: 'Empresário / Proprietário',
+          role: 'company_owner',
+          approval_status: 'pending_approval',
+          terms_accepted: true,
+          terms_version: 'LGPD-TERMOS-2026.1',
+          terms_accepted_at_utc: termsAcceptedAtUtc,
+          terms_accepted_ip: termsAcceptedIp,
           foto: '',
           empresas_ids: [empId],
           escala_fixa_json: JSON.stringify([1, 2, 3, 4, 5, 6, 0]),
@@ -4661,6 +4730,8 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
             gerenciar_subordinados: true,
             escopo_colaboradores: 'subordinados',
             modulos: {
+              aprovacoes: { ver: true, editar: true },
+              quadro_branco: { ver: true, editar: true },
               rateio: { ver: true, editar: true },
               escalas: { ver: true, editar: true },
               agenda: { ver: true, editar: true },
@@ -4681,7 +4752,7 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
             }
           },
           arquivado_legal: false,
-          criado_em: new Date().toISOString()
+          criado_em: termsAcceptedAtUtc
         };
         db.usuarios.push(novoUsuarioObj);
 
@@ -4739,15 +4810,30 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
       'Empresário / Proprietário'
     );
 
+    await syncAccessApprovalRecordToPostgres({
+      userId: Number(novoUsuarioObj.id),
+      companyId: Number(novaEmpresaObj.id),
+      nome: String(novoUsuarioObj.nome || ''),
+      email: String(novoUsuarioObj.email || ''),
+      telefone: String(novoUsuarioObj.telefone || ''),
+      role: 'company_owner',
+      approvalStatus: 'pending_approval',
+      termsAccepted: true,
+      termsVersion: 'LGPD-TERMOS-2026.1',
+      termsAcceptedAtUtc,
+      termsAcceptedIp
+    });
+
     const usuarioSemHash = { ...novoUsuarioObj };
     delete usuarioSemHash.senha_argon2id;
-    const sessaoToken = emitirSessaoAssinada(res, usuarioSemHash, novaEmpresaObj.id);
 
     res.json({
       ok: true,
+      pending_approval: true,
+      approval_status: 'pending_approval',
       empresa: novaEmpresaObj,
       usuario: usuarioSemHash,
-      sessao_token: sessaoToken,
+      sessao_token: null,
       unidade: novaUnidadeObj,
       setores: novosSetoresList,
       plataformas: {

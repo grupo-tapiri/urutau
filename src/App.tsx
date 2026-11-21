@@ -116,6 +116,8 @@ import { OfflineSyncCenter } from './components/OfflineSyncCenter';
 import { PdvHibridoTab } from './components/PdvHibridoTab';
 import { UrutauLandingPage } from './components/UrutauLandingPage';
 import { CleanModuleShell, HomeDashboardHub, MODULE_CLEAN_GUIDES } from './components/CleanModuleShell';
+import { PersonalWhiteboardCanvas } from './components/PersonalWhiteboardCanvas';
+import { AccessApprovalPanel } from './components/AccessApprovalPanel';
 import {
   LaunchedPcProgram,
   UrutauPcProgramTakeoverScreen,
@@ -457,6 +459,10 @@ export default function App() {
   const [cadGoogleToken, setCadGoogleToken] = useState<string>('');
   const [cadPlanilhaUrl, setCadPlanilhaUrl] = useState<string>('');
   const [cadAceiteLgpd, setCadAceiteLgpd] = useState<boolean>(true);
+  const [cadAceiteTermosUso, setCadAceiteTermosUso] = useState<boolean>(false);
+  const [cadTermosExpandido, setCadTermosExpandido] = useState<boolean>(false);
+  const [cadTipoCadastro, setCadTipoCadastro] = useState<'empresa' | 'usuario'>('empresa');
+  const [pendingApprovalUser, setPendingApprovalUser] = useState<any>(null);
   const [cadModoGuarda, setCadModoGuarda] = useState<'google_drive' | 'computador_local_multiacesso'>('google_drive');
   const [cadCienciaMultiacessoSemDrive, setCadCienciaMultiacessoSemDrive] = useState<boolean>(false);
   const [computadoresAtivosEmpresa, setComputadoresAtivosEmpresa] = useState<number>(1);
@@ -1339,6 +1345,26 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [sidebarWidth, setSidebarWidth] = useState<number>(236);
   const [isResizingSidebar, setIsResizingSidebar] = useState<boolean>(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('urutau_sidebar_accordions_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+    return {};
+  });
+
+  const toggleSidebarCategory = useCallback((catId: string) => {
+    setCollapsedCategories((prev) => {
+      const next = { ...prev, [catId]: !prev[catId] };
+      try {
+        localStorage.setItem('urutau_sidebar_accordions_v1', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const normalizeUnifiedCategories = useCallback((rawCats: NavCategory[]): NavCategory[] => {
     if (!Array.isArray(rawCats) || rawCats.length === 0) return DEFAULT_CATEGORIES;
@@ -2957,7 +2983,16 @@ export default function App() {
         });
         return;
       }
+      if (json.pending_approval || json.approval_status === 'pending_approval' || json.approval_status === 'rejected') {
+        setPendingApprovalUser(json.usuario || { nome: unlockIdentificador, approval_status: json.approval_status || 'pending_approval' });
+        setUnlockPassword('');
+        setSessionVerifiedByServer(false);
+        setIsUserAuthenticated(false);
+        setIsSessionLocked(true);
+        return;
+      }
       if (json.usuario) {
+        setPendingApprovalUser(null);
         setCurrentUser(json.usuario);
         setRealOperatorUser(json.usuario);
         setUnlockIdentificador(json.usuario.nome || '');
@@ -3233,6 +3268,10 @@ export default function App() {
         setSwitchAuthError(json.erro || 'Credenciais inválidas ou usuário não encontrado.');
         return;
       }
+      if (json.pending_approval || json.approval_status === 'pending_approval' || json.approval_status === 'rejected') {
+        setSwitchAuthError('Esta conta está aguardando aprovação do Administrador.');
+        return;
+      }
       const loggedUser = json.usuario || {
         id: Date.now(),
         nome: switchLoginIdentificador.trim(),
@@ -3409,7 +3448,17 @@ export default function App() {
         setWppError(json.erro || 'Código inválido ou expirado.');
         return;
       }
+      if (json.pending_approval || json.approval_status === 'pending_approval' || json.approval_status === 'rejected') {
+        setPendingApprovalUser(json.usuario || { nome: wppInputTelefone, approval_status: json.approval_status || 'pending_approval' });
+        setSessionVerifiedByServer(false);
+        setIsUserAuthenticated(false);
+        setIsSessionLocked(true);
+        setWppOtpCode('');
+        setWppOtpSent(false);
+        return;
+      }
       if (json.usuario) {
+        setPendingApprovalUser(null);
         setCurrentUser(json.usuario);
         setRealOperatorUser(json.usuario);
         setUnlockIdentificador(json.usuario.nome || '');
@@ -3468,6 +3517,7 @@ export default function App() {
   ];
 
   const GESTOR_GOVERNANCE_TABS: TabId[] = [
+    'aprovacoes',
     'permissoes',
     'auditoria',
     'notificacoes',
@@ -3735,13 +3785,13 @@ export default function App() {
         />
       ) : isAuthenticatedAndUnlocked ? (
         <div
-          className={`w-full min-h-screen text-[#F8FAFC] flex flex-col transition-colors duration-300 ${
-            isCurrentTabSystematicAdmin ? 'systematic-admin-viewport' : 'bg-[#05100C]'
+          className={`w-full h-screen max-h-screen overflow-hidden text-[#F8FAFC] flex flex-col transition-colors duration-300 ${
+            isCurrentTabSystematicAdmin ? 'systematic-admin-viewport' : 'bg-[#0B0E14]'
           }`}
         >
       <StagingEnvironmentTopBanner onAfterReset={fetchAllData} />
       {estaSimulandoColaborador && (
-        <div className="w-full bg-[#F59E0B] text-[#05100C] px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 z-50 shadow-md border-b border-black/20">
+        <div className="w-full shrink-0 bg-[#F59E0B] text-[#05100C] px-3 sm:px-6 py-1.5 flex items-center justify-between gap-2 z-50 shadow-md border-b border-black/20">
           <div className="flex items-center gap-2 text-xs font-bold min-w-0 truncate">
             <Eye className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">
@@ -3774,7 +3824,7 @@ export default function App() {
         </button>
       )}
 
-      <div className="flex-1 w-full flex items-start relative">
+      <div className="flex-1 min-h-0 w-full flex overflow-hidden relative">
         {menuPosition === 'left' && sidebarCollapsed && (
           <button
             type="button"
@@ -3793,7 +3843,7 @@ export default function App() {
         {menuPosition === 'left' && !sidebarCollapsed && (
           <aside
             style={{ width: menuVisualMode === 'dock' ? 148 : Math.max(220, sidebarWidth) }}
-            className="hidden md:flex sticky top-0 self-start h-screen tapiri-sidebar flex-col shrink-0 select-none z-30 transition-[width] duration-150"
+            className="hidden md:flex h-full overflow-hidden tapiri-sidebar flex-col shrink-0 select-none z-30 transition-[width] duration-150 relative"
           >
             <button
               type="button"
@@ -3809,7 +3859,6 @@ export default function App() {
             </button>
 
             <div className="p-2.5 border-b border-white/[0.06] space-y-2 shrink-0">
-              <div className="grafismo-amazonico-frieze opacity-75 rounded-sm" />
                 <button
                   type="button"
                   onClick={() => setBrandShowcaseOpen(true)}
@@ -4197,7 +4246,7 @@ export default function App() {
               onScroll={(e) => {
                 sidebarScrollPosRef.current = e.currentTarget.scrollTop;
               }}
-              className="flex-1 overflow-y-auto py-2 px-2 space-y-1"
+              className="flex-1 min-h-0 overflow-y-auto py-2 px-2 space-y-1"
             >
               {menuVisualMode === 'dock' ? (
                 <div className="flex flex-col items-stretch gap-1">
@@ -4279,7 +4328,7 @@ export default function App() {
                   .map((cat) => {
                   const visibleTabs = cat.abas.filter(canAccessTab);
                   if (visibleTabs.length === 0 && inlineEditingCatId !== cat.id) return null;
-                  const isExpanded = true;
+                  const isExpanded = !collapsedCategories[cat.id];
                   const isEditingThisCat = inlineEditingCatId === cat.id;
                   const isDragOverThisCat = dragOverCatId === cat.id;
                   const rawCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
@@ -4388,10 +4437,18 @@ export default function App() {
                           onTouchStart={(e) => startHoldOnCategory(cat.id, e)}
                           onTouchMove={handleTouchMoveDrag}
                           onTouchEnd={handleTouchEndDrag}
-                          className="group/cat w-full flex items-center justify-between px-2 py-1 border-b border-white/[0.06] text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 select-none"
-                          title={cleanCatTitle}
+                          onClick={() => toggleSidebarCategory(cat.id)}
+                          role="button"
+                          aria-expanded={isExpanded}
+                          className="group/cat w-full flex items-center justify-between px-2 py-1.5 border-b border-white/[0.06] text-left text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200 hover:bg-white/[0.03] rounded-t-lg transition-colors select-none cursor-pointer"
+                          title={isExpanded ? `Recolher ${cleanCatTitle}` : `Expandir ${cleanCatTitle}`}
                         >
                           <div className="flex items-center gap-1.5 min-w-0">
+                            <ChevronRight
+                              className={`w-3 h-3 shrink-0 text-slate-500 transition-transform duration-150 ${
+                                isExpanded ? 'rotate-90' : ''
+                              }`}
+                            />
                             <CategorySymbolSVG
                               categoryId={cat.id}
                               colorHex={cat.corSimbolo}
@@ -4600,8 +4657,10 @@ export default function App() {
           onScroll={(e) => {
             tabScrollMemoryRef.current[activeTab] = e.currentTarget.scrollTop;
           }}
-          className={`flex-1 w-full min-w-0 p-3.5 sm:p-6 pb-24 overflow-x-hidden transition-colors duration-300 ${
-            isCurrentTabSystematicAdmin ? 'systematic-admin-main' : 'bg-[#0C1117]'
+          className={`flex-1 h-full w-full min-w-0 overflow-y-auto overflow-x-hidden transition-colors duration-300 ${
+            activeTab === 'quadro_branco' ? 'p-2 sm:p-4 pb-10' : 'p-3.5 sm:p-6 pb-24'
+          } ${
+            isCurrentTabSystematicAdmin ? 'systematic-admin-main' : 'bg-[#0B0E14]'
           }`}
         >
 
@@ -5028,6 +5087,18 @@ export default function App() {
                     onNavigateTab={(tId, sSlug) => handleSelectTab(tId, sSlug)}
                     alertasPanel={<NotificacoesTab {...commonProps} sseEventHistory={sseEvents} />}
                   />
+                )}
+                {activeTab === 'quadro_branco' && (
+                  <div className="w-full min-h-[calc(100vh-11rem)]">
+                    <PersonalWhiteboardCanvas
+                      currentUser={currentUser}
+                      usuarios={Array.isArray(isolatedErpData?.usuarios) ? isolatedErpData.usuarios : []}
+                      accentHex="#10B981"
+                    />
+                  </div>
+                )}
+                {activeTab === 'aprovacoes' && (
+                  <AccessApprovalPanel onRefreshErp={fetchAllData} />
                 )}
                 {activeTab === 'empresas' && <EmpresasTab {...commonProps} />}
                 {activeTab === 'freelancers' && <FreelancersTab {...commonProps} />}
@@ -5496,7 +5567,7 @@ export default function App() {
                   .map((cat) => {
                   const visibleTabs = cat.abas.filter(canAccessTab);
                   if (visibleTabs.length === 0 && inlineEditingCatId !== cat.id) return null;
-                  const isExpanded = true;
+                  const isExpanded = !collapsedCategories[cat.id];
                   const isDragOverThisCat = dragOverCatId === cat.id;
                   const rawCatTitle = String(cat.titulo || '').replace(/^\d+\.\s*/, '');
                   const cleanCatTitle =
@@ -5586,9 +5657,17 @@ export default function App() {
                           onTouchStart={(e) => startHoldOnCategory(cat.id, e)}
                           onTouchMove={handleTouchMoveDrag}
                           onTouchEnd={handleTouchEndDrag}
-                          className="w-full px-3 py-2 bg-black/25 border-b border-white/[0.06] flex items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-300 select-none"
+                          onClick={() => toggleSidebarCategory(cat.id)}
+                          role="button"
+                          aria-expanded={isExpanded}
+                          className="w-full px-3 py-2 bg-[#12161F] border-b border-white/[0.06] flex items-center justify-between text-left text-[11px] font-bold uppercase tracking-wider text-slate-300 select-none cursor-pointer"
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <ChevronRight
+                              className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-150 ${
+                                isExpanded ? 'rotate-90' : ''
+                              }`}
+                            />
                             <CategorySymbolSVG
                               categoryId={cat.id}
                               colorHex={cat.corSimbolo}
@@ -5596,7 +5675,7 @@ export default function App() {
                             />
                             <span className="truncate">{cleanCatTitle}</span>
                             {isAdminExclusiveCategory(cat.id) && (
-                              <span className="px-1.5 py-0.5 rounded bg-amber-500/25 border border-amber-400/60 text-[8px] font-mono font-black uppercase text-amber-300 shrink-0">
+                              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-[8px] font-mono font-bold uppercase text-amber-300 shrink-0">
                                  ADMIN
                               </span>
                             )}
@@ -6691,9 +6770,74 @@ export default function App() {
         </div>
       )}
 
-      {!isAuthenticatedAndUnlocked && (!showLandingPage || isSessionLocked) && (
+      {!isAuthenticatedAndUnlocked && pendingApprovalUser && (
+        <div className="fixed inset-0 z-[120] bg-[#0B0E14] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md rounded-2xl bg-[#12161F] border border-white/[0.1] p-6 sm:p-8 space-y-5 text-center shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+              <Clock className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h2 className="text-lg font-bold text-white">
+                {pendingApprovalUser.approval_status === 'rejected'
+                  ? 'Solicitação de Acesso Recusada'
+                  : 'Aguardando aprovação do Administrador'}
+              </h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {pendingApprovalUser.approval_status === 'rejected'
+                  ? pendingApprovalUser.rejection_reason ||
+                    'Seu cadastro não foi aprovado pela administração. Entre em contato com o gestor responsável.'
+                  : 'Seu cadastro foi recebido com segurança e colocado em quarentena Zero-Trust. Assim que o Admin Master ou o Proprietário da sua empresa aprovar seu acesso e definir seu perfil, você poderá entrar normalmente.'}
+              </p>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#0E1117] border border-white/[0.08] text-left space-y-1.5 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-400">Usuário:</span>
+                <span className="font-semibold text-white truncate">{pendingApprovalUser.nome || '—'}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-slate-400">Status:</span>
+                <span className="font-mono text-amber-300">
+                  {pendingApprovalUser.approval_status || 'pending_approval'}
+                </span>
+              </div>
+              {pendingApprovalUser.terms_accepted_at_utc && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-400">Aceite LGPD:</span>
+                  <span className="font-mono text-slate-300">
+                    {new Date(pendingApprovalUser.terms_accepted_at_utc).toLocaleString('pt-BR')}
+                  </span>
+                </div>
+              )}
+              {pendingApprovalUser.terms_accepted_ip && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-slate-400">IP Registrado:</span>
+                  <span className="font-mono text-slate-400">{pendingApprovalUser.terms_accepted_ip}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingApprovalUser(null);
+                  setLoginTab('argon2');
+                  setIsSessionLocked(true);
+                }}
+                className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold cursor-pointer"
+              >
+                Voltar para a Tela de Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isAuthenticatedAndUnlocked && !pendingApprovalUser && (!showLandingPage || isSessionLocked) && (
         <div
-          className="fixed inset-0 z-[110] bg-[#05100C] flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-[110] bg-[#0B0E14] flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -7270,6 +7414,43 @@ export default function App() {
                     <form
                       onSubmit={async (e) => {
                         e.preventDefault();
+                        if (!cadAceiteTermosUso) {
+                          setCadError('É obrigatório ler e aceitar os Termos de Uso e Política de Privacidade (LGPD) para concluir o cadastro.');
+                          return;
+                        }
+                        if (cadTipoCadastro === 'usuario') {
+                          if (!cadNomeEmpresario.trim() || !cadSenha.trim() || (!cadEmail.trim() && !cadWhatsapp.trim())) {
+                            setCadError('Preencha Seu Nome, E-mail ou WhatsApp e Senha.');
+                            return;
+                          }
+                          setCadLoading(true);
+                          setCadError('');
+                          try {
+                            const res = await fetch('/api/auth/register', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                nome: cadNomeEmpresario.trim(),
+                                email: cadEmail.trim(),
+                                telefone: cadWhatsapp.trim(),
+                                senha: cadSenha.trim(),
+                                termsAccepted: true
+                              })
+                            });
+                            const json = await res.json();
+                            if (!res.ok || !json.ok) {
+                              setCadError(json.erro || 'Não foi possível concluir o cadastro.');
+                              return;
+                            }
+                            setPendingApprovalUser(json.usuario || { nome: cadNomeEmpresario.trim(), approval_status: 'pending_approval' });
+                            setCadSenha('');
+                          } catch (err: any) {
+                            setCadError(err.message || 'Falha ao enviar cadastro.');
+                          } finally {
+                            setCadLoading(false);
+                          }
+                          return;
+                        }
                         if (!cadNomeEmpresa.trim() || !cadNomeEmpresario.trim() || !cadWhatsapp.trim() || !cadSenha.trim()) {
                           setCadError('Preencha Nome da Empresa, Seu Nome, WhatsApp e Senha.');
                           return;
@@ -7307,6 +7488,7 @@ export default function App() {
                               pasta_google_drive_url: cadPastaDriveUrl.trim(),
                               google_access_token: cadGoogleToken.trim(),
                               planilha_google_url: cadPlanilhaUrl.trim(),
+                              terms_accepted: true,
                               termo_lgpd_aceito: true,
                               zero_guarda_operacional_vps: true,
                               modo_guarda_escolhido: cadModoGuarda,
@@ -7328,22 +7510,16 @@ export default function App() {
                             setPortalSubdominioInput(json.empresa.subdominio);
                             localStorage.setItem('urutau_portal_subdominio', json.empresa.subdominio);
                           }
-                          if (json.usuario) {
-                            setCurrentUser(json.usuario);
-                            setRealOperatorUser(json.usuario);
-                            setUnlockIdentificador(json.usuario.nome || '');
-                            const empId = json.empresa?.id || 1;
-                            setSelectedEmpresaId(empId);
-                            persistActiveSession(json.usuario, empId, json.sessao_token);
-                            setSessionVerifiedByServer(true);
-                            setIsSessionLocked(false);
-                            setIsUserAuthenticated(true);
-                            handleSaveUserToDeviceList(json.usuario);
-                            salvarPacotePortatilLocal(empId);
-                          }
-                          await fetchAllData();
-                          await carregarPortalEmpresaPorSubdominio(json.empresa?.subdominio);
-                          setCadCriadoResumo(json);
+                          setPendingApprovalUser(
+                            json.usuario || {
+                              nome: cadNomeEmpresario.trim(),
+                              approval_status: 'pending_approval'
+                            }
+                          );
+                          setCadSenha('');
+                          setSessionVerifiedByServer(false);
+                          setIsUserAuthenticated(false);
+                          setIsSessionLocked(true);
                         } catch (err: any) {
                           setCadError(err.message || 'Falha ao cadastrar empresa.');
                         } finally {
@@ -7639,17 +7815,78 @@ export default function App() {
                         )}
                       </div>
 
-                      <label className="flex items-start gap-2 text-[11px] text-slate-300 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={cadAceiteLgpd}
-                          onChange={(e) => setCadAceiteLgpd(e.target.checked)}
-                          className="mt-0.5 accent-[#10B981]"
-                        />
-                        <span>
-                          Autorizo a criação automática da pasta de <strong>Backup de Segurança Protegido pela LGPD (Art. 5º, VI)</strong> no meu Drive em nuvem, podendo alterar a conta vinculada quando desejar.
-                        </span>
-                      </label>
+                      <div className="p-3 rounded-xl bg-[#0E1117] border border-white/[0.08] space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[11px] font-semibold text-slate-200">
+                            Tipo de Cadastro
+                          </span>
+                          <div className="inline-flex rounded-lg bg-[#12161F] border border-white/[0.08] p-0.5 text-[11px]">
+                            <button
+                              type="button"
+                              onClick={() => setCadTipoCadastro('empresa')}
+                              className={`px-2.5 py-1 rounded cursor-pointer ${
+                                cadTipoCadastro === 'empresa' ? 'bg-emerald-600 text-white font-semibold' : 'text-slate-400'
+                              }`}
+                            >
+                              Nova Empresa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setCadTipoCadastro('usuario')}
+                              className={`px-2.5 py-1 rounded cursor-pointer ${
+                                cadTipoCadastro === 'usuario' ? 'bg-emerald-600 text-white font-semibold' : 'text-slate-400'
+                              }`}
+                            >
+                              Colaborador Individual
+                            </button>
+                          </div>
+                        </div>
+
+                        <label className="flex items-start gap-2 text-[11px] text-slate-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            required
+                            checked={cadAceiteTermosUso}
+                            onChange={(e) => setCadAceiteTermosUso(e.target.checked)}
+                            className="mt-0.5 accent-[#10B981]"
+                          />
+                          <span>
+                            Li e aceito os{' '}
+                            <button
+                              type="button"
+                              onClick={() => setCadTermosExpandido((prev) => !prev)}
+                              className="underline text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer"
+                            >
+                              Termos de Uso e Política de Privacidade (LGPD)
+                            </button>
+                            . A data, hora e meu endereço IP serão registrados para auditoria, e meu acesso permanecerá em <strong>Aguardando aprovação do Administrador</strong> até liberação.
+                          </span>
+                        </label>
+
+                        {cadTermosExpandido && (
+                          <div className="p-2.5 rounded-lg bg-[#12161F] border border-white/[0.08] text-[11px] text-slate-400 space-y-1 max-h-32 overflow-y-auto">
+                            <div className="font-semibold text-slate-200">Resumo LGPD (Lei 13.709/2018)</div>
+                            <p>1. Os dados cadastrais são tratados exclusivamente para autenticação, auditoria de acesso e operação multi-empresa.</p>
+                            <p>2. Cada empresa possui isolamento lógico estrito por identificador de tenant (companyId).</p>
+                            <p>3. O aceite registra data/hora UTC e endereço IP de origem no banco de dados.</p>
+                            <p>4. Novos cadastros iniciam em quarentena (pending_approval) e só acessam dados após aprovação explícita.</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {cadTipoCadastro === 'empresa' && (
+                        <label className="flex items-start gap-2 text-[11px] text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={cadAceiteLgpd}
+                            onChange={(e) => setCadAceiteLgpd(e.target.checked)}
+                            className="mt-0.5 accent-[#10B981]"
+                          />
+                          <span>
+                            Autorizo a criação automática da pasta de <strong>Backup de Segurança Protegido pela LGPD (Art. 5º, VI)</strong> no meu Drive em nuvem, podendo alterar a conta vinculada quando desejar.
+                          </span>
+                        </label>
+                      )}
 
                       {cadError && (
                         <div className="p-2.5 bg-[#FF6B57]/15 border border-[#FF6B57]/45 rounded-xl flex items-center gap-3 text-xs text-[#FF8A7A]">
@@ -7667,14 +7904,16 @@ export default function App() {
 
                       <button
                         type="submit"
-                        disabled={cadLoading}
-                        className="w-full py-3 rounded-full btn-metallic-gold disabled:opacity-50 text-xs font-black flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
+                        disabled={cadLoading || !cadAceiteTermosUso}
+                        className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer min-h-[44px]"
                       >
                         <FolderPlus className="w-4 h-4" />
                         <span>
                           {cadLoading
-                            ? 'Conectando e Criando Backup no Seu Drive...'
-                            : 'Cadastrar e Criar Automaticamente no Meu Drive'}
+                            ? 'Enviando Solicitação de Cadastro...'
+                            : cadTipoCadastro === 'usuario'
+                              ? 'Solicitar Cadastro (Aguardando Aprovação)'
+                              : 'Cadastrar Empresa e Solicitar Aprovação'}
                         </span>
                       </button>
                     </form>
