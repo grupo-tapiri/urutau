@@ -18,6 +18,142 @@ import {
 } from '../services/webhookAndHardLimitService.ts';
 import { getBackupSchedulerStatus } from '../services/postgresBackupScheduler.ts';
 import { isUserQuarantined } from '../services/accessApprovalService.ts';
+import {
+  isValidCoordinatePair,
+  normalizeAllowedRadiusMeters
+} from '../../shared/utils/geofencingUtils.ts';
+
+export interface EmpresaPerimeterPayload {
+  empresa_id: number;
+  empresa_nome: string;
+  latitude: number | null;
+  longitude: number | null;
+  allowed_radius_meters: number;
+  configured: boolean;
+  setor_id?: number | null;
+  setor_nome?: string | null;
+  setor_latitude?: number | null;
+  setor_longitude?: number | null;
+  setor_allowed_radius_meters?: number | null;
+}
+
+export async function resolveEmpresaPerimeterConfig(params: {
+  engine?: ReturnType<CommerceRepository['getEngine']> | null;
+  legacyDb: any;
+  empresaId: number;
+  setorId?: number | null;
+}): Promise<EmpresaPerimeterPayload> {
+  const targetEmpresaId = Number.isInteger(Number(params.empresaId)) && Number(params.empresaId) > 0
+    ? Number(params.empresaId)
+    : 1;
+  const legacyEmp = Array.isArray(params.legacyDb?.empresas)
+    ? params.legacyDb.empresas.find((e: any) => Number(e.id) === targetEmpresaId)
+    : null;
+
+  let empresaNome = String(legacyEmp?.nome || `Empresa #${targetEmpresaId}`);
+  let lat: number | null = isValidCoordinatePair(legacyEmp?.latitude, legacyEmp?.longitude)
+    ? Number(legacyEmp.latitude)
+    : null;
+  let lon: number | null = isValidCoordinatePair(legacyEmp?.latitude, legacyEmp?.longitude)
+    ? Number(legacyEmp.longitude)
+    : null;
+  let radius = normalizeAllowedRadiusMeters(legacyEmp?.allowed_radius_meters, 50);
+
+  if (params.engine && params.engine.isConfigured()) {
+    try {
+      const ready = await params.engine.ensureReady();
+      if (ready) {
+        const res = await params.engine.query<{
+          nome: string;
+          latitude: number | null;
+          longitude: number | null;
+          allowed_radius_meters: number | null;
+        }>(
+          'SELECT nome, latitude, longitude, allowed_radius_meters FROM empresas WHERE id = $1 LIMIT 1',
+          [targetEmpresaId]
+        );
+        if (res.rows.length > 0) {
+          const row = res.rows[0];
+          if (row.nome) empresaNome = String(row.nome);
+          if (isValidCoordinatePair(row.latitude, row.longitude)) {
+            lat = Number(row.latitude);
+            lon = Number(row.longitude);
+          }
+          if (row.allowed_radius_meters !== null && row.allowed_radius_meters !== undefined) {
+            radius = normalizeAllowedRadiusMeters(row.allowed_radius_meters, radius);
+          }
+        }
+      }
+    } catch {}
+  }
+
+  let setorId: number | null = null;
+  let setorNome: string | null = null;
+  let setorLat: number | null = null;
+  let setorLon: number | null = null;
+  let setorRadius: number | null = null;
+
+  const parsedSetorId = Number(params.setorId || 0);
+  if (Number.isInteger(parsedSetorId) && parsedSetorId > 0) {
+    setorId = parsedSetorId;
+    const legacySetor = Array.isArray(params.legacyDb?.setores)
+      ? params.legacyDb.setores.find((s: any) => Number(s.id) === parsedSetorId)
+      : null;
+    if (legacySetor) {
+      setorNome = String(legacySetor.nome || '');
+      if (isValidCoordinatePair(legacySetor.latitude, legacySetor.longitude)) {
+        setorLat = Number(legacySetor.latitude);
+        setorLon = Number(legacySetor.longitude);
+      }
+      setorRadius = normalizeAllowedRadiusMeters(legacySetor.allowed_radius_meters, radius);
+    }
+    if (params.engine && params.engine.isConfigured()) {
+      try {
+        const ready = await params.engine.ensureReady();
+        if (ready) {
+          const sRes = await params.engine.query<{
+            nome: string;
+            latitude: number | null;
+            longitude: number | null;
+            allowed_radius_meters: number | null;
+          }>(
+            'SELECT nome, latitude, longitude, allowed_radius_meters FROM setores WHERE id = $1 AND empresa_id = $2 LIMIT 1',
+            [parsedSetorId, targetEmpresaId]
+          );
+          if (sRes.rows.length > 0) {
+            const sRow = sRes.rows[0];
+            if (sRow.nome) setorNome = String(sRow.nome);
+            if (isValidCoordinatePair(sRow.latitude, sRow.longitude)) {
+              setorLat = Number(sRow.latitude);
+              setorLon = Number(sRow.longitude);
+            }
+            if (sRow.allowed_radius_meters !== null && sRow.allowed_radius_meters !== undefined) {
+              setorRadius = normalizeAllowedRadiusMeters(sRow.allowed_radius_meters, radius);
+            }
+          }
+        }
+      } catch {}
+    }
+  }
+
+  const effectiveLat = setorLat !== null && setorLon !== null ? setorLat : lat;
+  const effectiveLon = setorLat !== null && setorLon !== null ? setorLon : lon;
+  const effectiveRadius = setorLat !== null && setorLon !== null && setorRadius !== null ? setorRadius : radius;
+
+  return {
+    empresa_id: targetEmpresaId,
+    empresa_nome: empresaNome,
+    latitude: effectiveLat,
+    longitude: effectiveLon,
+    allowed_radius_meters: effectiveRadius,
+    configured: isValidCoordinatePair(effectiveLat, effectiveLon),
+    setor_id: setorId,
+    setor_nome: setorNome,
+    setor_latitude: setorLat,
+    setor_longitude: setorLon,
+    setor_allowed_radius_meters: setorRadius
+  };
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -382,6 +518,14 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
           .slice(0, 10);
       }
 
+      const targetEmpresaId =
+        Number(req.query?.empresa_id || req.headers['x-empresa-id'] || sessao.emp || 1) || 1;
+      const perimeter = await resolveEmpresaPerimeterConfig({
+        engine,
+        legacyDb: getLegacyDb(),
+        empresaId: targetEmpresaId
+      });
+
       res.json({
         ok: true,
         ambiente: engine.getEnvironment(),
@@ -390,6 +534,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
           : 'PostgreSQL Engine (aguardando DATABASE_URL) + Fallback Operacional',
         caminhoBancoIsolado: engine.getDatabaseTargetLabel(),
         backupWorkerStatus: getBackupSchedulerStatus(),
+        perimeter,
         constraintsAtivas: [
           'NOT NULL',
           'UNIQUE',
@@ -410,6 +555,255 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
           { id: 'backup-restore', filename: 'postgres-gdrive-backup.ts', titulo: 'Backup Horário PostgreSQL (pg_dump + gzip) -> Google Drive API v3' },
           { id: 'postgres-least-priv', filename: 'postgres-least-privilege.sql', titulo: 'Role PostgreSQL de Menor Privilégio (Sem DROP/SUPERUSER)' }
         ]
+      });
+    } catch (err) {
+      handleDomainErrorResponse(err, res);
+    }
+  });
+
+  app.get('/api/zero-trust/perfil-perimetro', async (req: Request, res: Response) => {
+    try {
+      const sessao = (req as any).urutauAuthSession as AuthenticatedOperatorContext;
+      const legacyDb = getLegacyDb();
+      const targetEmpresaId =
+        Number(req.query?.empresa_id || req.headers['x-empresa-id'] || sessao.emp || 1) || 1;
+      const targetSetorId = Number(req.query?.setor_id || 0) || null;
+      const activeUser = Array.isArray(legacyDb?.usuarios)
+        ? legacyDb.usuarios.find((u: any) => Number(u.id) === Number(sessao.uid))
+        : null;
+      const safeUser = activeUser ? { ...activeUser } : { id: sessao.uid, nome: sessao.nome, cargo: sessao.cargo, tipo: sessao.tipo };
+      delete safeUser.senha_argon2id;
+
+      const effectiveSetorId =
+        targetSetorId ||
+        (Number(safeUser.setor_id || 0) > 0 ? Number(safeUser.setor_id) : null);
+
+      const perimeter = await resolveEmpresaPerimeterConfig({
+        engine: getRepo().getEngine(),
+        legacyDb,
+        empresaId: targetEmpresaId,
+        setorId: effectiveSetorId
+      });
+
+      res.json({
+        ok: true,
+        usuario: {
+          ...safeUser,
+          perimeter
+        },
+        perimeter
+      });
+    } catch (err) {
+      handleDomainErrorResponse(err, res);
+    }
+  });
+
+  app.get('/api/governanca/perimetro', async (req: Request, res: Response) => {
+    try {
+      const sessao = (req as any).urutauAuthSession as AuthenticatedOperatorContext;
+      const roleLower = `${sessao.cargo} ${sessao.tipo} ${(sessao as any).role || ''}`.toLowerCase();
+      const isAdminOrGestor =
+        sessao.super ||
+        roleLower.includes('admin') ||
+        roleLower.includes('diretor') ||
+        roleLower.includes('gerente') ||
+        roleLower.includes('empres') ||
+        roleLower.includes('company_owner');
+
+      if (!isAdminOrGestor) {
+        res.status(403).json({
+          ok: false,
+          erro: 'Apenas Administradores, Proprietarios e Gerentes podem consultar a configuracao de perimetro.'
+        });
+        return;
+      }
+
+      const targetEmpresaId =
+        Number(req.query?.empresa_id || req.headers['x-empresa-id'] || sessao.emp || 1) || 1;
+      const legacyDb = getLegacyDb();
+      const perimeter = await resolveEmpresaPerimeterConfig({
+        engine: getRepo().getEngine(),
+        legacyDb,
+        empresaId: targetEmpresaId
+      });
+
+      const setores = Array.isArray(legacyDb?.setores)
+        ? legacyDb.setores
+            .filter((s: any) => !s.arquivado_legal && (!s.empresa_id || Number(s.empresa_id) === targetEmpresaId))
+            .map((s: any) => ({
+              id: Number(s.id),
+              nome: String(s.nome || ''),
+              latitude: isValidCoordinatePair(s.latitude, s.longitude) ? Number(s.latitude) : null,
+              longitude: isValidCoordinatePair(s.latitude, s.longitude) ? Number(s.longitude) : null,
+              allowed_radius_meters: normalizeAllowedRadiusMeters(s.allowed_radius_meters, 50)
+            }))
+        : [];
+
+      res.json({
+        ok: true,
+        perimeter,
+        setores
+      });
+    } catch (err) {
+      handleDomainErrorResponse(err, res);
+    }
+  });
+
+  app.put('/api/governanca/perimetro', async (req: Request, res: Response) => {
+    try {
+      const sessao = (req as any).urutauAuthSession as AuthenticatedOperatorContext;
+      const roleLower = `${sessao.cargo} ${sessao.tipo} ${(sessao as any).role || ''}`.toLowerCase();
+      const isAdminOrGestor =
+        sessao.super ||
+        roleLower.includes('admin') ||
+        roleLower.includes('diretor') ||
+        roleLower.includes('gerente') ||
+        roleLower.includes('empres') ||
+        roleLower.includes('company_owner');
+
+      if (!isAdminOrGestor) {
+        res.status(403).json({
+          ok: false,
+          erro: 'Apenas Administradores, Proprietarios e Gerentes podem alterar o perimetro GPS da unidade.'
+        });
+        return;
+      }
+
+      const rawEmpresaId = req.body?.empresa_id ?? req.headers['x-empresa-id'] ?? sessao.emp ?? 1;
+      const targetEmpresaId = Number(rawEmpresaId);
+      if (!Number.isInteger(targetEmpresaId) || targetEmpresaId <= 0) {
+        res.status(400).json({ ok: false, erro: 'Identificador de empresa invalido.' });
+        return;
+      }
+
+      if (!sessao.super && !sessao.emps.includes(targetEmpresaId) && sessao.emp !== targetEmpresaId) {
+        res.status(403).json({
+          ok: false,
+          erro: 'Acesso negado: voce nao tem permissao para editar o perimetro desta empresa.'
+        });
+        return;
+      }
+
+      const rawLat = req.body?.latitude;
+      const rawLon = req.body?.longitude;
+      const isClearing =
+        (rawLat === null || rawLat === undefined || String(rawLat).trim() === '') &&
+        (rawLon === null || rawLon === undefined || String(rawLon).trim() === '');
+
+      let latitude: number | null = null;
+      let longitude: number | null = null;
+
+      if (!isClearing) {
+        if (!isValidCoordinatePair(rawLat, rawLon)) {
+          res.status(400).json({
+            ok: false,
+            erro: 'Coordenadas GPS invalidas. Informe Latitude entre -90 e 90 e Longitude entre -180 e 180.'
+          });
+          return;
+        }
+        latitude = Number(Number(rawLat).toFixed(7));
+        longitude = Number(Number(rawLon).toFixed(7));
+      }
+
+      const rawRadius = req.body?.allowed_radius_meters;
+      const parsedRadius = Number(rawRadius ?? 50);
+      if (!Number.isFinite(parsedRadius) || parsedRadius < 5 || parsedRadius > 50000) {
+        res.status(400).json({
+          ok: false,
+          erro: 'Raio permitido invalido. Informe um valor entre 5 e 50000 metros.'
+        });
+        return;
+      }
+      const allowedRadiusMeters = Math.round(parsedRadius);
+
+      const targetSetorId = req.body?.setor_id ? Number(req.body.setor_id) : null;
+      const legacyDb = getLegacyDb();
+      const engine = getRepo().getEngine();
+
+      if (targetSetorId && Number.isInteger(targetSetorId) && targetSetorId > 0) {
+        const setorObj = Array.isArray(legacyDb?.setores)
+          ? legacyDb.setores.find(
+              (s: any) =>
+                Number(s.id) === targetSetorId &&
+                (!s.empresa_id || Number(s.empresa_id) === targetEmpresaId)
+            )
+          : null;
+        if (!setorObj) {
+          res.status(404).json({ ok: false, erro: 'Setor nao encontrado nesta empresa.' });
+          return;
+        }
+        setorObj.latitude = latitude;
+        setorObj.longitude = longitude;
+        setorObj.allowed_radius_meters = allowedRadiusMeters;
+        saveLegacyDb();
+
+        if (engine.isConfigured()) {
+          try {
+            const ready = await engine.ensureReady();
+            if (ready) {
+              await engine.query(
+                `INSERT INTO setores (id, empresa_id, nome, latitude, longitude, allowed_radius_meters, atualizado_em_utc)
+                 VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                 ON CONFLICT (id) DO UPDATE SET
+                   latitude = EXCLUDED.latitude,
+                   longitude = EXCLUDED.longitude,
+                   allowed_radius_meters = EXCLUDED.allowed_radius_meters,
+                   atualizado_em_utc = NOW()`,
+                [
+                  targetSetorId,
+                  targetEmpresaId,
+                  String(setorObj.nome || `Setor #${targetSetorId}`),
+                  latitude,
+                  longitude,
+                  allowedRadiusMeters
+                ]
+              );
+            }
+          } catch {}
+        }
+      } else {
+        const empresaObj = Array.isArray(legacyDb?.empresas)
+          ? legacyDb.empresas.find((e: any) => Number(e.id) === targetEmpresaId)
+          : null;
+        if (empresaObj) {
+          empresaObj.latitude = latitude;
+          empresaObj.longitude = longitude;
+          empresaObj.allowed_radius_meters = allowedRadiusMeters;
+          saveLegacyDb();
+        }
+
+        if (engine.isConfigured()) {
+          try {
+            const ready = await engine.ensureReady();
+            if (ready) {
+              const empNome = String(empresaObj?.nome || `Empresa #${targetEmpresaId}`);
+              await engine.query(
+                `INSERT INTO empresas (id, nome, latitude, longitude, allowed_radius_meters)
+                 VALUES ($1, $2, $3, $4, $5)
+                 ON CONFLICT (id) DO UPDATE SET
+                   latitude = EXCLUDED.latitude,
+                   longitude = EXCLUDED.longitude,
+                   allowed_radius_meters = EXCLUDED.allowed_radius_meters`,
+                [targetEmpresaId, empNome, latitude, longitude, allowedRadiusMeters]
+              );
+            }
+          } catch {}
+        }
+      }
+
+      const updatedPerimeter = await resolveEmpresaPerimeterConfig({
+        engine,
+        legacyDb,
+        empresaId: targetEmpresaId,
+        setorId: targetSetorId
+      });
+
+      res.json({
+        ok: true,
+        mensagem: isClearing
+          ? 'Perimetro GPS removido da unidade.'
+          : `Perimetro GPS salvo com sucesso (raio de ${allowedRadiusMeters}m).`,
+        perimeter: updatedPerimeter
       });
     } catch (err) {
       handleDomainErrorResponse(err, res);

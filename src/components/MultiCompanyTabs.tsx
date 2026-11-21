@@ -359,10 +359,9 @@ export function Kvm2GoogleSheetsPersistentDbSection({
               onChange={(e) => setProvedorBanco(e.target.value)}
               className="w-full px-3 py-2 bg-[#0B0D11] border border-slate-700 rounded-lg text-xs text-emerald-300 font-semibold"
             >
-              <option value="postgresql_cliente">PostgreSQL do Empresário (Supabase / RDS / Cloud SQL / VPS)</option>
-              <option value="s3_r2_cliente">PostgreSQL + Object Storage S3 / Cloudflare R2 (100GB+)</option>
-              <option value="sheets_drive_cliente">Google Sheets / Google Drive da Conta do Empresário</option>
-              <option value="servidor_local_cliente">Servidor Físico Local no Estabelecimento (On-Premise)</option>
+              <option value="postgresql_cliente">Infraestrutura Híbrida Gerenciada Urutau (PostgreSQL + Storage)</option>
+              <option value="s3_r2_cliente">PostgreSQL Gerenciado + Object Storage Corporativo</option>
+              <option value="servidor_local_cliente">Instância Dedicada / On-Premise</option>
             </select>
           </div>
 
@@ -413,7 +412,7 @@ export function Kvm2GoogleSheetsPersistentDbSection({
 
           <div>
             <label className="block text-[11px] font-bold text-slate-300 mb-1">
-              Bucket de Mídias & Backups de 100GB+ do Empresário (S3 / R2 / Google Drive):
+              Volume de Storage Híbrido Gerenciado (VPS + Nuvem):
             </label>
             <input
               type="text"

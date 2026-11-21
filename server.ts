@@ -35,11 +35,13 @@ import {
   syncAccessApprovalRecordToPostgres
 } from './src/server/services/accessApprovalService.ts';
 import { registerTenantBackupRoutes } from './src/server/services/tenantLogicalBackupService.ts';
+import { registerTenantExportRoutes } from './src/server/services/tenantExportService.ts';
 import { startPostgresBackupWorkerThread } from './src/server/services/postgresBackupScheduler.ts';
 import {
   handleDomainErrorResponse,
   isTrustedCorsOrigin,
-  registerZeroTrustMiddlewareAndRoutes
+  registerZeroTrustMiddlewareAndRoutes,
+  resolveEmpresaPerimeterConfig
 } from './src/server/controllers/securityAndZeroTrustController.ts';
 import { registerAllIsolatedMotors } from './src/server/motors/index.ts';
 
@@ -338,6 +340,13 @@ registerTenantBackupRoutes({
   app,
   getLegacyDb: () => db,
   saveLegacyDb: () => saveDbToDisk(),
+  registerAuditLog: registrarAuditLog
+});
+
+registerTenantExportRoutes({
+  app,
+  getStorageService: () => hybridStorageService,
+  getLegacyDb: () => db,
   registerAuditLog: registrarAuditLog
 });
 
@@ -2813,9 +2822,17 @@ app.post(['/api/v31/auth/desbloquear', '/api/v31/auth/validar-acesso'], async (r
               ? Number(copia.empresas_ids[0])
               : 1);
           const sessaoToken = emitirSessaoAssinada(res, copia, empresaAtivaId);
+          const perimeter = await resolveEmpresaPerimeterConfig({
+            engine: getPostgresEngine(),
+            legacyDb: db,
+            empresaId: empresaAtivaId,
+            setorId: Number(copia.setor_id || 0) || null
+          });
+          copia.perimeter = perimeter;
           return res.json({
             ok: true,
             usuario: copia,
+            perimeter,
             empresa_ativa_id: empresaAtivaId,
             sessao_token: sessaoToken,
             expira_em_segundos: 300
@@ -2883,9 +2900,17 @@ app.post(['/api/v31/auth/desbloquear', '/api/v31/auth/validar-acesso'], async (r
           ? Number(copia.empresas_ids[0])
           : 1);
       const sessaoToken = emitirSessaoAssinada(res, copia, empresaAtivaId);
+      const perimeter = await resolveEmpresaPerimeterConfig({
+        engine: getPostgresEngine(),
+        legacyDb: db,
+        empresaId: empresaAtivaId,
+        setorId: Number(copia.setor_id || 0) || null
+      });
+      copia.perimeter = perimeter;
       return res.json({
         ok: true,
         usuario: copia,
+        perimeter,
         empresa_ativa_id: empresaAtivaId,
         sessao_token: sessaoToken,
         expira_em_segundos: 300
@@ -2906,9 +2931,17 @@ app.post(['/api/v31/auth/desbloquear', '/api/v31/auth/validar-acesso'], async (r
                 ? Number(copia.empresas_ids[0])
                 : 1;
             const sessaoToken = emitirSessaoAssinada(res, copia, empresaAtivaId);
+            const perimeter = await resolveEmpresaPerimeterConfig({
+              engine: getPostgresEngine(),
+              legacyDb: db,
+              empresaId: empresaAtivaId,
+              setorId: Number(copia.setor_id || 0) || null
+            });
+            copia.perimeter = perimeter;
             return res.json({
               ok: true,
               usuario: copia,
+              perimeter,
               empresa_ativa_id: empresaAtivaId,
               sessao_token: sessaoToken,
               expira_em_segundos: 300
@@ -2935,9 +2968,16 @@ app.post(['/api/v31/auth/desbloquear', '/api/v31/auth/validar-acesso'], async (r
       const copia = { ...userMaster };
       delete copia.senha_argon2id;
       const sessaoToken = emitirSessaoAssinada(res, copia, 1);
+      const perimeter = await resolveEmpresaPerimeterConfig({
+        engine: getPostgresEngine(),
+        legacyDb: db,
+        empresaId: 1
+      });
+      copia.perimeter = perimeter;
       return res.json({
         ok: true,
         usuario: copia,
+        perimeter,
         empresa_ativa_id: 1,
         sessao_token: sessaoToken,
         expira_em_segundos: 300
@@ -3778,9 +3818,18 @@ app.post('/api/v50/auth/validar-token-wpp', async (req: Request, res: Response) 
       user.cargo
     );
 
+    const perimeter = await resolveEmpresaPerimeterConfig({
+      engine: getPostgresEngine(),
+      legacyDb: db,
+      empresaId: item.empresa_id,
+      setorId: Number(copia.setor_id || 0) || null
+    });
+    copia.perimeter = perimeter;
+
     res.json({
       ok: true,
       usuario: copia,
+      perimeter,
       sessao_token: sessaoToken,
       empresas_permitidas: empresasPermitidas,
       empresa_ativa_id: item.empresa_id,
@@ -4516,40 +4565,21 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
     let novaUnidadeObj: any = null;
     const novosSetoresList: any[] = [];
     const empIdPrevisto = nextId(db.empresas);
-    const secretSheetTokenPrevisto = `urutau_lgpd_${empIdPrevisto}_${crypto.randomBytes(8).toString('hex')}`;
-    const googleAccessToken = String(req.body?.google_access_token || '').trim();
-    const pastaCompartilhadaInput = String(req.body?.pasta_google_drive_url || '').trim();
-    const contaGoogleVinculada = String(req.body?.conta_google_vinculada || email || '').trim();
-    const provedorNuvemBackup = String(req.body?.provedor_nuvem_backup || 'Google Drive').trim();
-    const modoConexaoDrive = (req.body?.modo_conexao_drive || 'botao_google') as
-      | 'botao_google'
-      | 'compartilhar_pasta'
-      | 'automatico_depois';
-    const emailServicoCompartilhamento = 'bd@nyctibi.us';
+    const controladorEmail = String(req.body?.controlador_email || email || '').trim();
     const estruturaProvisionada = await provisionarDiretoriosEPlanilhasDaEmpresa(
       empIdPrevisto,
       String(nome_empresa).trim(),
       String(nome_empresario).trim(),
       String(cnpj || '').trim(),
-      contaGoogleVinculada,
-      googleAccessToken,
-      pastaCompartilhadaInput,
-      true
+      controladorEmail,
+      '',
+      '',
+      false
     );
 
     await executarComOutbox(
       () => {
         const empId = empIdPrevisto;
-        const rawSheetUrl = String(
-          req.body?.planilha_google_url || estruturaProvisionada.planilhaMestreUrl || ''
-        ).trim();
-        const rawWebhookUrl = String(req.body?.apps_script_webhook_url || '').trim();
-        const extractedSheetIdMatch = rawSheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-        const extractedSheetId = extractedSheetIdMatch
-          ? extractedSheetIdMatch[1]
-          : estruturaProvisionada.planilhaMestreId || rawSheetUrl;
-        const secretSheetToken = secretSheetTokenPrevisto;
-
         const rawSubdominioInput = String(req.body?.subdominio || nome_empresa || '').trim();
         const subdominioBase =
           rawSubdominioInput
@@ -4618,46 +4648,16 @@ app.post('/api/erp/onboarding-empresario', async (req: Request, res: Response) =
             empresa_nome: String(nome_empresa).trim(),
             controlador_nome: String(nome_empresario).trim(),
             controlador_documento: String(cnpj || '').trim(),
-            controlador_email: contaGoogleVinculada,
-            conta_google_vinculada: contaGoogleVinculada,
-            provedor_nuvem_backup: provedorNuvemBackup,
+            controlador_email: controladorEmail,
+            provedor_nuvem_backup: 'Infraestrutura Híbrida Urutau (VPS + Nuvem Gerenciada)',
             termo_lgpd_aceito: true,
             termo_lgpd_aceito_em: new Date().toISOString(),
-            termo_versao: 'LGPD-BYOS-2026.1',
-            modo_conexao_drive: modoConexaoDrive,
-            email_servico_compartilhamento: emailServicoCompartilhamento,
-            pasta_google_drive_nome: estruturaProvisionada.pastaRaizNome,
-            pasta_google_drive_url:
-              String(pastaCompartilhadaInput || estruturaProvisionada.pastaRaizDriveUrl || 'https://drive.google.com/drive/my-drive').trim(),
-            pasta_google_drive_id: estruturaProvisionada.pastaRaizDriveId || '',
+            termo_versao: 'LGPD-URUTAU-HIBRIDO-2026.2',
             diretorio_workspace_id: estruturaProvisionada.diretorioWorkspaceRel,
-            planilha_google_url: rawSheetUrl,
-            planilha_google_id: extractedSheetId,
-            apps_script_webhook_url: rawWebhookUrl,
-            chave_secreta_planilha: secretSheetToken,
-            guarda_exclusiva_planilha_empresario: true,
-            zero_guarda_operacional_vps: true,
-            custodia_transferida_em: new Date().toISOString(),
-            modo_guarda_escolhido:
-              req.body?.modo_guarda_escolhido === 'computador_local_multiacesso'
-                ? 'computador_local_multiacesso'
-                : 'google_drive',
-            multiacesso_sem_drive_confirmado: Boolean(
-              req.body?.multiacesso_sem_drive_confirmado === true
-            ),
-            multiacesso_sem_drive_confirmado_em:
-              req.body?.multiacesso_sem_drive_confirmado === true
-                ? new Date().toISOString()
-                : null,
-            exportacao_nuvem_intervalo_minutos: 60,
-            exportacao_nuvem_automatica_ativa: true,
-            exportacao_local_fechamento_exe_ativa: true,
             estrutura_criada_no_cadastro: true,
             estrutura_diretorios_planilhas: estruturaProvisionada.diretorios,
             ultima_sincronizacao_em: new Date().toISOString(),
-            proxima_exportacao_nuvem_em: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-            ultimo_backup_local_fechamento_em: new Date().toISOString(),
-            status_conexao: 'Ativa'
+            status_conexao: 'Gerenciado Urutau'
           },
           cidade: String(cidade || 'Belém - PA').trim(),
           ramo: String(ramo || 'Gastronomia & Hospitalidade').trim(),
@@ -5118,13 +5118,12 @@ app.get('/api/erp/dados-completos', async (req: Request, res: Response) => {
       .filter((x) => !x.arquivado_legal)
       .filter((x) => !escopoEmpresasPermitidas || escopoEmpresasPermitidas.has(Number(x.id)))
       .map((emp: any) => {
-        if (emp?.lgpd_custodia_config?.google_access_token) {
+        if (emp?.lgpd_custodia_config) {
+          const { google_access_token: _ignoredToken, refresh_token: _ignoredRefresh, ...cleanCfg } =
+            emp.lgpd_custodia_config;
           return {
             ...emp,
-            lgpd_custodia_config: {
-              ...emp.lgpd_custodia_config,
-              google_access_token: '***'
-            }
+            lgpd_custodia_config: cleanCfg
           };
         }
         return emp;
@@ -8625,60 +8624,10 @@ async function provisionarDiretoriosEPlanilhasDaEmpresa(
     } catch {}
   }
 
-  let pastaRaizDriveId = '';
-  let pastaRaizDriveUrl = '';
-  let planilhaMestreId = '';
-  let planilhaMestreUrl = '';
-
-  const sharedUrlRaw = String(pastaCompartilhadaUrl || '').trim();
-  if (sharedUrlRaw) {
-    const folderMatch = sharedUrlRaw.match(/\/folders\/([a-zA-Z0-9-_]+)/);
-    pastaRaizDriveId = folderMatch ? folderMatch[1] : sharedUrlRaw;
-    pastaRaizDriveUrl = sharedUrlRaw.startsWith('http')
-      ? sharedUrlRaw
-      : `https://drive.google.com/drive/folders/${pastaRaizDriveId}`;
-  }
-
-  const tokenLimpo = String(googleAccessToken || '').trim();
-  if (tokenLimpo.length > 20 && !pastaRaizDriveId) {
-    try {
-      const respRootFolder = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,webViewLink', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tokenLimpo}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: pastaRaizNome,
-          mimeType: 'application/vnd.google-apps.folder'
-        })
-      });
-      if (respRootFolder.ok) {
-        const rootJson: any = await respRootFolder.json();
-        pastaRaizDriveId = String(rootJson.id || '');
-        pastaRaizDriveUrl =
-          String(rootJson.webViewLink || '') ||
-          (pastaRaizDriveId ? `https://drive.google.com/drive/folders/${pastaRaizDriveId}` : '');
-        if (pastaRaizDriveId && emailControlador && emailControlador.includes('@')) {
-          await fetch(
-            `https://www.googleapis.com/drive/v3/files/${pastaRaizDriveId}/permissions`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${tokenLimpo}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                role: 'writer',
-                type: 'user',
-                emailAddress: emailControlador.trim()
-              })
-            }
-          ).catch(() => {});
-        }
-      }
-    } catch {}
-  }
+  const pastaRaizDriveId = '';
+  const pastaRaizDriveUrl = '';
+  const planilhaMestreId = '';
+  const planilhaMestreUrl = '';
 
   const diretoriosCriados: Array<{
     codigo: string;
@@ -8702,7 +8651,7 @@ async function provisionarDiretoriosEPlanilhasDaEmpresa(
           if (!fs.existsSync(csvPath)) {
             let initialCsv = `${aba.colunas.join(',')}\n`;
             if (aba.nome === 'Termo_Guarda_Controlador') {
-              initialCsv += `${empresaId},"${nomeEmpresa.replace(/"/g, '')}","${nomeControlador.replace(/"/g, '')}","${documentoControlador.replace(/"/g, '')}","LGPD-BYOS-2026.1","${new Date().toISOString()}"\n`;
+              initialCsv += `${empresaId},"${nomeEmpresa.replace(/"/g, '')}","${nomeControlador.replace(/"/g, '')}","${documentoControlador.replace(/"/g, '')}","LGPD-URUTAU-HIBRIDO-2026.2","${new Date().toISOString()}"\n`;
             } else if (aba.nome === 'Colaboradores_RH') {
               initialCsv += `1,"${nomeControlador.replace(/"/g, '')}","Empresario / Proprietario","","${emailControlador.replace(/"/g, '')}","${new Date().toISOString()}"\n`;
             }
@@ -8712,98 +8661,15 @@ async function provisionarDiretoriosEPlanilhasDaEmpresa(
       } catch {}
     }
 
-    let subFolderDriveId = '';
-    let subFolderDriveUrl = '';
-    let sheetDriveId = '';
-    let sheetDriveUrl = '';
-
-    if (tokenLimpo.length > 20 && pastaRaizDriveId) {
-      try {
-        const respSub = await fetch('https://www.googleapis.com/drive/v3/files?fields=id,webViewLink', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${tokenLimpo}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: item.nome_pasta,
-            mimeType: 'application/vnd.google-apps.folder',
-            parents: [pastaRaizDriveId]
-          })
-        });
-        if (respSub.ok) {
-          const subJson: any = await respSub.json();
-          subFolderDriveId = String(subJson.id || '');
-          subFolderDriveUrl =
-            String(subJson.webViewLink || '') ||
-            (subFolderDriveId ? `https://drive.google.com/drive/folders/${subFolderDriveId}` : '');
-        }
-
-        if (item.planilha_nome) {
-          const sheetsPayload = {
-            properties: {
-              title: `${item.planilha_nome} - ${nomeEmpresa}`
-            },
-            sheets: item.abas.map((aba) => ({
-              properties: { title: aba.nome },
-              data: [
-                {
-                  startRow: 0,
-                  startColumn: 0,
-                  rowData: [
-                    {
-                      values: aba.colunas.map((col) => ({
-                        userEnteredValue: { stringValue: col }
-                      }))
-                    }
-                  ]
-                }
-              ]
-            }))
-          };
-          const respSheet = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${tokenLimpo}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(sheetsPayload)
-          });
-          if (respSheet.ok) {
-            const sheetJson: any = await respSheet.json();
-            sheetDriveId = String(sheetJson.spreadsheetId || '');
-            sheetDriveUrl =
-              String(sheetJson.spreadsheetUrl || '') ||
-              (sheetDriveId ? `https://docs.google.com/spreadsheets/d/${sheetDriveId}/edit` : '');
-
-            if (sheetDriveId && subFolderDriveId) {
-              await fetch(
-                `https://www.googleapis.com/drive/v3/files/${sheetDriveId}?addParents=${subFolderDriveId}&fields=id`,
-                {
-                  method: 'PATCH',
-                  headers: { Authorization: `Bearer ${tokenLimpo}` }
-                }
-              ).catch(() => {});
-            }
-
-            if (item.codigo === '01') {
-              planilhaMestreId = sheetDriveId;
-              planilhaMestreUrl = sheetDriveUrl;
-            }
-          }
-        }
-      } catch {}
-    }
-
     diretoriosCriados.push({
       codigo: item.codigo,
       nome_pasta: item.nome_pasta,
       descricao: item.descricao,
-      folder_drive_id: subFolderDriveId,
-      folder_drive_url: subFolderDriveUrl,
+      folder_drive_id: '',
+      folder_drive_url: '',
       planilha_nome: item.planilha_nome ? `${item.planilha_nome} - ${nomeEmpresa}` : undefined,
-      planilha_id: sheetDriveId,
-      planilha_url: sheetDriveUrl,
+      planilha_id: '',
+      planilha_url: '',
       abas: item.abas.map((a) => a.nome)
     });
   }
@@ -9189,30 +9055,11 @@ app.get('/api/lgpd/google-sheets/baixar-planilha-mestre/:empresaId', (req: Reque
   res.send(xmlContent);
 });
 
-function verificarDriveRealmenteConectado(cfg: any): boolean {
-  if (!cfg || typeof cfg !== 'object') return false;
-  const hasRealFolderId = Boolean(
-    cfg.pasta_google_drive_id &&
-      String(cfg.pasta_google_drive_id).trim().length > 4 &&
-      !String(cfg.pasta_google_drive_id).includes('my-drive')
-  );
-  const hasRealSheetId = Boolean(
-    cfg.planilha_google_id &&
-      String(cfg.planilha_google_id).trim().length > 4
-  );
-  const hasRealWebhook = Boolean(
-    cfg.apps_script_webhook_url &&
-      String(cfg.apps_script_webhook_url).trim().startsWith('https://')
-  );
-  const hasRealOAuth = Boolean(cfg.google_oauth_conectado_real === true);
-  return hasRealFolderId || hasRealSheetId || hasRealWebhook || hasRealOAuth;
-}
-
 app.get('/api/lgpd/google-sheets/opcoes-publicas', (_req: Request, res: Response) => {
   res.json({
     ok: true,
-    email_servico_compartilhamento: 'bd@nyctibi.us',
-    google_client_id: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || ''
+    storage_model: 'managed_hybrid_urutau',
+    portability_endpoint: '/api/export-tenant-data/:companyId'
   });
 });
 
@@ -9223,255 +9070,41 @@ app.get('/api/lgpd/google-sheets/status/:empresaId', async (req: Request, res: R
     res.status(404).json({ ok: false, erro: 'Empresa não localizada.' });
     return;
   }
-  const emailServicoSistema = 'bd@nyctibi.us';
-  if (!emp.lgpd_custodia_config || !Array.isArray(emp.lgpd_custodia_config.estrutura_diretorios_planilhas)) {
-    const secretSheetToken =
-      emp.lgpd_custodia_config?.chave_secreta_planilha ||
-      `urutau_lgpd_${emp.id}_${crypto.randomBytes(6).toString('hex')}`;
-    const estrutura = await provisionarDiretoriosEPlanilhasDaEmpresa(
-      emp.id,
-      emp.nome,
-      emp.lgpd_custodia_config?.controlador_nome || emp.nome,
-      emp.cnpj || '',
-      emp.lgpd_custodia_config?.controlador_email || '',
-      '',
-      '',
-      Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true)
-    );
-    emp.lgpd_custodia_config = {
-      empresa_id: emp.id,
-      empresa_nome: emp.nome,
-      controlador_nome: emp.lgpd_custodia_config?.controlador_nome || emp.nome,
-      controlador_documento: emp.lgpd_custodia_config?.controlador_documento || emp.cnpj || '',
-      controlador_email: emp.lgpd_custodia_config?.controlador_email || '',
-      conta_google_vinculada: '',
-      google_oauth_conectado_real: false,
-      provedor_nuvem_backup: emp.lgpd_custodia_config?.provedor_nuvem_backup || 'Google Drive',
-      termo_lgpd_aceito: true,
-      termo_lgpd_aceito_em: emp.lgpd_custodia_config?.termo_lgpd_aceito_em || emp.criado_em || new Date().toISOString(),
-      termo_versao: 'LGPD-BYOS-2026.1',
-      modo_conexao_drive: emp.lgpd_custodia_config?.modo_conexao_drive || 'botao_google',
-      email_servico_compartilhamento: emailServicoSistema,
-      pasta_google_drive_nome: estrutura.pastaRaizNome,
-      pasta_google_drive_url: '',
-      pasta_google_drive_id: '',
-      diretorio_workspace_id: estrutura.diretorioWorkspaceRel,
-      planilha_google_url: '',
-      planilha_google_id: '',
-      apps_script_webhook_url: '',
-      chave_secreta_planilha: secretSheetToken,
-      guarda_exclusiva_planilha_empresario: true,
-      zero_guarda_operacional_vps: Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true),
-      estrutura_criada_no_cadastro: true,
-      estrutura_diretorios_planilhas: estrutura.diretorios,
-      status_conexao: 'Não Conectado'
-    };
-    saveDbToDisk();
-  }
-  const realConnected = verificarDriveRealmenteConectado(emp.lgpd_custodia_config);
-  if (!realConnected) {
-    emp.lgpd_custodia_config.google_oauth_conectado_real = false;
-    emp.lgpd_custodia_config.conta_google_vinculada = '';
-    if (emp.lgpd_custodia_config.pasta_google_drive_url === 'https://drive.google.com/drive/my-drive') {
-      emp.lgpd_custodia_config.pasta_google_drive_url = '';
-    }
-    emp.lgpd_custodia_config.status_conexao = 'Não Conectado';
-  }
   const cfg = {
-    ...emp.lgpd_custodia_config,
-    google_conectado_real: realConnected,
-    email_servico_compartilhamento: emailServicoSistema,
-    zero_guarda_operacional_vps: Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true)
+    empresa_id: emp.id,
+    empresa_nome: emp.nome,
+    controlador_nome: emp.lgpd_custodia_config?.controlador_nome || emp.nome,
+    controlador_documento: emp.lgpd_custodia_config?.controlador_documento || emp.cnpj || '',
+    controlador_email: emp.lgpd_custodia_config?.controlador_email || '',
+    provedor_nuvem_backup: 'Infraestrutura Híbrida Urutau (VPS + Nuvem Gerenciada)',
+    termo_lgpd_aceito: true,
+    termo_lgpd_aceito_em: emp.lgpd_custodia_config?.termo_lgpd_aceito_em || emp.criado_em || new Date().toISOString(),
+    termo_versao: 'LGPD-URUTAU-HIBRIDO-2026.2',
+    status_conexao: 'Gerenciado Urutau'
   };
-  const scriptConector = gerarScriptConectorGoogleSheetsEmpresario(
-    emp.id,
-    emp.nome,
-    cfg.chave_secreta_planilha
-  );
   res.json({
     ok: true,
+    storage_model: 'managed_hybrid_urutau',
     config: cfg,
-    google_conectado_real: realConnected,
-    email_servico_compartilhamento: emailServicoSistema,
-    google_client_id: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || '',
-    script_conector_apps_script: scriptConector,
-    abas_padrao: [
-      'Colaboradores_RH',
-      'Escalas_Turnos',
-      'Comunicacao_Interna',
-      'Reservas_Salao',
-      'Caixa_Rateio',
-      'Estoque_Compras_CMV',
-      'Auditoria_LGPD'
-    ]
+    portability_endpoint: `/api/export-tenant-data/${emp.id}`
   });
 });
 
-app.post('/api/lgpd/google-sheets/desconectar', async (req: Request, res: Response) => {
-  try {
-    const empId = Number(req.body?.empresa_id) || 1;
-    const emp = (db.empresas || []).find((e: any) => Number(e.id) === empId) || db.empresas?.[0];
-    if (!emp) {
-      res.status(404).json({ ok: false, erro: 'Empresa não localizada.' });
-      return;
-    }
-    if (emp.lgpd_custodia_config) {
-      emp.lgpd_custodia_config.conta_google_vinculada = '';
-      emp.lgpd_custodia_config.google_oauth_conectado_real = false;
-      emp.lgpd_custodia_config.pasta_google_drive_id = '';
-      emp.lgpd_custodia_config.pasta_google_drive_url = '';
-      emp.lgpd_custodia_config.planilha_google_id = '';
-      emp.lgpd_custodia_config.planilha_google_url = '';
-      emp.lgpd_custodia_config.apps_script_webhook_url = '';
-      emp.lgpd_custodia_config.status_conexao = 'Não Conectado';
-      saveDbToDisk();
-    }
-    res.json({ ok: true, config: emp.lgpd_custodia_config });
-  } catch (e: any) {
-    res.status(500).json({ ok: false, erro: e.message });
-  }
+app.post('/api/lgpd/google-sheets/desconectar', async (_req: Request, res: Response) => {
+  res.json({
+    ok: true,
+    storage_model: 'managed_hybrid_urutau',
+    mensagem: 'Armazenamento gerenciado exclusivamente pela infraestrutura híbrida do Urutau.'
+  });
 });
 
 app.post('/api/lgpd/google-sheets/provisionar-estrutura', async (req: Request, res: Response) => {
-  try {
-    const {
-      empresa_id,
-      nome_empresa,
-      controlador_nome,
-      controlador_documento,
-      controlador_email,
-      conta_google_vinculada,
-      provedor_nuvem_backup,
-      modo_conexao_drive,
-      pasta_google_drive_url,
-      google_access_token,
-      apps_script_webhook_url
-    } = req.body || {};
-
-    const empId = Number(empresa_id) || 1;
-    const emp = (db.empresas || []).find((e: any) => Number(e.id) === empId);
-    const nomeEmpFinal = String(nome_empresa || emp?.nome || 'Minha Empresa').trim();
-    const nomeCtrlFinal = String(controlador_nome || emp?.lgpd_custodia_config?.controlador_nome || nomeEmpFinal).trim();
-    const docCtrlFinal = String(controlador_documento || emp?.cnpj || '').trim();
-    const tokenLimpo = String(google_access_token || '').trim();
-    const temTokenOAuthValido =
-      tokenLimpo.length > 20 && tokenLimpo !== 'CONECTADO_AUTOMATICO_BD_NYCTIBI_US';
-    const emailCtrlFinal = String(
-      controlador_email ||
-        emp?.lgpd_custodia_config?.controlador_email ||
-        ''
-    ).trim();
-    const contaGoogleFinal = temTokenOAuthValido
-      ? String(conta_google_vinculada || emailCtrlFinal || '').trim()
-      : String(conta_google_vinculada || '').trim();
-    const provedorNuvemFinal = String(
-      provedor_nuvem_backup || emp?.lgpd_custodia_config?.provedor_nuvem_backup || 'Google Drive'
-    ).trim();
-    const pastaCompartilhadaUrl = String(
-      pasta_google_drive_url ?? emp?.lgpd_custodia_config?.pasta_google_drive_url ?? ''
-    ).trim();
-
-    const isZeroGuarda = Boolean(emp?.lgpd_custodia_config?.zero_guarda_operacional_vps === true);
-    let estrutura = await provisionarDiretoriosEPlanilhasDaEmpresa(
-      empId,
-      nomeEmpFinal,
-      nomeCtrlFinal,
-      docCtrlFinal,
-      contaGoogleFinal || emailCtrlFinal,
-      temTokenOAuthValido ? tokenLimpo : '',
-      pastaCompartilhadaUrl === 'https://drive.google.com/drive/my-drive' ? '' : pastaCompartilhadaUrl,
-      isZeroGuarda
-    );
-
-    const webhookUrl = String(apps_script_webhook_url || emp?.lgpd_custodia_config?.apps_script_webhook_url || '').trim();
-    if (!estrutura.pastaRaizDriveUrl && webhookUrl && webhookUrl.startsWith('https://')) {
-      try {
-        const respWebhook = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            acao: 'CRIAR_ESTRUTURA_COMPLETA',
-            chave_secreta: emp?.lgpd_custodia_config?.chave_secreta_planilha || '',
-            empresa_id: empId,
-            empresa_nome: nomeEmpFinal
-          })
-        });
-        if (respWebhook.ok) {
-          const jsonRemoto: any = await respWebhook.json();
-          if (jsonRemoto?.ok) {
-            estrutura = {
-              ...estrutura,
-              pastaRaizDriveId: jsonRemoto.pasta_google_drive_id || estrutura.pastaRaizDriveId,
-              pastaRaizDriveUrl: jsonRemoto.pasta_google_drive_url || estrutura.pastaRaizDriveUrl,
-              planilhaMestreId: jsonRemoto.planilha_google_id || estrutura.planilhaMestreId,
-              planilhaMestreUrl: jsonRemoto.planilha_google_url || estrutura.planilhaMestreUrl,
-              diretorios: Array.isArray(jsonRemoto.diretorios) ? jsonRemoto.diretorios : estrutura.diretorios
-            };
-          }
-        }
-      } catch {}
-    }
-
-    if (emp) {
-      const prevCfg = emp.lgpd_custodia_config || {};
-      const nextFolderId = estrutura.pastaRaizDriveId || prevCfg.pasta_google_drive_id || '';
-      const nextSheetId = estrutura.planilhaMestreId || prevCfg.planilha_google_id || '';
-      const isRealConn = Boolean(
-        temTokenOAuthValido ||
-          (nextFolderId && !String(nextFolderId).includes('my-drive')) ||
-          nextSheetId ||
-          (webhookUrl && webhookUrl.startsWith('https://'))
-      );
-      emp.lgpd_custodia_config = {
-        ...prevCfg,
-        empresa_id: emp.id,
-        empresa_nome: emp.nome,
-        controlador_nome: nomeCtrlFinal,
-        controlador_documento: docCtrlFinal,
-        controlador_email: emailCtrlFinal,
-        conta_google_vinculada: isRealConn ? (contaGoogleFinal || emailCtrlFinal) : '',
-        google_oauth_conectado_real: isRealConn,
-        provedor_nuvem_backup: provedorNuvemFinal,
-        modo_conexao_drive: modo_conexao_drive || prevCfg.modo_conexao_drive || 'botao_google',
-        email_servico_compartilhamento: 'bd@nyctibi.us',
-        pasta_google_drive_nome: estrutura.pastaRaizNome,
-        pasta_google_drive_url:
-          estrutura.pastaRaizDriveUrl ||
-          (pastaCompartilhadaUrl !== 'https://drive.google.com/drive/my-drive' ? pastaCompartilhadaUrl : '') ||
-          prevCfg.pasta_google_drive_url ||
-          '',
-        pasta_google_drive_id: nextFolderId,
-        diretorio_workspace_id: estrutura.diretorioWorkspaceRel,
-        planilha_google_url: estrutura.planilhaMestreUrl || prevCfg.planilha_google_url || '',
-        planilha_google_id: nextSheetId,
-        apps_script_webhook_url: webhookUrl,
-        zero_guarda_operacional_vps: Boolean(prevCfg.zero_guarda_operacional_vps === true),
-        estrutura_criada_no_cadastro: true,
-        estrutura_diretorios_planilhas: estrutura.diretorios,
-        ultima_sincronizacao_em: isRealConn ? new Date().toISOString() : prevCfg.ultima_sincronizacao_em,
-        status_conexao: isRealConn ? 'Ativa' : 'Não Conectado',
-        estado_fechamento_local: isRealConn ? null : prevCfg.estado_fechamento_local || null
-      };
-      if (!emp.lgpd_custodia_config.estado_fechamento_local && isRealConn) {
-        sseBroker.emit('sessao.ultimo_pc_sincronizado', { empresa_id: emp.id });
-      }
-      saveDbToDisk();
-    }
-
-    res.json({
-      ok: true,
-      pasta_raiz_nome: estrutura.pastaRaizNome,
-      pasta_google_drive_url:
-        estrutura.pastaRaizDriveUrl ||
-        (pastaCompartilhadaUrl !== 'https://drive.google.com/drive/my-drive' ? pastaCompartilhadaUrl : ''),
-      planilha_google_url: estrutura.planilhaMestreUrl,
-      diretorio_workspace_id: estrutura.diretorioWorkspaceRel,
-      diretorios: estrutura.diretorios,
-      config: emp?.lgpd_custodia_config || null
-    });
-  } catch (e: any) {
-    res.status(500).json({ ok: false, erro: e.message });
-  }
+  const empId = Number(req.body?.empresa_id) || 1;
+  res.json({
+    ok: true,
+    storage_model: 'managed_hybrid_urutau',
+    portability_endpoint: `/api/export-tenant-data/${empId}`
+  });
 });
 
 app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) => {
@@ -9480,13 +9113,7 @@ app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) =
       empresa_id,
       controlador_nome,
       controlador_documento,
-      controlador_email,
-      conta_google_vinculada,
-      provedor_nuvem_backup,
-      modo_conexao_drive,
-      pasta_google_drive_url,
-      planilha_google_url,
-      apps_script_webhook_url
+      controlador_email
     } = req.body || {};
 
     const empId = Number(empresa_id) || 1;
@@ -9496,83 +9123,33 @@ app.post('/api/lgpd/google-sheets/config', async (req: Request, res: Response) =
       return;
     }
 
-    const rawFolderUrl = String(pasta_google_drive_url ?? emp.lgpd_custodia_config?.pasta_google_drive_url ?? '').trim();
-    const cleanFolderUrl = rawFolderUrl === 'https://drive.google.com/drive/my-drive' ? '' : rawFolderUrl;
-    const folderIdMatch = cleanFolderUrl.match(/\/folders\/([a-zA-Z0-9-_]+)/);
-    const extractedFolderId = folderIdMatch ? folderIdMatch[1] : '';
-    const rawSheetUrl = String(planilha_google_url ?? emp.lgpd_custodia_config?.planilha_google_url ?? '').trim();
-    const rawWebhookUrl = String(apps_script_webhook_url ?? emp.lgpd_custodia_config?.apps_script_webhook_url ?? '').trim();
-    const extractedMatch = rawSheetUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
-    const extractedId = extractedMatch ? extractedMatch[1] : rawSheetUrl;
     const prevCfg = emp.lgpd_custodia_config || {};
-    const secretToken =
-      prevCfg.chave_secreta_planilha ||
-      `urutau_lgpd_${emp.id}_${crypto.randomBytes(6).toString('hex')}`;
-    const emailControladorFinal = String(
-      controlador_email ?? prevCfg.controlador_email ?? ''
-    ).trim();
-    const provedorFinal = String(
-      provedor_nuvem_backup ?? prevCfg.provedor_nuvem_backup ?? 'Google Drive'
-    ).trim();
-    const nextFolderId = extractedFolderId || prevCfg.pasta_google_drive_id || '';
-    const hasRealConnection = Boolean(
-      (nextFolderId && String(nextFolderId).trim().length > 4) ||
-        (extractedId && String(extractedId).trim().length > 4) ||
-        (rawWebhookUrl && rawWebhookUrl.startsWith('https://')) ||
-        prevCfg.google_oauth_conectado_real === true
-    );
-    const contaGoogleFinal = hasRealConnection
-      ? String(conta_google_vinculada ?? prevCfg.conta_google_vinculada ?? emailControladorFinal).trim()
-      : '';
-
     emp.lgpd_custodia_config = {
-      ...prevCfg,
       empresa_id: emp.id,
       empresa_nome: emp.nome,
       controlador_nome: String(controlador_nome || prevCfg.controlador_nome || emp.nome).trim(),
       controlador_documento: String(controlador_documento ?? prevCfg.controlador_documento ?? emp.cnpj ?? '').trim(),
-      controlador_email: emailControladorFinal,
-      conta_google_vinculada: contaGoogleFinal,
-      google_oauth_conectado_real: hasRealConnection,
-      provedor_nuvem_backup: provedorFinal,
+      controlador_email: String(controlador_email ?? prevCfg.controlador_email ?? '').trim(),
+      provedor_nuvem_backup: 'Infraestrutura Híbrida Urutau (VPS + Nuvem Gerenciada)',
       termo_lgpd_aceito: true,
       termo_lgpd_aceito_em: prevCfg.termo_lgpd_aceito_em || new Date().toISOString(),
-      termo_versao: 'LGPD-BYOS-2026.1',
-      modo_conexao_drive: modo_conexao_drive || prevCfg.modo_conexao_drive || 'botao_google',
-      email_servico_compartilhamento: 'bd@nyctibi.us',
-      pasta_google_drive_url: cleanFolderUrl,
-      pasta_google_drive_id: nextFolderId,
-      planilha_google_url: rawSheetUrl,
-      planilha_google_id: extractedId,
-      apps_script_webhook_url: rawWebhookUrl,
-      chave_secreta_planilha: secretToken,
-      guarda_exclusiva_planilha_empresario: true,
-      zero_guarda_operacional_vps: Boolean(prevCfg.zero_guarda_operacional_vps === true),
-      exportacao_nuvem_intervalo_minutos: 60,
-      exportacao_nuvem_automatica_ativa: true,
-      exportacao_local_fechamento_exe_ativa: true,
-      ultima_sincronizacao_em: hasRealConnection ? new Date().toISOString() : prevCfg.ultima_sincronizacao_em,
-      proxima_exportacao_nuvem_em: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      ultimo_backup_local_fechamento_em:
-        prevCfg.ultimo_backup_local_fechamento_em || new Date().toISOString(),
-      status_conexao: hasRealConnection ? 'Ativa' : 'Não Conectado',
-      estado_fechamento_local: hasRealConnection ? null : prevCfg.estado_fechamento_local || null
+      termo_versao: 'LGPD-URUTAU-HIBRIDO-2026.2',
+      ultima_sincronizacao_em: new Date().toISOString(),
+      status_conexao: 'Gerenciado Urutau'
     };
 
-    if (!emp.lgpd_custodia_config.estado_fechamento_local && hasRealConnection) {
-      sseBroker.emit('sessao.ultimo_pc_sincronizado', { empresa_id: emp.id });
-    }
     saveDbToDisk();
     await registrarAuditLog(
       emp.lgpd_custodia_config.controlador_nome,
-      'LGPD_CONFIGURAR_BACKUP_NUVEM',
-      `Backup de Segurança em Nuvem (${provedorFinal}) atualizado para ${emp.nome}`,
+      'LGPD_ATUALIZAR_CONTROLADOR',
+      `Dados do controlador LGPD atualizados para ${emp.nome}`,
       req.ip,
       'Gestor da Empresa'
     );
 
     res.json({
       ok: true,
+      storage_model: 'managed_hybrid_urutau',
       config: emp.lgpd_custodia_config
     });
   } catch (e: any) {
@@ -9622,7 +9199,7 @@ async function executarExportacaoBackupEmpresa(
   if (!emp.lgpd_custodia_config) {
     emp.lgpd_custodia_config = {};
   }
-  const hasRealConn = verificarDriveRealmenteConectado(emp.lgpd_custodia_config);
+  const hasRealConn = true;
   emp.lgpd_custodia_config.ultima_sincronizacao_em = agoraIso;
   emp.lgpd_custodia_config.proxima_exportacao_nuvem_em = proxima1hIso;
   emp.lgpd_custodia_config.exportacao_nuvem_intervalo_minutos = 60;
@@ -9750,8 +9327,7 @@ app.post('/api/lgpd/google-sheets/exportar-fechamento-local', async (req: Reques
     }
     const emp = (db?.empresas || []).find((e: any) => Number(e.id) === empId);
     const isZeroGuarda = Boolean(emp?.lgpd_custodia_config?.zero_guarda_operacional_vps === true);
-    const cfgEmp = emp?.lgpd_custodia_config || {};
-    const driveConectadoEmp = verificarDriveRealmenteConectado(cfgEmp);
+    const driveConectadoEmp = true;
     const pcIdLimpo = String(bodyObj.pc_id || '').trim() || 'PC-LOCAL';
     const pcApelidoLimpo = String(bodyObj.pc_apelido || '').trim() || 'Computador Local';
     const agoraCheckpointIso = new Date().toISOString();
@@ -9840,7 +9416,7 @@ app.get('/api/lgpd/vps-processador/status/:empresaId', (req: Request, res: Respo
   const contagens = contarRegistrosOperacionaisNaVps(emp.id);
   const zeroGuarda = Boolean(emp.lgpd_custodia_config?.zero_guarda_operacional_vps === true);
   const cfg = emp.lgpd_custodia_config || {};
-  const driveConectado = verificarDriveRealmenteConectado(cfg);
+  const driveConectado = true;
   res.json({
     ok: true,
     empresa_id: emp.id,
@@ -9849,10 +9425,10 @@ app.get('/api/lgpd/vps-processador/status/:empresaId', (req: Request, res: Respo
     custodia_transferida_em: cfg.custodia_transferida_em || null,
     computadores_ativos: sseBroker.countClientsForEmpresa(emp.id),
     drive_conectado: driveConectado,
-    modo_guarda_escolhido: cfg.modo_guarda_escolhido || (driveConectado ? 'google_drive' : 'computador_local_multiacesso'),
+    modo_guarda_escolhido: cfg.modo_guarda_escolhido || 'infraestrutura_hibrida_urutau',
     multiacesso_sem_drive_confirmado: Boolean(cfg.multiacesso_sem_drive_confirmado === true),
     multiacesso_sem_drive_confirmado_em: cfg.multiacesso_sem_drive_confirmado_em || null,
-    estado_fechamento_local: driveConectado ? null : cfg.estado_fechamento_local || null,
+    estado_fechamento_local: null,
     backups_pontos_parada_por_pc: cfg.backups_pontos_parada_por_pc || {},
     contagens_vps: contagens
   });

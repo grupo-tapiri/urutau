@@ -34,6 +34,7 @@ import {
   UnidadesMultiSelectControl
 } from './UrutauShared';
 import { UrutauTableFloorPlan } from './UrutauTableFloorPlan';
+import { RequirePerimeter } from './RequirePerimeter';
 import { FechamentoCaixaDiarioPanel } from './FechamentoCaixaDiarioPanel';
 
 export interface CommonTabProps {
@@ -1203,6 +1204,7 @@ export function RateioTab({
       
       <UrutauDateMultiView
         title="Histórico de Fechamentos Gravados por Data"
+        themeColor="emerald"
         items={data.rateiosHistorico || []}
         getDateISO={(h: any) => h.data}
         getTitle={(h: any) =>
@@ -1670,6 +1672,7 @@ export function EscalasTab({
       
       <UrutauDateMultiView
         title="Movimentos de Escala, Reforços e Lotações por Data"
+        themeColor="blue"
         items={(data.movimentosEscala || []).filter((m: any) => {
           if (effectiveUnidadesIds.length > 0 && m.unidade_id && !effectiveUnidadesIds.includes(Number(m.unidade_id))) {
             return false;
@@ -2017,6 +2020,7 @@ export function AgendaTab({
       <div className="w-full">
         <UrutauDateMultiView
           title="Agenda & Cronograma de Tarefas"
+          themeColor="amber"
           items={(data.agenda || []).filter((ev: any) => {
             if (filtroStatusAgenda === 'pendentes' && ev.concluido) return false;
             if (filtroStatusAgenda === 'concluidas' && !ev.concluido) return false;
@@ -2573,108 +2577,121 @@ export function ReservasTab({
   return (
     <div className="space-y-6 w-full">
       
-      <div className="bg-[#11151E] border border-slate-800/90 rounded-lg p-5 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h2 className="text-base font-semibold text-slate-100">
-            Reservas
-          </h2>
+      <div className="bg-[#11151E] border border-slate-800/90 rounded-lg p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-0.5 min-w-0">
+            <h2 className="text-base font-semibold text-slate-100">
+              Reservas & Mapa do Salão
+            </h2>
+            <p className="text-xs text-slate-400">
+              Acompanhe mesas livres, reservas confirmadas e grupos vinculados em tempo real.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => handleOpenReserva()}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-slate-950 bg-amber-500 hover:bg-amber-400 rounded"
+            className="w-full md:w-auto min-h-[42px] inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-400 rounded-lg transition-colors cursor-pointer shrink-0"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4 shrink-0" />
             <span>Nova Reserva de Mesa</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-2 border-t border-slate-800">
-          <div className="p-2.5 bg-[#0B0D11] border border-slate-800 rounded flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Adultos $</span>
-            <span className="text-base font-mono font-bold text-slate-100 tabular-nums">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-3 border-t border-slate-800">
+          <div className="p-3 bg-[#0B0D11] border border-slate-800 rounded-lg flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[11px] text-slate-400 truncate">Adultos $</span>
+            <span className="text-base font-mono font-bold text-slate-100 tabular-nums shrink-0">
               {totaisSalao.adultosPag}
             </span>
           </div>
-          <div className="p-2.5 bg-[#0B0D11] border border-slate-800 rounded flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Adultos </span>
-            <span className="text-base font-mono font-semibold text-amber-400 tabular-nums">
+          <div className="p-3 bg-[#0B0D11] border border-slate-800 rounded-lg flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[11px] text-slate-400 truncate">Adultos Cort.</span>
+            <span className="text-base font-mono font-semibold text-amber-400 tabular-nums shrink-0">
               {totaisSalao.adultosFreq}
             </span>
           </div>
-          <div className="p-2.5 bg-[#0B0D11] border border-slate-800 rounded flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Kids $</span>
-            <span className="text-base font-mono font-bold text-slate-100 tabular-nums">
+          <div className="p-3 bg-[#0B0D11] border border-slate-800 rounded-lg flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[11px] text-slate-400 truncate">Kids $</span>
+            <span className="text-base font-mono font-bold text-slate-100 tabular-nums shrink-0">
               {totaisSalao.kidsPag}
             </span>
           </div>
-          <div className="p-2.5 bg-[#0B0D11] border border-slate-800 rounded flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">Kids </span>
-            <span className="text-base font-mono font-semibold text-amber-400 tabular-nums">
+          <div className="p-3 bg-[#0B0D11] border border-slate-800 rounded-lg flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[11px] text-slate-400 truncate">Kids Cort.</span>
+            <span className="text-base font-mono font-semibold text-amber-400 tabular-nums shrink-0">
               {totaisSalao.kidsFreq}
             </span>
           </div>
-          <div className="p-2.5 bg-[#0B0D11] border border-emerald-500/30 rounded flex items-center justify-between">
-            <span className="text-[11px] text-emerald-300">Pagantes</span>
-            <span className="text-base font-mono font-bold text-emerald-400 tabular-nums">
+          <div className="p-3 bg-[#0B0D11] border border-indigo-500/35 rounded-lg flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[11px] text-indigo-300 truncate">Pagantes</span>
+            <span className="text-base font-mono font-bold text-indigo-300 tabular-nums shrink-0">
               {totaisSalao.totalPagantes}
             </span>
           </div>
-          <div className="p-2.5 bg-[#0B0D11] border border-amber-500/30 rounded flex items-center justify-between">
-            <span className="text-[11px] text-amber-300">Total Pax</span>
-            <span className="text-base font-mono font-bold text-amber-400 tabular-nums">
+          <div className="p-3 bg-[#0B0D11] border border-indigo-500/35 rounded-lg flex items-center justify-between gap-2 min-w-0">
+            <span className="text-[11px] text-indigo-200 truncate">Total Pax</span>
+            <span className="text-base font-mono font-bold text-white tabular-nums shrink-0">
               {totaisSalao.totalGeral}
             </span>
           </div>
         </div>
       </div>
 
-      <UrutauTableFloorPlan
-        reservas={data.reservas || []}
-        pdvComandas={data.pdvComandas || []}
-        configs={data.configs || []}
-        unidadeId={Number(data.unidades?.[0]?.id || 1)}
-        empresaId={data.empresaAtivaId}
+      <RequirePerimeter
+        moduleName="Mapa de Mesas & Salao"
         currentUser={currentUser}
-        areaFiltro={areaFiltro}
-        onChangeAreaFiltro={setAreaFiltro}
-        onOpenEditReserva={handleOpenReserva}
-        onOpenNewReservaAtTable={({ mesa, mesas_vinculadas, area, lugares, data: dataPreset }) => {
-          const listaMesas =
-            Array.isArray(mesas_vinculadas) && mesas_vinculadas.length > 0
-              ? mesas_vinculadas
-              : [mesa];
-          setForm({
-            id: null,
-            cliente: '',
-            whatsapp: '',
-            data: dataPreset || getTodayISO(),
-            hora: '20:00',
-            mesa,
-            mesas_vinculadas: listaMesas,
-            area,
-            adultos_pagantes: lugares,
-            adultos_frequentadores: 0,
-            criancas_pagantes: 0,
-            criancas_frequentadores: 0,
-            observacoes: `Jogo de ${lugares} lugares (${listaMesas.join(' + ')})`,
-            status: 'Confirmada',
-            unidade_id: Number(data.unidades?.[0]?.id || 1)
-          });
-          setModalOpen(true);
-        }}
-        onOpenTableInPdv={({ mesaCodigo, comandaId }) => {
-          onNavigateDeepLink({
-            tab: 'pdv',
-            entityId: comandaId ?? undefined,
-            mesaCodigo
-          });
-        }}
-        onRefresh={onRefresh}
-        showAlert={showAlert}
-      />
+        empresaId={data.empresaAtivaId}
+        setorId={Number(currentUser?.setor_id || 0) || null}
+      >
+        <UrutauTableFloorPlan
+          reservas={data.reservas || []}
+          pdvComandas={data.pdvComandas || []}
+          configs={data.configs || []}
+          unidadeId={Number(data.unidades?.[0]?.id || 1)}
+          empresaId={data.empresaAtivaId}
+          currentUser={currentUser}
+          areaFiltro={areaFiltro}
+          onChangeAreaFiltro={setAreaFiltro}
+          onOpenEditReserva={handleOpenReserva}
+          onOpenNewReservaAtTable={({ mesa, mesas_vinculadas, area, lugares, data: dataPreset }) => {
+            const listaMesas =
+              Array.isArray(mesas_vinculadas) && mesas_vinculadas.length > 0
+                ? mesas_vinculadas
+                : [mesa];
+            setForm({
+              id: null,
+              cliente: '',
+              whatsapp: '',
+              data: dataPreset || getTodayISO(),
+              hora: '20:00',
+              mesa,
+              mesas_vinculadas: listaMesas,
+              area,
+              adultos_pagantes: lugares,
+              adultos_frequentadores: 0,
+              criancas_pagantes: 0,
+              criancas_frequentadores: 0,
+              observacoes: `Jogo de ${lugares} lugares (${listaMesas.join(' + ')})`,
+              status: 'Confirmada',
+              unidade_id: Number(data.unidades?.[0]?.id || 1)
+            });
+            setModalOpen(true);
+          }}
+          onOpenTableInPdv={({ mesaCodigo, comandaId }) => {
+            onNavigateDeepLink({
+              tab: 'pdv',
+              entityId: comandaId ?? undefined,
+              mesaCodigo
+            });
+          }}
+          onRefresh={onRefresh}
+          showAlert={showAlert}
+        />
+      </RequirePerimeter>
 
       <UrutauDateMultiView
         title="Agenda de Reservas de Salão (Lista, Kanban da Semana & Calendário do Mês)"
+        themeColor="indigo"
         items={(data.reservas || []).filter(
           (r: any) => areaFiltro === 'Todas' || r.area === areaFiltro
         )}
@@ -5215,6 +5232,7 @@ export function CaixaTab({
 
           <UrutauDateMultiView
             title="Lançamentos do Livro Caixa por Data"
+            themeColor="emerald"
             items={caixaFiltrado}
             getDateISO={(c: any) => c.data}
             getTitle={(c: any) => `${c.descricao || c.categoria}`}

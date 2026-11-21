@@ -69,6 +69,8 @@ export type SystemImageSourceId =
   | 'camuflagem'
   | 'olhos_fechados'
   | 'canto'
+  | 'canto_suave'
+  | 'canto_intenso'
   | 'comunicacao'
   | 'totem'
   | 'octogono'
@@ -361,6 +363,9 @@ export interface Empresa {
   diaria_teto: number;
   subdominio?: string;
   link_acesso?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  allowed_radius_meters?: number;
   brand_config?: Partial<BrandIdentityConfig> | null;
   arquivado_legal: boolean;
   criado_em: string;

@@ -114,6 +114,7 @@ import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { WhatsAppAiHub } from './components/WhatsAppAiHub';
 import { OfflineSyncCenter } from './components/OfflineSyncCenter';
 import { PdvHibridoTab } from './components/PdvHibridoTab';
+import { RequirePerimeter } from './components/RequirePerimeter';
 import { UrutauLandingPage } from './components/UrutauLandingPage';
 import { CleanModuleShell, HomeDashboardHub, MODULE_CLEAN_GUIDES } from './components/CleanModuleShell';
 import { PersonalWhiteboardCanvas } from './components/PersonalWhiteboardCanvas';
@@ -449,25 +450,12 @@ export default function App() {
   const [cadEmail, setCadEmail] = useState<string>('');
   const [cadCnpj, setCadCnpj] = useState<string>('');
   const [cadSenha, setCadSenha] = useState<string>('');
-  const [cadModoDrive, setCadModoDrive] = useState<'botao_google' | 'compartilhar_pasta' | 'automatico_depois'>('botao_google');
-  const [cadPastaDriveUrl, setCadPastaDriveUrl] = useState<string>('');
-  const [cadProvedorNuvem, setCadProvedorNuvem] = useState<string>('Google Drive');
-  const [cadMostrarTrocaDrive, setCadMostrarTrocaDrive] = useState<boolean>(false);
-  const [cadEmailServicoSistema, setCadEmailServicoSistema] = useState<string>('bd@nyctibi.us');
-  const [cadGoogleClientId, setCadGoogleClientId] = useState<string>('');
-  const [cadCopiedServiceEmail, setCadCopiedServiceEmail] = useState<boolean>(false);
-  const [cadGoogleToken, setCadGoogleToken] = useState<string>('');
-  const [cadPlanilhaUrl, setCadPlanilhaUrl] = useState<string>('');
   const [cadAceiteLgpd, setCadAceiteLgpd] = useState<boolean>(true);
   const [cadAceiteTermosUso, setCadAceiteTermosUso] = useState<boolean>(false);
   const [cadTermosExpandido, setCadTermosExpandido] = useState<boolean>(false);
   const [cadTipoCadastro, setCadTipoCadastro] = useState<'empresa' | 'usuario'>('empresa');
   const [pendingApprovalUser, setPendingApprovalUser] = useState<any>(null);
-  const [cadModoGuarda, setCadModoGuarda] = useState<'google_drive' | 'computador_local_multiacesso'>('google_drive');
-  const [cadCienciaMultiacessoSemDrive, setCadCienciaMultiacessoSemDrive] = useState<boolean>(false);
   const [computadoresAtivosEmpresa, setComputadoresAtivosEmpresa] = useState<number>(1);
-  const [bannerMultiacessoSaving, setBannerMultiacessoSaving] = useState<boolean>(false);
-  const [fechamentoUltimoPcModalOpen, setFechamentoUltimoPcModalOpen] = useState<boolean>(false);
   const [estadoFechamentoLocal, setEstadoFechamentoLocal] = useState<any>(null);
   const [outroPcCienteContinuar, setOutroPcCienteContinuar] = useState<boolean>(false);
   const [verificandoOutroPc, setVerificandoOutroPc] = useState<boolean>(false);
@@ -502,20 +490,6 @@ export default function App() {
     } catch {
       return { meuPcId: 'PC-LOCAL', meuPcApelido: 'Este Computador' };
     }
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/lgpd/google-sheets/opcoes-publicas')
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.email_servico_compartilhamento) {
-          setCadEmailServicoSistema(json.email_servico_compartilhamento);
-        }
-        if (json?.google_client_id && !cadGoogleClientId) {
-          setCadGoogleClientId(json.google_client_id);
-        }
-      })
-      .catch(() => {});
   }, []);
 
   const hidratacaoEmAndamentoRef = useRef<Record<number, boolean>>({});
@@ -737,40 +711,9 @@ export default function App() {
   const finalizarSaidaDaSessao = useCallback(
     (limparIdentificador = false) => {
       const empId = Number(selectedEmpresaId || currentUser?.empresas_ids?.[0] || 1);
-      const empObj = (erpData?.empresas || []).find((e: any) => Number(e.id) === empId);
-      const cfgCust: any = empObj?.lgpd_custodia_config || {};
-      const driveConectado = Boolean(
-        (cfgCust.pasta_google_drive_id && String(cfgCust.pasta_google_drive_id).trim().length > 0) ||
-          (cfgCust.planilha_google_id && String(cfgCust.planilha_google_id).trim().length > 0) ||
-          (cfgCust.apps_script_webhook_url && String(cfgCust.apps_script_webhook_url).startsWith('https://')) ||
-          (cfgCust.conta_google_vinculada && String(cfgCust.conta_google_vinculada).includes('@'))
-      );
-      const isUltimoPcSemNuvem = !driveConectado && computadoresAtivosEmpresa <= 1;
-      if (isUltimoPcSemNuvem) {
-        const estadoLocal = {
-          aguardando_primeiro_pc: true,
-          ultimo_pc_id: meuPcId,
-          ultimo_pc_apelido: meuPcApelido,
-          fechado_em: new Date().toISOString()
-        };
-        setEstadoFechamentoLocal(estadoLocal);
-        try {
-          localStorage.setItem(
-            'urutau_ultimo_pc_fechou_sem_nuvem',
-            JSON.stringify({
-              empresa_id: empId,
-              empresa_nome: empObj?.nome || 'Sua Empresa',
-              pc_id: meuPcId,
-              pc_apelido: meuPcApelido,
-              fechado_em: estadoLocal.fechado_em
-            })
-          );
-        } catch {}
-      }
       salvarPacotePortatilLocal(empId, true);
-      dispararExportacaoFechamentoLocalExe(true, isUltimoPcSemNuvem);
+      dispararExportacaoFechamentoLocalExe(true, false);
       setMobileMenuOpen(false);
-      setFechamentoUltimoPcModalOpen(false);
       if (limparIdentificador) {
         setUnlockIdentificador(
           realOperatorUser?.nome && realOperatorUser.nome !== 'Visitante'
@@ -804,10 +747,6 @@ export default function App() {
     [
       selectedEmpresaId,
       currentUser,
-      erpData?.empresas,
-      computadoresAtivosEmpresa,
-      meuPcId,
-      meuPcApelido,
       salvarPacotePortatilLocal,
       dispararExportacaoFechamentoLocalExe,
       realOperatorUser
@@ -817,26 +756,12 @@ export default function App() {
   const solicitarSaidaDoSistema = useCallback(
     (limparIdentificador = false) => {
       const empId = Number(selectedEmpresaId || currentUser?.empresas_ids?.[0] || 1);
-      const empObj = (erpData?.empresas || []).find((e: any) => Number(e.id) === empId);
-      const cfgCust: any = empObj?.lgpd_custodia_config || {};
-      const driveConectado = Boolean(
-        (cfgCust.pasta_google_drive_id && String(cfgCust.pasta_google_drive_id).trim().length > 0) ||
-          (cfgCust.planilha_google_id && String(cfgCust.planilha_google_id).trim().length > 0) ||
-          (cfgCust.apps_script_webhook_url && String(cfgCust.apps_script_webhook_url).startsWith('https://')) ||
-          (cfgCust.conta_google_vinculada && String(cfgCust.conta_google_vinculada).includes('@'))
-      );
       salvarPacotePortatilLocal(empId, true);
-      if (!driveConectado && computadoresAtivosEmpresa <= 1) {
-        setFechamentoUltimoPcModalOpen(true);
-        return;
-      }
       finalizarSaidaDaSessao(limparIdentificador);
     },
     [
       selectedEmpresaId,
       currentUser,
-      erpData?.empresas,
-      computadoresAtivosEmpresa,
       salvarPacotePortatilLocal,
       finalizarSaidaDaSessao
     ]
@@ -850,92 +775,18 @@ export default function App() {
       }
     } catch {}
 
-    const empId = Number(selectedEmpresaId || currentUser?.empresas_ids?.[0] || 1);
-    const interval1h = window.setInterval(() => {
-      if (!isUserAuthenticated || isSessionLocked || !offlineSyncEngine.getSessionToken()) return;
-      fetch('/api/lgpd/google-sheets/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          empresa_id: empId,
-          origem: 'AUTOMATICA_1H'
-        })
-      })
-        .then((r) => r.json())
-        .then((json) => {
-          if (json?.pacote_portatil) {
-            try {
-              limparBackupsDuplicadosLocais(empId, true);
-              localStorage.setItem(
-                `urutau_pacote_local_empresa_${empId}`,
-                JSON.stringify(json.pacote_portatil)
-              );
-            } catch {}
-          }
-        })
-        .catch(() => {});
-    }, 60 * 60 * 1000);
-
     const handleBeforeUnload = () => {
-      const empObj = (erpData?.empresas || []).find((e: any) => Number(e.id) === empId);
-      const cfgCust: any = empObj?.lgpd_custodia_config || {};
-      const driveConectado = Boolean(
-        (cfgCust.pasta_google_drive_id && String(cfgCust.pasta_google_drive_id).trim().length > 0) ||
-          (cfgCust.planilha_google_id && String(cfgCust.planilha_google_id).trim().length > 0) ||
-          (cfgCust.apps_script_webhook_url && String(cfgCust.apps_script_webhook_url).startsWith('https://')) ||
-          (cfgCust.conta_google_vinculada && String(cfgCust.conta_google_vinculada).includes('@'))
-      );
-      const isUltimoSemNuvemUnload = !driveConectado && computadoresAtivosEmpresa <= 1;
-      dispararExportacaoFechamentoLocalExe(false, isUltimoSemNuvemUnload);
+      dispararExportacaoFechamentoLocalExe(false, false);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('pagehide', handleBeforeUnload);
 
     return () => {
-      window.clearInterval(interval1h);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('pagehide', handleBeforeUnload);
     };
-  }, [selectedEmpresaId, currentUser, erpData?.empresas, computadoresAtivosEmpresa, dispararExportacaoFechamentoLocalExe, limparBackupsDuplicadosLocais]);
-
-  const handleConectarGoogleDrivePopup = () => {
-    setCadError('');
-    const clientId = cadGoogleClientId.trim();
-    if (!clientId) {
-      setCadError('Para login direto com popup OAuth, o Client ID do SaaS precisa estar ativo ou utilize o compartilhamento de pasta com bd@nyctibi.us.');
-      return;
-    }
-    const startOAuth = () => {
-      const g = (window as any).google;
-      if (!g?.accounts?.oauth2) {
-        setCadError('Biblioteca Google Identity não pôde ser carregada no navegador.');
-        return;
-      }
-      const tokenClient = g.accounts.oauth2.initTokenClient({
-        client_id: clientId,
-        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets',
-        callback: (resp: any) => {
-          if (resp?.access_token) {
-            setCadGoogleToken(resp.access_token);
-          } else {
-            setCadGoogleToken('');
-          }
-        }
-      });
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    };
-    if ((window as any).google?.accounts?.oauth2) {
-      startOAuth();
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.onload = startOAuth;
-    script.onerror = () => setCadGoogleToken('');
-    document.head.appendChild(script);
-  };
+  }, [dispararExportacaoFechamentoLocalExe]);
 
   const [brandShowcaseOpen, setBrandShowcaseOpen] = useState<boolean>(false);
   const [previewPostura, setPreviewPostura] = useState<UrutauPosturaState>('sentinela');
@@ -2352,14 +2203,9 @@ export default function App() {
       const empAtivaId = Number(selectedEmpresaId || currentUser?.empresas_ids?.[0] || 1);
       const empAtivaObj = (json.empresas || []).find((e: any) => Number(e.id) === empAtivaId);
       const cfgEmpAtiva: any = empAtivaObj?.lgpd_custodia_config || {};
-      const pendFechamento = cfgEmpAtiva?.estado_fechamento_local || null;
-      const driveConectadoEmp = Boolean(
-        (cfgEmpAtiva.pasta_google_drive_id && String(cfgEmpAtiva.pasta_google_drive_id).trim().length > 0) ||
-          (cfgEmpAtiva.planilha_google_id && String(cfgEmpAtiva.planilha_google_id).trim().length > 0) ||
-          (cfgEmpAtiva.apps_script_webhook_url && String(cfgEmpAtiva.apps_script_webhook_url).startsWith('https://')) ||
-          (cfgEmpAtiva.conta_google_vinculada && String(cfgEmpAtiva.conta_google_vinculada).includes('@'))
-      );
-      setEstadoFechamentoLocal(driveConectadoEmp ? null : pendFechamento);
+      const pendFechamento: any = null;
+      const driveConectadoEmp = true;
+      setEstadoFechamentoLocal(null);
 
       if (cfgEmpAtiva?.zero_guarda_operacional_vps === true) {
         const matchEmp = (r: any) => Number(r?.empresa_id ?? r?.id_empresa ?? 0) === empAtivaId;
@@ -4658,7 +4504,7 @@ export default function App() {
             tabScrollMemoryRef.current[activeTab] = e.currentTarget.scrollTop;
           }}
           className={`flex-1 h-full w-full min-w-0 overflow-y-auto overflow-x-hidden transition-colors duration-300 ${
-            activeTab === 'quadro_branco' ? 'p-2 sm:p-4 pb-10' : 'p-3.5 sm:p-6 pb-24'
+            activeTab === 'quadro_branco' ? 'p-2 sm:p-4 pb-10' : 'p-2 sm:p-6 pb-24'
           } ${
             isCurrentTabSystematicAdmin ? 'systematic-admin-main' : 'bg-[#0B0E14]'
           }`}
@@ -4734,138 +4580,20 @@ export default function App() {
             </div>
           )}
 
-          {(() => {
-            const cfgCust: any = empresaAtivaObj?.lgpd_custodia_config || {};
-            const driveConectado = Boolean(
-              (cfgCust.pasta_google_drive_id && String(cfgCust.pasta_google_drive_id).trim().length > 0) ||
-                (cfgCust.planilha_google_id && String(cfgCust.planilha_google_id).trim().length > 0) ||
-                (cfgCust.apps_script_webhook_url && String(cfgCust.apps_script_webhook_url).startsWith('https://')) ||
-                (cfgCust.conta_google_vinculada && String(cfgCust.conta_google_vinculada).includes('@'))
-            );
-            const outroPcPendente = Boolean(
-              !driveConectado &&
-                estadoFechamentoLocal?.aguardando_primeiro_pc &&
-                estadoFechamentoLocal?.ultimo_pc_id &&
-                estadoFechamentoLocal.ultimo_pc_id !== meuPcId
-            );
-            const confirmadoSemDrive = Boolean(cfgCust.multiacesso_sem_drive_confirmado === true);
-            const empIdAtual = Number(selectedEmpresaId || currentUser?.empresas_ids?.[0] || 1);
-
-            return (
-              <>
-                {recuperacaoConcluidaMsg && (
-                  <div className="mb-4 p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/50 flex items-center justify-between gap-3 shadow-lg">
-                    <div className="text-xs text-emerald-100 font-semibold leading-relaxed">
-                      {recuperacaoConcluidaMsg}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setRecuperacaoConcluidaMsg('')}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs cursor-pointer shrink-0"
-                    >
-                      OK
-                    </button>
-                  </div>
-                )}
-
-                {outroPcPendente && outroPcCienteContinuar && (
-                  <div className="mb-4 p-4 rounded-2xl bg-rose-500/15 border-2 border-rose-500/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-lg">
-                    <div className="space-y-1">
-                      <div className="text-xs font-black uppercase tracking-wider text-rose-300">
-                        Aviso: Este Computador Não Possui Os Dados Mais Recentes
-                      </div>
-                      <p className="text-xs text-rose-100/95 leading-relaxed">
-                        O último computador usado sem Google Drive foi{' '}
-                        <strong>{estadoFechamentoLocal?.ultimo_pc_apelido || 'outro computador'}</strong>
-                        {estadoFechamentoLocal?.fechado_em
-                          ? ` em ${new Date(estadoFechamentoLocal.fechado_em).toLocaleString('pt-BR')}`
-                          : ''}
-                        . Você pode continuar usando normalmente e <strong>recuperar o atraso depois sem perder nada</strong>: assim que aquele computador for ligado e entrar no sistema (ou se você carregar a cópia salva dele aqui), o sistema juntará os dois sem apagar o que você lançar hoje.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        disabled={verificandoOutroPc}
-                        onClick={async () => {
-                          setVerificandoOutroPc(true);
-                          try {
-                            const r = await fetch(`/api/lgpd/vps-processador/status/${empIdAtual}`);
-                            const j = await r.json();
-                            if (j?.ok) {
-                              setEstadoFechamentoLocal(j.drive_conectado ? null : j.estado_fechamento_local || null);
-                            }
-                            await fetchAllData();
-                          } catch {} finally {
-                            setVerificandoOutroPc(false);
-                          }
-                        }}
-                        className="px-3.5 py-2 rounded-xl bg-rose-500 hover:bg-rose-400 text-slate-950 font-black text-xs cursor-pointer disabled:opacity-50"
-                      >
-                        {verificandoOutroPc ? 'Verificando...' : 'Verificar Se Já Subiu'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('config')}
-                        className="px-3.5 py-2 rounded-xl bg-[#0C1117] hover:bg-slate-900 border border-emerald-500/50 text-emerald-300 font-bold text-xs cursor-pointer"
-                      >
-                        Conectar Google Drive
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {computadoresAtivosEmpresa >= 2 && !driveConectado && !confirmadoSemDrive && (
-                  <div className="mb-4 p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500/50 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-lg">
-                    <div className="space-y-1">
-                      <div className="text-xs font-black uppercase tracking-wider text-amber-300">
-                        {computadoresAtivosEmpresa} Computadores Conectados Ao Mesmo Tempo Sem Google Drive
-                      </div>
-                      <p className="text-xs text-amber-100/90 leading-relaxed">
-                        Enquanto estiverem abertos juntos, todos veem as alterações na hora. Porém, sem Google Drive conectado, quando o <strong>último computador fechar</strong>, a versão final ficará salva apenas nesse último computador — no dia seguinte, abra primeiro por ele para não perder dados.
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('config')}
-                        className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs cursor-pointer"
-                      >
-                        Conectar Meu Google Drive (Recomendado)
-                      </button>
-                      <button
-                        type="button"
-                        disabled={bannerMultiacessoSaving}
-                        onClick={async () => {
-                          setBannerMultiacessoSaving(true);
-                          try {
-                            await fetch('/api/lgpd/vps-processador/definir-modo-multiacesso', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                empresa_id: empIdAtual,
-                                modo_guarda_escolhido: 'computador_local_multiacesso',
-                                multiacesso_sem_drive_confirmado: true,
-                                usuario_nome: currentUser?.nome || empresaAtivaObj?.nome
-                              })
-                            });
-                            await fetchAllData();
-                          } catch {} finally {
-                            setBannerMultiacessoSaving(false);
-                          }
-                        }}
-                        className="px-3.5 py-2 rounded-xl bg-[#0C1117] hover:bg-slate-900 border border-amber-400/60 text-amber-200 font-bold text-xs cursor-pointer disabled:opacity-50"
-                      >
-                        {bannerMultiacessoSaving
-                          ? 'Confirmando...'
-                          : 'Entendi as Orientações e Quero Continuar Sem Drive'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </>
-            );
-          })()}
+          {recuperacaoConcluidaMsg && (
+            <div className="mb-4 p-4 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/50 flex items-center justify-between gap-3 shadow-lg">
+              <div className="text-xs text-emerald-100 font-semibold leading-relaxed">
+                {recuperacaoConcluidaMsg}
+              </div>
+              <button
+                type="button"
+                onClick={() => setRecuperacaoConcluidaMsg('')}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs cursor-pointer shrink-0"
+              >
+                OK
+              </button>
+            </div>
+          )}
 
           {nivelAcessoLicencaAtiva === 'somente_download' && activeTab !== 'empresas' ? (
             <div className="max-w-3xl mx-auto my-6 bg-[#11151E] border-2 border-amber-500/60 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
@@ -5106,11 +4834,18 @@ export default function App() {
                 {activeTab === 'escalas' && <EscalasTab {...commonProps} />}
                 {activeTab === 'agenda' && <AgendaTab {...commonProps} />}
                 {activeTab === 'pdv' && (
-                  <PdvHibridoTab
-                    {...commonProps}
+                  <RequirePerimeter
+                    moduleName="PDV & Comandas"
                     currentUser={currentUser}
-                    deepLinkMesaCodigo={deepLinkMesaCodigo}
-                  />
+                    empresaId={isolatedErpData?.empresaAtivaId}
+                    setorId={Number(currentUser?.setor_id || 0) || null}
+                  >
+                    <PdvHibridoTab
+                      {...commonProps}
+                      currentUser={currentUser}
+                      deepLinkMesaCodigo={deepLinkMesaCodigo}
+                    />
+                  </RequirePerimeter>
                 )}
                 {activeTab === 'reservas' && <ReservasTab {...commonProps} />}
                 {activeTab === 'portais' && <PortaisTab {...commonProps} />}
@@ -6505,166 +6240,7 @@ export default function App() {
         </div>
       ) : null}
 
-      {isAuthenticatedAndUnlocked && fechamentoUltimoPcModalOpen && (
-        <div
-          className="fixed inset-0 z-[125] penumbra-da-mata-backdrop flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg urutau-gold-turquoise-outer p-3 sm:p-4 my-auto"
-          >
-            <div className="urutau-gold-turquoise-inner p-5 space-y-4">
-              <div className="space-y-1">
-                <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-amber-300 text-[10px] font-black uppercase tracking-wider">
-                  Último Computador Ativo • {meuPcApelido}
-                </span>
-                <h3 className="text-base sm:text-lg font-black text-white">
-                  Atenção Antes de Fechar Este Computador
-                </h3>
-              </div>
 
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-400/40 space-y-2 text-xs text-amber-50 leading-relaxed">
-                <div>
-                  <strong>1. Cópia final salva aqui ({meuPcApelido}):</strong> Como não há Google Drive conectado e este é o último computador aberto, todos os dados atualizados até agora ficarão salvos <strong>somente neste computador</strong>.
-                </div>
-                <div>
-                  <strong>2. Este precisa ser o PRIMEIRO computador a ligar depois:</strong> Quando a empresa voltar a usar o sistema, <strong>ligue e entre primeiro neste computador</strong> para que ele envie os dados salvos automaticamente antes de qualquer outro computador acessar.
-                </div>
-                <div>
-                  <strong>3. Se outro computador ligar antes:</strong> o sistema exibirá um alerta avisando que ele não tem as informações atualizadas até que este computador suba a cópia salva.
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
-                <button
-                  type="button"
-                  onClick={() => finalizarSaidaDaSessao(false)}
-                  className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black cursor-pointer"
-                >
-                  Entendi — Salvar Neste Computador e Fechar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFechamentoUltimoPcModalOpen(false);
-                    setActiveTab('config');
-                  }}
-                  className="py-3 px-4 rounded-xl bg-[#0C1117] hover:bg-slate-900 border border-emerald-500/50 text-emerald-300 text-xs font-bold cursor-pointer"
-                >
-                  Conectar Google Drive Antes
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {(() => {
-        if (!isAuthenticatedAndUnlocked || outroPcCienteContinuar) return null;
-        const cfgCustModal: any = empresaAtivaObj?.lgpd_custodia_config || {};
-        const driveConectadoModal = Boolean(
-          (cfgCustModal.pasta_google_drive_id && String(cfgCustModal.pasta_google_drive_id).trim().length > 0) ||
-            (cfgCustModal.planilha_google_id && String(cfgCustModal.planilha_google_id).trim().length > 0) ||
-            (cfgCustModal.apps_script_webhook_url && String(cfgCustModal.apps_script_webhook_url).startsWith('https://')) ||
-            (cfgCustModal.conta_google_vinculada && String(cfgCustModal.conta_google_vinculada).includes('@'))
-        );
-        const mostrarAlertaOutroPc = Boolean(
-          !driveConectadoModal &&
-            estadoFechamentoLocal?.aguardando_primeiro_pc &&
-            estadoFechamentoLocal?.ultimo_pc_id &&
-            estadoFechamentoLocal.ultimo_pc_id !== meuPcId
-        );
-        if (!mostrarAlertaOutroPc) return null;
-        const empIdModal = Number(selectedEmpresaId || currentUser?.empresas_ids?.[0] || 1);
-        return (
-          <div
-            className="fixed inset-0 z-[124] penumbra-da-mata-backdrop flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg urutau-gold-turquoise-outer p-3 sm:p-4 my-auto"
-            >
-              <div className="urutau-gold-turquoise-inner p-5 space-y-4">
-                <div className="space-y-1">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-400/50 text-rose-300 text-[10px] font-black uppercase tracking-wider">
-                    Computador Diferente do Último Acesso • {meuPcApelido}
-                  </span>
-                  <h3 className="text-base sm:text-lg font-black text-white">
-                    Atenção: Este Computador Não Terá as Informações Atualizadas
-                  </h3>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-400/40 space-y-2.5 text-xs text-rose-50 leading-relaxed">
-                  <div>
-                    <strong>1. Onde estão os dados finais:</strong> Como o sistema está sem Google Drive conectado, o último encerramento ocorreu em{' '}
-                    <strong>{estadoFechamentoLocal?.ultimo_pc_apelido || 'outro computador'}</strong>
-                    {estadoFechamentoLocal?.fechado_em
-                      ? ` em ${new Date(estadoFechamentoLocal.fechado_em).toLocaleString('pt-BR')}`
-                      : ''}
-                    . As últimas alterações ficaram salvas apenas lá.
-                  </div>
-                  <div>
-                    <strong>2. Como atualizar aqui automaticamente:</strong> Ligue primeiro o computador{' '}
-                    <strong>{estadoFechamentoLocal?.ultimo_pc_apelido || 'anterior'}</strong> e entre no sistema por ele. Assim que ele enviar os dados, este computador será atualizado sozinho na hora.
-                  </div>
-                  <div>
-                    <strong>3. Se você continuar sem aguardar (é possível recuperar o atraso depois):</strong> novos lançamentos feitos aqui serão mantidos. Quando o computador{' '}
-                    <strong>{estadoFechamentoLocal?.ultimo_pc_apelido || 'anterior'}</strong> ligar depois (ou ao carregar a cópia salva dele manualmente), o sistema irá <strong>juntar os dados atrasados sem apagar o que foi feito aqui</strong>.
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 pt-1">
-                  <button
-                    type="button"
-                    disabled={verificandoOutroPc}
-                    onClick={async () => {
-                      setVerificandoOutroPc(true);
-                      try {
-                        const r = await fetch(`/api/lgpd/vps-processador/status/${empIdModal}`);
-                        const j = await r.json();
-                        if (j?.ok) {
-                          setEstadoFechamentoLocal(j.drive_conectado ? null : j.estado_fechamento_local || null);
-                        }
-                        await fetchAllData();
-                      } catch {} finally {
-                        setVerificandoOutroPc(false);
-                      }
-                    }}
-                    className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black cursor-pointer disabled:opacity-50"
-                  >
-                    {verificandoOutroPc
-                      ? 'Verificando se o último computador já enviou os dados...'
-                      : 'Verificar Novamente (Aguardar Outro Computador Enviar)'}
-                  </button>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOutroPcCienteContinuar(true);
-                        setActiveTab('config');
-                      }}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-[#0C1117] hover:bg-slate-900 border border-amber-400/50 text-amber-200 text-xs font-bold cursor-pointer"
-                    >
-                      Carregar Cópia Salva Manualmente
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOutroPcCienteContinuar(true)}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-[#0C1117] hover:bg-slate-900 border border-white/15 text-slate-300 text-xs font-bold cursor-pointer"
-                    >
-                      Abrir Mesmo Assim (Sincronizar Depois)
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {isAuthenticatedAndUnlocked && pacoteAtrasadoPendente && (
         <div
@@ -6950,49 +6526,6 @@ export default function App() {
                     </div>
                   </div>
                 );
-              })()}
-
-              {(() => {
-                if (!portalEmpresaAtiva) return null;
-                try {
-                  const rawUltimo = localStorage.getItem('urutau_ultimo_pc_fechou_sem_nuvem');
-                  const ehEsteUltimoPc = Boolean(rawUltimo);
-                  const ehOutroPcComPendencia = Boolean(
-                    !ehEsteUltimoPc &&
-                      estadoFechamentoLocal?.aguardando_primeiro_pc &&
-                      estadoFechamentoLocal?.ultimo_pc_id &&
-                      estadoFechamentoLocal.ultimo_pc_id !== meuPcId
-                  );
-                  if (ehEsteUltimoPc && rawUltimo) {
-                    const parsedUlt = JSON.parse(rawUltimo);
-                    return (
-                      <div className="mx-4 mt-3 p-3 rounded-xl bg-amber-500/15 border border-amber-400/50 text-[11px] text-amber-100 leading-relaxed">
-                        <strong className="text-amber-300 block mb-0.5">
-                          Este Computador Foi o Último a Fechar Sem Nuvem ({parsedUlt?.empresa_nome || 'Empresa'})
-                        </strong>
-                        Ao entrar agora por este computador, ele enviará automaticamente os dados salvos para liberar o acesso atualizado aos demais computadores.
-                      </div>
-                    );
-                  }
-                  if (ehOutroPcComPendencia) {
-                    return (
-                      <div className="mx-4 mt-3 p-3 rounded-xl bg-rose-500/15 border border-rose-400/60 text-[11px] text-rose-100 leading-relaxed">
-                        <strong className="text-rose-300 block mb-0.5">
-                          Atenção: Este Não Foi o Último Computador a Fechar
-                        </strong>
-                        O último uso sem Google Drive foi encerrado em{' '}
-                        <strong>{estadoFechamentoLocal?.ultimo_pc_apelido || 'outro computador'}</strong>
-                        {estadoFechamentoLocal?.fechado_em
-                          ? ` (${new Date(estadoFechamentoLocal.fechado_em).toLocaleString('pt-BR')})`
-                          : ''}
-                        . Se você entrar por este computador agora, ele <strong>não terá as informações atualizadas</strong> até que aquele computador seja ligado e entre no sistema primeiro.
-                      </div>
-                    );
-                  }
-                  return null;
-                } catch {
-                  return null;
-                }
               })()}
 
               <div className="flex border-b border-white/10 bg-[#11151C]/80">
@@ -7371,29 +6904,11 @@ export default function App() {
                           </span>
                         </div>
                         <div className="text-sm font-bold text-white pt-1">
-                          Tudo Pronto! Seus Dados Ficam Exclusivamente com Você
+                          Tudo Pronto! Sua Empresa Está na Infraestrutura Híbrida Urutau
                         </div>
                         <p className="text-xs text-slate-300">
-                          A pasta <strong>{cadCriadoResumo.empresa?.lgpd_custodia_config?.pasta_google_drive_nome}</strong> e suas planilhas foram preparadas para o seu controle exclusivo (<strong>{cadCriadoResumo.empresa?.lgpd_custodia_config?.conta_google_vinculada || cadEmail || 'Sua Conta Conectada'}</strong>), com cópias automáticas no seu Drive e no seu computador.
+                          Os dados da sua empresa ficam isolados em banco gerenciado com backups automáticos e portabilidade integral LGPD sempre disponível no painel.
                         </p>
-                      </div>
-
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        {(cadCriadoResumo.empresa?.lgpd_custodia_config?.estrutura_diretorios_planilhas || []).map((dir: any) => (
-                          <div
-                            key={dir.codigo}
-                            className="p-2.5 rounded-lg bg-black/40 border border-white/10 text-[11px] flex flex-col gap-0.5"
-                          >
-                            <div className="font-mono font-bold text-[#6EE7B7]">
-                              [{dir.codigo}] {dir.nome_pasta}
-                            </div>
-                            {dir.planilha_nome && (
-                              <div className="text-slate-300">
-                                Backup Automático: <strong>{dir.planilha_nome}</strong> ({(dir.abas || []).length} abas)
-                              </div>
-                            )}
-                          </div>
-                        ))}
                       </div>
 
                       <button
@@ -7456,11 +6971,7 @@ export default function App() {
                           return;
                         }
                         if (!cadAceiteLgpd) {
-                          setCadError('Confirme a proteção de backup LGPD para continuar.');
-                          return;
-                        }
-                        if (cadModoGuarda === 'computador_local_multiacesso' && !cadCienciaMultiacessoSemDrive) {
-                          setCadError('Confirme que entendeu as orientações de uso em mais de um computador sem Google Drive.');
+                          setCadError('Confirme a proteção de dados LGPD para continuar.');
                           return;
                         }
                         setCadLoading(true);
@@ -7480,22 +6991,10 @@ export default function App() {
                               usar_wpp_pessoal_como_bot: true,
                               whatsapp_bot_empresa: cadWhatsapp.trim(),
                               email: cadEmail.trim(),
-                              conta_google_vinculada: cadGoogleToken.trim() ? cadEmail.trim() : '',
-                              provedor_nuvem_backup: cadProvedorNuvem,
                               cnpj: cadCnpj.trim(),
                               senha: cadSenha.trim(),
-                              modo_conexao_drive: cadModoDrive,
-                              pasta_google_drive_url: cadPastaDriveUrl.trim(),
-                              google_access_token: cadGoogleToken.trim(),
-                              planilha_google_url: cadPlanilhaUrl.trim(),
                               terms_accepted: true,
-                              termo_lgpd_aceito: true,
-                              zero_guarda_operacional_vps: true,
-                              modo_guarda_escolhido: cadModoGuarda,
-                              multiacesso_sem_drive_confirmado:
-                                cadModoGuarda === 'computador_local_multiacesso'
-                                  ? cadCienciaMultiacessoSemDrive
-                                  : false
+                              termo_lgpd_aceito: true
                             })
                           });
                           const json = await res.json();
@@ -7530,10 +7029,10 @@ export default function App() {
                     >
                       <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-[11px] text-slate-200 space-y-1">
                         <div className="font-bold text-emerald-300">
-                          Link Próprio (.nyctibi.us) + Seus Dados 100% no Seu Drive ou Computador
+                          Link Próprio (.nyctibi.us) + Infraestrutura Híbrida Gerenciada
                         </div>
                         <p className="text-slate-300">
-                          Ao cadastrar, você recebe seu endereço exclusivo <strong>{(cadSubdominioInput || normalizarSlugEmpresa(cadNomeEmpresa || 'sua-empresa'))}.nyctibi.us</strong> com login personalizado da sua marca.
+                          Ao cadastrar, você recebe seu endereço exclusivo <strong>{(cadSubdominioInput || normalizarSlugEmpresa(cadNomeEmpresa || 'sua-empresa'))}.nyctibi.us</strong> com backups automáticos e portabilidade LGPD garantida.
                         </p>
                       </div>
 
@@ -7639,13 +7138,13 @@ export default function App() {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-[#94A3B8] mb-1">
-                            E-mail da Sua Conta Google (Drive de Backup)
+                            E-mail do Empresário
                           </label>
                           <input
                             type="email"
                             value={cadEmail}
                             onChange={(e) => setCadEmail(e.target.value)}
-                            placeholder="suaempresa@gmail.com"
+                            placeholder="contato@suaempresa.com.br"
                             className="w-full px-3 py-2 text-xs"
                           />
                         </div>
@@ -7676,143 +7175,13 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="text-xs font-bold text-[#6EE7B7]">
-                            Como Você Prefere Usar e Salvar Seus Dados?
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setCadMostrarTrocaDrive((prev) => !prev)}
-                            className="text-[11px] font-bold text-amber-300 hover:underline cursor-pointer"
-                          >
-                            {cadMostrarTrocaDrive ? 'Ocultar Opções de Nuvem' : 'Alterar Conta do Drive'}
-                          </button>
+                      <div className="p-3 rounded-xl bg-black/40 border border-white/10 space-y-1.5 text-[11px] text-slate-300">
+                        <div className="font-bold text-[#6EE7B7]">
+                          Armazenamento Gerenciado &amp; Portabilidade LGPD
                         </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setCadModoGuarda('google_drive')}
-                            className={`p-2.5 rounded-lg border text-left text-[11px] cursor-pointer ${
-                              cadModoGuarda === 'google_drive'
-                                ? 'bg-[#10B981]/20 border-[#10B981] text-white'
-                                : 'bg-black/30 border-white/10 text-slate-300'
-                            }`}
-                          >
-                            <div className="font-bold text-[#6EE7B7]">Com Google Drive (Recomendado)</div>
-                            <div className="text-[10px] text-slate-300 mt-0.5">
-                              Sincroniza vários computadores ao mesmo tempo e salva tudo no seu Drive.
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setCadModoGuarda('computador_local_multiacesso')}
-                            className={`p-2.5 rounded-lg border text-left text-[11px] cursor-pointer ${
-                              cadModoGuarda === 'computador_local_multiacesso'
-                                ? 'bg-amber-500/20 border-amber-400 text-white'
-                                : 'bg-black/30 border-white/10 text-slate-300'
-                            }`}
-                          >
-                            <div className="font-bold text-amber-300">Sem Google Drive (Só no Computador)</div>
-                            <div className="text-[10px] text-slate-300 mt-0.5">
-                              Salva direto no computador quando o último PC conectado fechar.
-                            </div>
-                          </button>
-                        </div>
-
-                        {cadModoGuarda === 'google_drive' ? (
-                          <div className="space-y-2 text-[11px] text-slate-300">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={handleConectarGoogleDrivePopup}
-                                className="px-3.5 py-2.5 rounded-lg bg-[#10B981] hover:bg-[#059669] text-[#04181C] text-xs font-black cursor-pointer"
-                              >
-                                {cadGoogleToken
-                                  ? `Conta Google Conectada (${cadEmail || 'Criação Automática Ativa'})`
-                                  : 'Conectar Minha Conta Google'}
-                              </button>
-                            </div>
-                            <p className="text-[11px] text-slate-300">
-                              Conectando sua conta Google, sua pasta e planilhas são criadas direto no <strong>seu Google Drive</strong> e atualizadas sozinhas de 1 em 1 hora.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-400/40 space-y-2 text-[11px] text-amber-100">
-                            <div className="font-bold text-amber-300">
-                              Orientação Importante Para Usar em Mais de Um Computador Sem Google Drive:
-                            </div>
-                            <div>
-                              • Enquanto estiverem abertos juntos, os computadores sincronizam na hora.
-                            </div>
-                            <div>
-                              • Quando o <strong>último computador fechar</strong>, a cópia final fica salva <strong>somente nesse computador</strong>.
-                            </div>
-                            <div>
-                              • No dia seguinte, <strong>abra primeiro pelo último computador que fechou</strong> (ou carregue a cópia salva em Configurações).
-                            </div>
-                            <label className="flex items-start gap-2 pt-1 cursor-pointer text-white">
-                              <input
-                                type="checkbox"
-                                checked={cadCienciaMultiacessoSemDrive}
-                                onChange={(e) => setCadCienciaMultiacessoSemDrive(e.target.checked)}
-                                className="mt-0.5 accent-amber-400"
-                              />
-                              <span>
-                                Li e entendi: se usar vários computadores sem Google Drive, o último computador que fechar fica com a versão final e devo abrir primeiro por ele.
-                              </span>
-                            </label>
-                          </div>
-                        )}
-
-                        {cadMostrarTrocaDrive && (
-                          <div className="p-2.5 rounded-lg bg-black/50 border border-white/10 space-y-2 pt-2">
-                            <div className="text-[11px] font-bold text-amber-300">
-                              Alterar Conta ou Destino do Seu Drive em Nuvem:
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <div>
-                                <label className="block text-[10px] text-[#94A3B8] mb-1">
-                                  Nuvem de Backup
-                                </label>
-                                <select
-                                  value={cadProvedorNuvem}
-                                  onChange={(e) => setCadProvedorNuvem(e.target.value)}
-                                  className="w-full px-2.5 py-1.5 text-xs bg-[#041518] border border-white/15 rounded-lg text-white"
-                                >
-                                  <option value="Google Drive">Google Drive (Criação Automática)</option>
-                                  <option value="Google Workspace Corporativo">Google Workspace Corporativo</option>
-                                  <option value="Outro Drive em Nuvem">Outra Pasta / Nuvem Personalizada</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-[10px] text-[#94A3B8] mb-1">
-                                  E-mail da Conta do Drive
-                                </label>
-                                <input
-                                  type="email"
-                                  value={cadEmail}
-                                  onChange={(e) => setCadEmail(e.target.value)}
-                                  placeholder="outraconta@gmail.com"
-                                  className="w-full px-2.5 py-1.5 text-xs"
-                                />
-                              </div>
-                              <div className="sm:col-span-2">
-                                <label className="block text-[10px] text-[#94A3B8] mb-1">
-                                  Pasta Específica do Drive (Opcional — deixe em branco para o sistema criar sozinho)
-                                </label>
-                                <input
-                                  type="url"
-                                  value={cadPastaDriveUrl}
-                                  onChange={(e) => setCadPastaDriveUrl(e.target.value)}
-                                  placeholder="https://drive.google.com/drive/folders/..."
-                                  className="w-full px-2.5 py-1.5 text-xs"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                        <p>
+                          Sua base de dados e arquivos ficam protegidos na infraestrutura híbrida gerenciada do Urutau, com backups automáticos e exportação completa disponível a qualquer momento no painel da empresa.
+                        </p>
                       </div>
 
                       <div className="p-3 rounded-xl bg-[#0E1117] border border-white/[0.08] space-y-2">

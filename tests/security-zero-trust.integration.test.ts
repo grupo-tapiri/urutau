@@ -23,6 +23,10 @@ import {
   exportTenantLogicalBackup,
   restoreTenant
 } from '../src/server/services/tenantLogicalBackupService.ts';
+import {
+  calculateDistanceInMeters,
+  evaluatePerimeterAccess
+} from '../src/shared/utils/geofencingUtils.ts';
 
 let httpServer: http.Server;
 let baseUrl = '';
@@ -775,5 +779,72 @@ describe('Suite E2E de Seguranca Zero-Trust, Transacoes ACID, Concorrencia & Ide
     } finally {
       fs.rmSync(tmpBackupDir, { recursive: true, force: true });
     }
+  });
+
+  it('11. Controle de Perimetro Zero-Trust (Geofencing Haversine + API de Governanca + Perfil do Usuario)', async () => {
+    const samePoint = calculateDistanceInMeters(-23.55052, -46.633308, -23.55052, -46.633308);
+    assert.equal(samePoint, 0);
+
+    const distApprox50 = calculateDistanceInMeters(-23.55052, -46.633308, -23.55097, -46.633308);
+    assert.ok(distApprox50 >= 49 && distApprox50 <= 51);
+
+    const evalInside = evaluatePerimeterAccess(-23.5507, -46.633308, {
+      latitude: -23.55052,
+      longitude: -46.633308,
+      allowedRadiusMeters: 50
+    });
+    assert.equal(evalInside.configured, true);
+    assert.equal(evalInside.allowed, true);
+
+    const evalOutside = evaluatePerimeterAccess(-23.56052, -46.633308, {
+      latitude: -23.55052,
+      longitude: -46.633308,
+      allowedRadiusMeters: 50
+    });
+    assert.equal(evalOutside.configured, true);
+    assert.equal(evalOutside.allowed, false);
+
+    const forbiddenByGarcom = await sendJson('/api/governanca/perimetro', {
+      method: 'PUT',
+      token: garcomEmp1Token,
+      body: { empresa_id: 1, latitude: -23.55052, longitude: -46.633308, allowed_radius_meters: 50 }
+    });
+    assert.equal(forbiddenByGarcom.status, 403);
+
+    const invalidCoords = await sendJson('/api/governanca/perimetro', {
+      method: 'PUT',
+      token: gerenteEmp1Token,
+      body: { empresa_id: 1, latitude: 120, longitude: -46.633308, allowed_radius_meters: 50 }
+    });
+    assert.equal(invalidCoords.status, 400);
+
+    const savedByGerente = await sendJson('/api/governanca/perimetro', {
+      method: 'PUT',
+      token: gerenteEmp1Token,
+      body: { empresa_id: 1, latitude: -23.55052, longitude: -46.633308, allowed_radius_meters: 75 }
+    });
+    assert.equal(savedByGerente.status, 200);
+    assert.equal(savedByGerente.json.ok, true);
+    assert.equal(savedByGerente.json.perimeter.configured, true);
+    assert.equal(savedByGerente.json.perimeter.allowed_radius_meters, 75);
+
+    const perfilRes = await sendJson('/api/zero-trust/perfil-perimetro?empresa_id=1', {
+      method: 'GET',
+      token: garcomEmp1Token
+    });
+    assert.equal(perfilRes.status, 200);
+    assert.equal(perfilRes.json.ok, true);
+    assert.equal(perfilRes.json.perimeter.latitude, -23.55052);
+    assert.equal(perfilRes.json.perimeter.longitude, -46.633308);
+    assert.equal(perfilRes.json.perimeter.allowed_radius_meters, 75);
+    assert.equal(perfilRes.json.usuario.perimeter.configured, true);
+
+    const clearedByAdmin = await sendJson('/api/governanca/perimetro', {
+      method: 'PUT',
+      token: superAdminToken,
+      body: { empresa_id: 1, latitude: null, longitude: null, allowed_radius_meters: 50 }
+    });
+    assert.equal(clearedByAdmin.status, 200);
+    assert.equal(clearedByAdmin.json.perimeter.configured, false);
   });
 });

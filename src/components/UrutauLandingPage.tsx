@@ -104,7 +104,6 @@ export function UrutauLandingPage({
   const [empRamo, setEmpRamo] = useState<string>('Restaurante / Bar / Gastronomia');
   const [empCidade, setEmpCidade] = useState<string>('Belém - PA');
   const [empUnidadeInicial, setEmpUnidadeInicial] = useState<string>('Matriz Principal');
-  const [empPlanilhaGoogleUrl, setEmpPlanilhaGoogleUrl] = useState<string>('');
   const [empAceiteLgpd, setEmpAceiteLgpd] = useState<boolean>(true);
   const [showLgpdModal, setShowLgpdModal] = useState<boolean>(false);
   const [onboardingLoading, setOnboardingLoading] = useState<boolean>(false);
@@ -320,9 +319,7 @@ export function UrutauLandingPage({
       ramo: empRamo,
       cidade: empCidade.trim() || 'Belém - PA',
       nome_unidade_inicial: empUnidadeInicial.trim() || 'Matriz Principal',
-      planilha_google_url: empPlanilhaGoogleUrl.trim(),
-      termo_lgpd_aceito: true,
-      zero_guarda_operacional_vps: true
+      termo_lgpd_aceito: true
     };
 
     try {
@@ -1103,11 +1100,30 @@ export function UrutauLandingPage({
 
             <div className="lg:col-span-5">
               <div className="rounded-xl overflow-hidden border border-[#10B981]/40 bg-[#04120C] shadow-2xl">
-                <img
-                  src="/assets/branding/poses/prancha_oficial_urutau.jpg?v=esmeralda1"
-                  alt="Tríptico Oficial Urutau Esmeralda: Camuflagem, Sentinela e Canto"
-                  className="w-full h-auto object-cover block"
-                />
+                <div className="grid grid-cols-3 divide-x divide-white/10 bg-[#04120C]">
+                  <div className="aspect-[3/4] overflow-hidden flex items-center justify-center bg-[#04120C]">
+                    <UrutauEmblemSVG
+                      postura="camuflagem"
+                      disableAutoBlink={true}
+                      size="100%"
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="aspect-[3/4] overflow-hidden flex items-center justify-center bg-[#04120C]">
+                    <UrutauEmblemSVG
+                      postura="sentinela"
+                      size="100%"
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="aspect-[3/4] overflow-hidden flex items-center justify-center bg-[#04120C]">
+                    <UrutauEmblemSVG
+                      postura="canto"
+                      size="100%"
+                      className="w-full h-full"
+                    />
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 divide-x divide-white/10 bg-[#041518] py-2 px-2 text-center text-[11px] font-semibold text-slate-300">
                   <span>1. Camuflagem</span>
                   <span className="text-[#F5B041]">2. Sentinela</span>
@@ -1150,8 +1166,8 @@ export function UrutauLandingPage({
                   <div className="flex items-start gap-3">
                     <ShieldCheck className="w-4 h-4 text-[#10B981] shrink-0 mt-1" />
                     <div>
-                      <strong className="text-[#6EE7B7]">Modo Offline Contínuo e Guarda Própria de Dados:</strong>{' '}
-                      O sistema continua operando normalmente mesmo sem internet, guardando os lançamentos no aparelho e sincronizando automaticamente quando a conexão volta.
+                      <strong className="text-[#6EE7B7]">Modo Offline Contínuo e Armazenamento Gerenciado:</strong>{' '}
+                      O sistema continua operando normalmente mesmo sem internet, sincronizando automaticamente com nossa infraestrutura híbrida gerenciada e garantindo portabilidade completa dos dados sob a LGPD.
                     </div>
                   </div>
 
@@ -1466,19 +1482,6 @@ export function UrutauLandingPage({
                         />
                       </div>
 
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs font-bold text-[#6EE7B7] mb-1">
-                          Link da Planilha Google da Empresa (Guarda Soberana dos Dados)
-                        </label>
-                        <input
-                          type="url"
-                          value={empPlanilhaGoogleUrl}
-                          onChange={(e) => setEmpPlanilhaGoogleUrl(e.target.value)}
-                          placeholder="https://docs.google.com/spreadsheets/d/... (pode informar agora ou depois no painel)"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-[#041417] border border-[#10B981]/35 text-xs text-white"
-                        />
-                      </div>
-
                       <div className="sm:col-span-2 p-3 rounded-xl bg-[#041417] border border-[#10B981]/35 space-y-2">
                         <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-200 leading-snug">
                           <input
@@ -1488,7 +1491,7 @@ export function UrutauLandingPage({
                             className="mt-0.5 accent-[#10B981] cursor-pointer"
                           />
                           <span>
-                            Declaro ciência de que minha empresa é a única <strong>Controladora e Guardiã dos Dados (Art. 5º, VI da LGPD)</strong>, mantendo a guarda na própria <strong>Planilha Google</strong> da empresa, enquanto o servidor hospeda exclusivamente o funcionamento do sistema.
+                            Declaro ciência de que minha empresa atua como <strong>Controladora dos Dados (Art. 5º, VI da LGPD)</strong>, utilizando a infraestrutura híbrida gerenciada do Urutau com backups automáticos e portabilidade integral dos meus dados a qualquer momento.
                           </span>
                         </label>
                         <div className="flex justify-end">
@@ -1497,7 +1500,7 @@ export function UrutauLandingPage({
                             onClick={() => setShowLgpdModal(true)}
                             className="text-[11px] font-bold text-[#6EE7B7] hover:underline cursor-pointer"
                           >
-                            Ler Análise Técnica LGPD &amp; Termo de Guarda
+                            Ler Política LGPD &amp; Portabilidade de Dados
                           </button>
                         </div>
                       </div>
@@ -1589,7 +1592,7 @@ export function UrutauLandingPage({
             <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
               <div>
                 <h3 className="text-base sm:text-lg font-black text-white">
-                  Arquitetura LGPD &amp; Guarda Exclusiva na Planilha Google do Empresário
+                  Arquitetura LGPD, Infraestrutura Híbrida Gerenciada &amp; Portabilidade
                 </h3>
                 <p className="text-xs text-[#6EE7B7]">
                   Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018)
@@ -1607,28 +1610,28 @@ export function UrutauLandingPage({
             <div className="space-y-3 text-xs leading-relaxed">
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
                 <div className="font-bold text-[#6EE7B7]">
-                  1. Atribuição Completa da Guarda dos Dados ao Empresário (Controlador — Art. 5º, VI)
+                  1. Controladora dos Dados (Art. 5º, VI) &amp; Isolamento Multi-Tenant
                 </div>
                 <p>
-                  Cada empresário cadastrado atua como único <strong>Controlador dos Dados</strong> de sua empresa, colaboradores, fornecedores e clientes. A guarda permanente das informações operacionais (Equipe/RH, Escalas, Comunicação Interna, Reservas, Caixa, Rateio, Estoque e CMV) ocorre diretamente na <strong>Planilha Google vinculada à conta Google do próprio empresário</strong>.
+                  Cada empresa cadastrada atua como única <strong>Controladora dos Dados</strong> de sua operação, colaboradores, fornecedores e clientes. Todos os registros ficam estritamente isolados por empresa em banco PostgreSQL gerenciado, com controle de acesso Zero-Trust.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
                 <div className="font-bold text-[#6EE7B7]">
-                  2. Servidor VPS Exclusivo para Execução do Sistema (Zero Guarda de Terceiros)
+                  2. Infraestrutura Híbrida Gerenciada &amp; Backups Automáticos
                 </div>
                 <p>
-                  A VPS hospeda apenas o motor de funcionamento do aplicativo. Com o modo de <strong>Guarda Exclusiva na Planilha Google</strong> ativo, os dados operacionais são gravados nas abas da Planilha Google do empresário e expurgados do armazenamento operacional da VPS após a sincronização, isentando o servidor de custódia permanente de bancos de dados de terceiros.
+                  O Urutau gerencia 100% da infraestrutura de armazenamento híbrido (assets rápidos na VPS + armazenamento frio seguro e rotinas horárias de backup automatizado), sem exigir que o empresário configure servidores ou contas de nuvem próprias.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-black/40 border border-white/10 space-y-1.5">
                 <div className="font-bold text-[#6EE7B7]">
-                  3. Minimização de Dados (Art. 6º, III) — Sem Batida de Ponto
+                  3. Portabilidade Integral de Dados (Art. 18, V da LGPD)
                 </div>
                 <p>
-                  O sistema não realiza controle de batida de ponto trabalhista e mantém desativado por padrão o rastreamento contínuo de localização dos usuários, coletando apenas as informações estritamente necessárias para a comunicação interna e gestão diária.
+                  A qualquer momento, o proprietário da empresa pode baixar um pacote estruturado completo contendo todos os dados cadastrais, operacionais, financeiros e o índice de arquivos da sua empresa diretamente pelo painel.
                 </p>
               </div>
 
@@ -1637,7 +1640,7 @@ export function UrutauLandingPage({
                   4. Segurança Técnica e Direitos do Titular (Art. 18 e Art. 46)
                 </div>
                 <p>
-                  As senhas são protegidas com hash criptográfico Argon2id irreversível. O painel da empresa dispõe de ferramenta própria para o empresário atender solicitações de titulares (clientes ou ex-colaboradores), permitindo anonimizar dados pessoais preservando apenas os totais financeiros anônimos.
+                  As senhas são protegidas com hash criptográfico Argon2id irreversível. O painel da empresa dispõe de ferramenta própria para atender solicitações de titulares (clientes ou ex-colaboradores), permitindo anonimizar dados pessoais preservando apenas os totais financeiros anônimos.
                 </p>
               </div>
             </div>

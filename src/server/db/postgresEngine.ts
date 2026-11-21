@@ -239,18 +239,19 @@ export class TransactionalPostgresEngine {
       .sort((a, b) => a.localeCompare(b));
 
     for (const filename of files) {
-      const version = filename.split('_')[0];
+      const numericPrefix = filename.split('_')[0];
+      const stemVersion = filename.replace(/\.sql$/i, '');
       const fullPath = path.join(MIGRATIONS_DIR, filename);
       const sqlContent = fs.readFileSync(fullPath, 'utf8');
       const checksum = crypto.createHash('sha256').update(sqlContent, 'utf8').digest('hex');
 
-      const existingRes = await pool.query<MigrationRecord>(
-        'SELECT version, filename, checksum_sha256, applied_at_utc::text AS applied_at_utc FROM schema_migrations WHERE version = $1',
-        [version]
+      const existingByFilename = await pool.query<MigrationRecord>(
+        'SELECT version, filename, checksum_sha256, applied_at_utc::text AS applied_at_utc FROM schema_migrations WHERE filename = $1',
+        [filename]
       );
 
-      if (existingRes.rows.length > 0) {
-        const existing = existingRes.rows[0];
+      if (existingByFilename.rows.length > 0) {
+        const existing = existingByFilename.rows[0];
         if (existing.checksum_sha256 !== checksum) {
           console.warn(
             `[PostgreSQL Migrations] Checksum atualizado para migration ${filename}. Mantendo registro aplicado.`
@@ -258,6 +259,13 @@ export class TransactionalPostgresEngine {
         }
         continue;
       }
+
+      const existingByPrefix = await pool.query<MigrationRecord>(
+        'SELECT version, filename, checksum_sha256, applied_at_utc::text AS applied_at_utc FROM schema_migrations WHERE version = $1',
+        [numericPrefix]
+      );
+
+      const version = existingByPrefix.rows.length === 0 ? numericPrefix : stemVersion;
 
       await this.runInTransaction(async (client) => {
         await client.query(sqlContent);

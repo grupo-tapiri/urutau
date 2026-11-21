@@ -406,16 +406,16 @@ export const MODULE_CLEAN_GUIDES: Record<TabId, ModuleCleanGuide> = {
   },
   empresas: {
     title: 'Empresas e Assinaturas',
-    subtitle: 'Gestão multi-empresa, licenças de uso, links próprios e backup',
-    whatItDoes: 'Gerencia as empresas cadastradas, seus níveis de acesso e a planilha automática no Google Drive.',
+    subtitle: 'Gestão multi-empresa, licenças de uso, links próprios e portabilidade LGPD',
+    whatItDoes: 'Gerencia as empresas cadastradas, seus níveis de acesso, armazenamento gerenciado e portabilidade LGPD.',
     steps: [
       'Veja e gerencie as empresas ativas e suas assinaturas na etapa "1. Empresas Cadastradas".',
-      'Configure a planilha automática no Google Drive na etapa "2. Google Drive e Backup".'
+      'Acompanhe a infraestrutura gerenciada e a exportação de dados na etapa "2. Governança e Portabilidade LGPD".'
     ],
     mode: 'dom_stages',
     subTabs: [
       { id: 'stage_1', slug: 'empresas-cadastradas', label: '1. Empresas Cadastradas', shortDesc: 'Painel de empresas, planos e Urutau.exe' },
-      { id: 'stage_2', slug: 'google-drive-backup', label: '2. Google Drive e Backup', shortDesc: 'Sincronização com planilha do empresário' }
+      { id: 'stage_2', slug: 'governanca-portabilidade', label: '2. Governança e Portabilidade LGPD', shortDesc: 'Armazenamento híbrido gerenciado e exportação de dados' }
     ]
   },
   portais: {
@@ -685,38 +685,38 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
     >
       <div className="bg-[#12161F] border border-slate-800 rounded-xl overflow-hidden flex flex-col max-w-full">
         <div className="px-4 py-3 flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 min-w-0">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
                 <h1 className="text-base sm:text-lg font-semibold text-slate-100 tracking-tight truncate">
                   {customLabel || guide.title}
                 </h1>
                 <span className="hidden md:inline-block text-slate-600" aria-hidden="true">·</span>
-                <span className="hidden md:inline-block text-xs text-slate-400 truncate max-w-md">
+                <span className="text-xs text-slate-400 line-clamp-2 md:truncate md:max-w-md">
                   {showTopSubTabs && activeSubTabMeta ? activeSubTabMeta.shortDesc : guide.subtitle}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
               <button
                 type="button"
                 onClick={() => setHelpOpen((prev) => !prev)}
-                className={`px-3 py-1.5 rounded-lg border text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors min-h-[36px] ${
+                className={`w-full md:w-auto px-3.5 py-2 rounded-lg border text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer transition-colors min-h-[40px] ${
                   helpOpen
                     ? 'bg-[#181D28] border-slate-600 text-white'
                     : 'bg-[#0E1117] border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
                 }`}
                 title="Como usar esta tela passo a passo"
               >
-                <HelpCircle className="w-3.5 h-3.5 text-slate-400" />
-                <span className="hidden sm:inline">Como usar</span>
+                <HelpCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>Como usar</span>
               </button>
             </div>
           </div>
 
           {showTopSubTabs && (
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-1 p-1 rounded-lg bg-[#0E1117] border border-slate-800 w-full max-w-full">
+            <div className="flex flex-col md:flex-row md:flex-wrap items-stretch gap-2 p-1.5 rounded-lg bg-[#0E1117] border border-slate-800 w-full max-w-full">
               {guide.subTabs.map((sub, idx) => {
                 const isSelected = !showAllStages && selectedStageIndex === idx;
                 return (
@@ -725,13 +725,13 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                     type="button"
                     onClick={() => handleSelectStage(idx)}
                     title={sub.shortDesc}
-                    className={`w-full sm:w-auto min-h-[36px] px-3 py-1.5 rounded-md text-xs font-medium flex items-center justify-center text-center leading-tight cursor-pointer transition-colors ${
+                    className={`w-full md:w-auto min-h-[40px] px-3.5 py-2 rounded-md text-xs font-medium flex items-center justify-center text-center leading-tight cursor-pointer transition-colors ${
                       isSelected
                         ? 'bg-[#181D28] text-white border border-slate-700'
                         : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
                     }`}
                   >
-                    <span className="line-clamp-2 sm:whitespace-nowrap">{sub.label}</span>
+                    <span className="whitespace-nowrap truncate">{sub.label}</span>
                   </button>
                 );
               })}
@@ -741,7 +741,7 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                   type="button"
                   onClick={() => setShowAllStages((prev) => !prev)}
                   title="Ver todas as seções desta tela na mesma página"
-                  className={`w-full sm:w-auto min-h-[36px] px-3 py-1.5 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1 cursor-pointer transition-colors ${
+                  className={`w-full md:w-auto min-h-[40px] px-3.5 py-2 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
                     showAllStages
                       ? 'bg-[#181D28] text-white border border-slate-700'
                       : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.04]'
@@ -758,36 +758,36 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
 
       {helpOpen && (
         <div
-          className="bg-[#112229] border rounded-xl p-4 shadow-xl space-y-3 animate-fadeIn"
-          style={{ borderColor: `rgba(${activeMenuTheme.rgb}, 0.45)` }}
+          className="bg-[#12161F] border rounded-xl p-4 sm:p-5 shadow-xl space-y-4 animate-fadeIn w-full"
+          style={{ borderColor: `rgba(${activeMenuTheme.rgb}, 0.4)` }}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="space-y-1.5 min-w-0 flex-1">
               <div
-                className="text-xs font-bold flex items-center gap-1.5"
+                className="text-xs sm:text-sm font-bold flex items-center gap-1.5"
                 style={{ color: activeMenuTheme.hex }}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
                 <span>Guia Rápido — {guide.title}</span>
               </div>
-              <p className="text-xs text-slate-200 leading-relaxed">{guide.whatItDoes}</p>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">{guide.whatItDoes}</p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto shrink-0">
               <button
                 type="button"
                 onClick={() => setShowDetailedDescriptions((prev) => !prev)}
-                className="px-2.5 py-1 rounded-lg bg-[#081115] hover:bg-white/[0.06] border border-white/10 text-[11px] font-medium text-slate-300 inline-flex items-center gap-1.5 cursor-pointer"
+                className="w-full sm:w-auto min-h-[40px] px-3 py-2 rounded-lg bg-[#0E1117] hover:bg-white/[0.06] border border-white/10 text-xs font-medium text-slate-200 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                 title="Mostrar ou recolher textos explicativos secundários da tela"
               >
                 {showDetailedDescriptions ? (
                   <>
-                    <EyeOff className="w-3 h-3 text-amber-400" />
+                    <EyeOff className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                     <span>Ocultar legendas longas</span>
                   </>
                 ) : (
                   <>
-                    <Eye className="w-3 h-3" style={{ color: activeMenuTheme.hex }} />
+                    <Eye className="w-3.5 h-3.5 shrink-0" style={{ color: activeMenuTheme.hex }} />
                     <span>Mostrar legendas técnicas</span>
                   </>
                 )}
@@ -796,15 +796,16 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
               <button
                 type="button"
                 onClick={() => setHelpOpen(false)}
-                className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 cursor-pointer"
+                className="w-full sm:w-auto min-h-[40px] px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 inline-flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer"
                 aria-label="Fechar guia"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 shrink-0" />
+                <span className="sm:hidden">Fechar guia</span>
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1">
+          <div className="flex flex-col md:flex-row items-stretch gap-4 pt-1 w-full">
             {guide.steps.map((stepText, idx) => (
               <div
                 key={idx}
@@ -813,24 +814,24 @@ export const CleanModuleShell: React.FC<CleanModuleShellProps> = ({
                     handleSelectStage(idx);
                   }
                 }}
-                className="p-3 rounded-lg bg-[#081115] border flex items-start gap-2.5 cursor-pointer transition-colors"
+                className="w-full md:flex-1 p-4 rounded-lg bg-[#0E1117] border flex items-start gap-3 cursor-pointer transition-colors hover:bg-white/[0.03]"
                 style={{ borderColor: `rgba(${activeMenuTheme.rgb}, 0.28)` }}
               >
                 <span
-                  className="w-5 h-5 rounded-full font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
+                  className="w-6 h-6 rounded-full font-mono text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
                   style={activeMenuTheme.badgeStyle}
                 >
                   {idx + 1}
                 </span>
-                <div className="space-y-1 min-w-0">
-                  <p className="text-xs text-slate-200 leading-snug">{stepText}</p>
+                <div className="space-y-1.5 min-w-0 flex-1">
+                  <p className="text-xs text-slate-200 leading-relaxed">{stepText}</p>
                   {idx < guide.subTabs.length && (
                     <span
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold"
+                      className="inline-flex items-center gap-1 text-xs font-semibold pt-0.5"
                       style={{ color: activeMenuTheme.hex }}
                     >
                       <span>Ir para {guide.subTabs[idx].label}</span>
-                      <ChevronRight className="w-3 h-3" />
+                      <ChevronRight className="w-3.5 h-3.5 shrink-0" />
                     </span>
                   )}
                 </div>

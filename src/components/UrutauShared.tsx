@@ -89,14 +89,24 @@ import {
   TabId
 } from '../types/erp';
 import { URUTAU_OFFICIAL_FOUR_DATA_URLS } from '../assets/urutauOfficialFourSprites';
+import urutauEsguioSentinelaImg from '../assets/images/urutau_esguio_sentinela_1795245622262.jpg';
+import urutauEsguioOlhosFechadosImg from '../assets/images/urutau_esguio_olhos_fechados_1795245621313.jpg';
+import urutauEsguioBocaAbertaImg from '../assets/images/urutau_esguio_boca_aberta_1795245620891.jpg';
+import urutauEsguioCantoSuaveImg from '../assets/images/urutau_esguio_canto_suave_1795245621281.jpg';
+import urutauEsguioCantoIntensoImg from '../assets/images/urutau_esguio_canto_intenso_1795245622267.jpg';
+import urutauEsguioCamufladoImg from '../assets/images/urutau_esguio_camuflado_1795245622441.jpg';
+import urutauEsguioFaviconImg from '../assets/images/urutau_esguio_favicon_1795245622075.jpg';
 
-const urutauPadraoOlhosAbertosImg = '/assets/aistudio/1794865504552_4f886805.jpg';
-const urutauOlhosFechadosImg = '/assets/aistudio/1794865500712_b86f119a.jpg';
-const urutauBocaAbertaImg = '/assets/aistudio/1794865495132_e5903896.jpg';
-const urutauBocaAbertaCantoImg = '/assets/aistudio/1794865490648_8336632f.jpg';
+const urutauPadraoOlhosAbertosImg = urutauEsguioSentinelaImg;
+const urutauOlhosFechadosImg = urutauEsguioOlhosFechadosImg;
+const urutauBocaAbertaImg = urutauEsguioBocaAbertaImg;
+const urutauBocaAbertaCantoSuaveImg = urutauEsguioCantoSuaveImg;
+const urutauBocaAbertaCantoImg = urutauEsguioCantoIntensoImg;
+const urutauCamufladoImg = urutauEsguioCamufladoImg;
+const urutauFaviconImg = urutauEsguioFaviconImg;
 
-const urutauCamuflagemMadeiraImg = urutauOlhosFechadosImg;
-const urutauCamuflagemEsmeraldaImg = urutauOlhosFechadosImg;
+const urutauCamuflagemMadeiraImg = urutauCamufladoImg;
+const urutauCamuflagemEsmeraldaImg = urutauCamufladoImg;
 const urutauSentinelaMadeiraImg = urutauPadraoOlhosAbertosImg;
 const urutauSentinelaEsmeraldaImg = urutauPadraoOlhosAbertosImg;
 const urutauCantoMadeiraImg = urutauBocaAbertaCantoImg;
@@ -111,43 +121,43 @@ const urutauRepousoEsmeraldaImg = urutauOlhosFechadosImg;
 export const ICONES_SVG = {
   urutauOrnamental: `<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <radialGradient id="bgGlow" cx="50%" cy="42%" r="58%">
-        <stop offset="0%" stop-color="#0C2A24"/>
-        <stop offset="65%" stop-color="#061714"/>
-        <stop offset="100%" stop-color="#030B0A"/>
+      <radialGradient id="bgGlow" cx="50%" cy="46%" r="58%">
+        <stop offset="0%" stop-color="#0F3D31"/>
+        <stop offset="60%" stop-color="#071C17"/>
+        <stop offset="100%" stop-color="#030D0B"/>
       </radialGradient>
-      <linearGradient id="plumage" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="#4E7A6B"/>
-        <stop offset="50%" stop-color="#2E5448"/>
-        <stop offset="100%" stop-color="#19352D"/>
+      <linearGradient id="slenderHead" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#8A917D"/>
+        <stop offset="55%" stop-color="#6F7A65"/>
+        <stop offset="100%" stop-color="#586350"/>
       </linearGradient>
-      <radialGradient id="amberEye" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="#FDE68A"/>
-        <stop offset="45%" stop-color="#F59E0B"/>
+      <linearGradient id="chinBeard" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#9A6B3A"/>
+        <stop offset="100%" stop-color="#6E4A26"/>
+      </linearGradient>
+      <radialGradient id="amberEye" cx="48%" cy="48%" r="52%">
+        <stop offset="0%" stop-color="#FEF08A"/>
+        <stop offset="52%" stop-color="#F59E0B"/>
         <stop offset="100%" stop-color="#B45309"/>
       </radialGradient>
     </defs>
-    <rect width="128" height="128" rx="28" fill="url(#bgGlow)" stroke="#10B981" stroke-width="2.5" stroke-opacity="0.45"/>
-    <path d="M18 22 L30 14 L42 22 M86 22 L98 14 L110 22" fill="none" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
-    <path d="M64 16 C37 16 24 36 24 64 C24 90 36 112 64 112 C92 112 104 90 104 64 C104 36 91 16 64 16 Z" fill="url(#plumage)" stroke="#6EE7B7" stroke-width="2" stroke-opacity="0.5"/>
-    <path d="M36 24 L26 12 L45 20 Z M92 24 L102 12 L83 20 Z" fill="#3B695B" stroke="#6EE7B7" stroke-width="1.5" stroke-linejoin="round"/>
-    <path d="M32 39 Q48 28 64 41 Q80 28 96 39" fill="none" stroke="#A7F3D0" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
-    <path d="M56 24 L64 17 L72 24 L64 31 Z" fill="#F59E0B" opacity="0.9"/>
-    <circle cx="46" cy="54" r="15.5" fill="#041210" stroke="#F59E0B" stroke-width="2.5"/>
-    <circle cx="82" cy="54" r="15.5" fill="#041210" stroke="#F59E0B" stroke-width="2.5"/>
-    <circle cx="46" cy="54" r="12" fill="url(#amberEye)"/>
-    <circle cx="82" cy="54" r="12" fill="url(#amberEye)"/>
-    <circle cx="46" cy="54" r="6.5" fill="#051815"/>
-    <circle cx="82" cy="54" r="6.5" fill="#051815"/>
-    <circle cx="42.5" cy="50.5" r="2.8" fill="#FFFFFF"/>
-    <circle cx="78.5" cy="50.5" r="2.8" fill="#FFFFFF"/>
-    <circle cx="49.5" cy="57.5" r="1.3" fill="#FDE68A" opacity="0.9"/>
-    <circle cx="85.5" cy="57.5" r="1.3" fill="#FDE68A" opacity="0.9"/>
-    <path d="M58 62 L64 56 L70 62 L64 73 Z" fill="#F59E0B" stroke="#041210" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M31 76 L64 96 L97 76 L91 101 L64 111 L37 101 Z" fill="#0A221D" stroke="#F59E0B" stroke-width="2" stroke-linejoin="round"/>
-    <path d="M40 81 L50 87 L45 96 Z M88 81 L78 87 L83 96 Z" fill="#F43F5E"/>
-    <path d="M53 89 L64 96 L75 89 L64 105 Z" fill="#F59E0B"/>
-    <path d="M46 101 L55 106 M82 101 L73 106" stroke="#6EE7B7" stroke-width="2.2" stroke-linecap="round"/>
+    <rect width="128" height="128" rx="26" fill="url(#bgGlow)" stroke="#10B981" stroke-width="2.5" stroke-opacity="0.45"/>
+    <path d="M27 33 L42 23 Q64 20 86 23 L101 33 L97 46 L102 88 L111 124 L17 124 L26 88 L31 46 Z" fill="url(#slenderHead)" stroke="#070E0B" stroke-width="3.2" stroke-linejoin="round"/>
+    <polygon points="64,26 70,35 64,44 58,35" fill="#7EA185" stroke="#070E0B" stroke-width="2" stroke-linejoin="round"/>
+    <circle cx="43" cy="52" r="13.5" fill="#070E0B"/>
+    <circle cx="85" cy="52" r="13.5" fill="#070E0B"/>
+    <circle cx="43" cy="52" r="11" fill="url(#amberEye)"/>
+    <circle cx="85" cy="52" r="11" fill="url(#amberEye)"/>
+    <circle cx="43.5" cy="52" r="6.6" fill="#050908"/>
+    <circle cx="84.5" cy="52" r="6.6" fill="#050908"/>
+    <circle cx="39.5" cy="48" r="2.8" fill="#FFFFFF"/>
+    <circle cx="80.5" cy="48" r="2.8" fill="#FFFFFF"/>
+    <path d="M28 73 Q46 66 64 67 Q82 66 100 73 L95 85 L88 81 L83 93 L75 87 L70 97 L64 103 L58 97 L53 87 L45 93 L40 81 L33 85 Z" fill="url(#chinBeard)" stroke="#070E0B" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M51 64 Q64 56 77 64 L71 68 L64 77 L57 68 Z" fill="#5D645B" stroke="#070E0B" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M61.5 64 L64 76 L66.5 64 Q64 61.5 61.5 64 Z" fill="#3D433C" stroke="#070E0B" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M23 93 L64 120 L105 93 L109 107 L64 127 L19 107 Z" fill="#6F8A73" stroke="#070E0B" stroke-width="2.8" stroke-linejoin="round"/>
+    <path d="M22 98 L64 123 L106 98" fill="none" stroke="#C85D3B" stroke-width="5.5" stroke-linejoin="round"/>
+    <path d="M22 98 L64 123 L106 98" fill="none" stroke="#D4A359" stroke-width="2" stroke-dasharray="6 5" stroke-linejoin="round"/>
   </svg>`
 };
 
@@ -157,6 +167,8 @@ export type UrutauPosturaState =
   | 'olhos_fechados'
   | 'sentinela'
   | 'canto'
+  | 'canto_suave'
+  | 'canto_intenso'
   | 'comunicacao'
   | 'totem'
   | 'octogono'
@@ -171,7 +183,7 @@ export type UrutauPose =
   | 'flying'
   | 'outline';
 
-export const OFFICIAL_URUTAU_PHOTO_URL = '/assets/branding/poses/prancha_oficial_urutau.jpg?v=ouro1';
+export const OFFICIAL_URUTAU_PHOTO_URL = urutauPadraoOlhosAbertosImg;
 
 export function mapPosturaToPose(postura?: UrutauPosturaState | UrutauPose): UrutauPose {
   switch (postura) {
@@ -186,6 +198,8 @@ export function mapPosturaToPose(postura?: UrutauPosturaState | UrutauPose): Uru
       return 'flying';
     case 'singing':
     case 'canto':
+    case 'canto_suave':
+    case 'canto_intenso':
     case 'comunicacao':
       return 'singing';
     case 'outline':
@@ -445,11 +459,15 @@ export function getPosturaCircadianPair(posturaKey: string): {
 } {
   const raw = String(posturaKey || 'sentinela');
 
-  const base = raw.startsWith('canto')
-    ? 'canto'
+  const base = raw.startsWith('canto_suave')
+    ? 'canto_suave'
+    : raw.startsWith('canto')
+    ? 'canto_intenso'
     : raw.startsWith('comunicacao') || raw.startsWith('boca_aberta')
     ? 'comunicacao'
-    : raw.startsWith('olhos_fechados') || raw.startsWith('camuflagem') || raw === 'totem'
+    : raw.startsWith('camuflagem') || raw === 'totem'
+    ? 'camuflagem'
+    : raw.startsWith('olhos_fechados')
     ? 'olhos_fechados'
     : 'sentinela';
 
@@ -462,11 +480,19 @@ export function getPosturaCircadianPair(posturaKey: string): {
       brownSrc: urutauOlhosFechadosImg,
       greenSrc: urutauOlhosFechadosImg
     },
+    camuflagem: {
+      brownSrc: urutauCamufladoImg,
+      greenSrc: urutauCamufladoImg
+    },
     comunicacao: {
       brownSrc: urutauBocaAbertaImg,
       greenSrc: urutauBocaAbertaImg
     },
-    canto: {
+    canto_suave: {
+      brownSrc: urutauBocaAbertaCantoSuaveImg,
+      greenSrc: urutauBocaAbertaCantoSuaveImg
+    },
+    canto_intenso: {
       brownSrc: urutauBocaAbertaCantoImg,
       greenSrc: urutauBocaAbertaCantoImg
     }
@@ -484,25 +510,25 @@ export function getPosturaCircadianPair(posturaKey: string): {
 const transparentBirdCache = new Map<string, string>();
 const transparentBirdPending = new Map<string, Promise<string>>();
 
-function isInsideCoreBirdBodyEnvelope(nx: number, ny: number): boolean {
-  if (ny < 0.045 || ny > 0.978) return false;
+function isInsideCoreBirdBodyEnvelope(nx: number, ny: number, basePose: string): boolean {
+  if (ny < 0.06 || ny > 0.985) return false;
   const dx = Math.abs(nx - 0.5);
-  if (ny < 0.145) {
-    const maxHalf = 0.135 + ((ny - 0.045) / 0.10) * 0.135;
+  const isCamo = basePose === 'camuflagem';
+  if (ny < 0.16) {
+    const maxHalf = (isCamo ? 0.15 : 0.18) + ((ny - 0.06) / 0.10) * 0.05;
     return dx <= maxHalf;
   }
-  if (ny < 0.295) {
-    return dx <= 0.27;
+  if (ny < 0.34) {
+    return dx <= (isCamo ? 0.215 : 0.225);
   }
-  if (ny < 0.56) {
-    return dx <= 0.282;
+  if (ny < 0.66) {
+    return dx <= (isCamo ? 0.21 : 0.235);
   }
-  if (ny < 0.75) {
-    const t = (ny - 0.56) / 0.19;
-    return dx <= 0.282 - t * 0.076;
+  if (ny < 0.84) {
+    const t = (ny - 0.66) / 0.18;
+    return dx <= (isCamo ? 0.20 : 0.22) - t * 0.06;
   }
-  const t = (ny - 0.75) / 0.228;
-  return dx <= 0.192 - t * 0.052;
+  return dx <= 0.165;
 }
 
 function isInsideBirdSilhouetteEnvelope(
@@ -513,16 +539,16 @@ function isInsideBirdSilhouetteEnvelope(
   g: number,
   b: number
 ): boolean {
-  if (isInsideCoreBirdBodyEnvelope(nx, ny)) {
+  if (isInsideCoreBirdBodyEnvelope(nx, ny, basePose)) {
     return true;
   }
-  if (basePose === 'canto') {
+  if (basePose === 'canto' || basePose === 'canto_suave' || basePose === 'canto_intenso') {
     const dx = Math.abs(nx - 0.5);
-    if (ny >= 0.092 && ny <= 0.388 && dx > 0.265 && dx <= 0.492) {
-      const isBrightTurquoiseWave = g >= 105 && b >= 75 && g > r;
-      const isBrightGoldWave = r >= 145 && g >= 115 && b < 115;
-      const isBrightUrucumWave = r >= 135 && r - g >= 40;
-      return isBrightTurquoiseWave || isBrightGoldWave || isBrightUrucumWave;
+    const maxWaveDx = basePose === 'canto_suave' ? 0.44 : 0.495;
+    if (ny >= 0.045 && ny <= 0.56 && dx > 0.20 && dx <= maxWaveDx) {
+      const isBrightCyanEmeraldWave = g >= 92 && b >= 72 && g > r + 10;
+      const isLuminousAquaDot = g >= 135 && b >= 110;
+      return isBrightCyanEmeraldWave || isLuminousAquaDot;
     }
   }
   return false;
@@ -532,14 +558,14 @@ function isDarkForestBackgroundPixel(r: number, g: number, b: number): boolean {
   const maxC = Math.max(r, g, b);
   const minC = Math.min(r, g, b);
   const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-  if (maxC <= 32) return true;
-  if (lum <= 36 && r < 36 && g >= r) return true;
-  if (lum <= 46 && g <= 64 && b <= 48 && r <= 34 && maxC - minC <= 36) return true;
+  if (maxC <= 36) return true;
+  if (lum <= 42 && r < 40 && g >= r) return true;
+  if (lum <= 54 && g <= 74 && b <= 58 && r <= 40 && maxC - minC <= 42) return true;
   return false;
 }
 
 function extractTransparentBirdFromJpg(src: string, basePose: string): Promise<string> {
-  const cacheKey = `v2::${basePose}::${src}`;
+  const cacheKey = `v3::${basePose}::${src}`;
   const cached = transparentBirdCache.get(cacheKey);
   if (cached) return Promise.resolve(cached);
 
@@ -680,7 +706,7 @@ function extractTransparentBirdFromJpg(src: string, basePose: string): Promise<s
 export function useTransparentCircadianPair(posturaKey: string) {
   const pair = getPosturaCircadianPair(posturaKey);
   const [greenUrl, setGreenUrl] = useState<string>(() => {
-    return transparentBirdCache.get(`v2::${pair.base}::${pair.greenSrc}`) || pair.greenSrc;
+    return transparentBirdCache.get(`v3::${pair.base}::${pair.greenSrc}`) || pair.greenSrc;
   });
 
   useEffect(() => {
@@ -780,24 +806,38 @@ export function useUrutauBusyBlink(externalBusy = false): {
   return { isBusy, isBlinkClosed };
 }
 
-export function useUrutauAlertSongAlternation(active: boolean): boolean {
-  const [isSingingWave, setIsSingingWave] = useState<boolean>(false);
+export type UrutauSingingStage = 'comunicacao' | 'canto_suave' | 'canto_intenso';
+
+const URUTAU_SONG_SEQUENCE: UrutauSingingStage[] = [
+  'comunicacao',
+  'canto_suave',
+  'canto_intenso',
+  'canto_suave'
+];
+
+export function useUrutauAlertSongStage(active: boolean): UrutauSingingStage {
+  const [stepIndex, setStepIndex] = useState<number>(0);
 
   useEffect(() => {
     if (!active) {
-      setIsSingingWave(false);
+      setStepIndex(0);
       return;
     }
     const interval = window.setInterval(() => {
-      setIsSingingWave((prev) => !prev);
-    }, 360);
+      setStepIndex((prev) => (prev + 1) % URUTAU_SONG_SEQUENCE.length);
+    }, 260);
     return () => {
       window.clearInterval(interval);
-      setIsSingingWave(false);
+      setStepIndex(0);
     };
   }, [active]);
 
-  return isSingingWave;
+  return URUTAU_SONG_SEQUENCE[stepIndex] || 'comunicacao';
+}
+
+export function useUrutauAlertSongAlternation(active: boolean): boolean {
+  const stage = useUrutauAlertSongStage(active);
+  return stage !== 'comunicacao';
 }
 
 function applyFaviconDataUrlToHead(href: string, mimeType = 'image/svg+xml') {
@@ -827,63 +867,86 @@ export function buildSymbolicUrutauFaviconSvgDataUrl(
   customPrimaryHex?: string
 ): string {
   const isNight = nightFactor >= 0.45;
-  const crestPrimary =
+  const accentStroke =
     customPrimaryHex && /^#[0-9A-Fa-f]{6}$/.test(customPrimaryHex)
       ? customPrimaryHex
       : isNight
       ? '#10B981'
       : '#D97706';
-  const crestLight = isNight ? '#34D399' : '#FBBF24';
   const isEyesClosed =
     poseKey.includes('olhos_fechados') || poseKey.includes('camuflagem');
   const isSinging = poseKey.includes('canto') || poseKey.includes('comunicacao');
 
   const eyesMarkup = isEyesClosed
     ? `
-      <path d="M13.5 29.5 L29.5 26.5" stroke="#F59E0B" stroke-width="3.2" stroke-linecap="round" />
-      <path d="M50.5 29.5 L34.5 26.5" stroke="#F59E0B" stroke-width="3.2" stroke-linecap="round" />
-      <path d="M15.5 29.2 L27.5 27" stroke="#34D399" stroke-width="1.4" stroke-linecap="round" />
-      <path d="M48.5 29.2 L36.5 27" stroke="#34D399" stroke-width="1.4" stroke-linecap="round" />
+      <path d="M16 27 Q21.5 24 27 27" stroke="#070E0B" stroke-width="2.6" stroke-linecap="round" fill="none" />
+      <path d="M37 27 Q42.5 24 48 27" stroke="#070E0B" stroke-width="2.6" stroke-linecap="round" fill="none" />
+      <path d="M17.5 27.5 Q21.5 25.5 25.5 27.5" stroke="#8FA891" stroke-width="1.1" stroke-linecap="round" fill="none" />
+      <path d="M38.5 27.5 Q42.5 25.5 46.5 27.5" stroke="#8FA891" stroke-width="1.1" stroke-linecap="round" fill="none" />
     `
     : `
-      <circle cx="21.5" cy="28.5" r="8.2" fill="url(#urutauGold)" stroke="#04120C" stroke-width="1.8" />
-      <circle cx="42.5" cy="28.5" r="8.2" fill="url(#urutauGold)" stroke="#04120C" stroke-width="1.8" />
-      <circle cx="21.5" cy="28.5" r="5.6" fill="#FDE68A" />
-      <circle cx="42.5" cy="28.5" r="5.6" fill="#FDE68A" />
-      <polygon points="21.5,23.2 24.5,28.5 21.5,33.8 18.5,28.5" fill="#04120C" />
-      <polygon points="42.5,23.2 45.5,28.5 42.5,33.8 39.5,28.5" fill="#04120C" />
-      <circle cx="19.8" cy="26.5" r="1.4" fill="#FFFFFF" />
-      <circle cx="40.8" cy="26.5" r="1.4" fill="#FFFFFF" />
+      <circle cx="21.5" cy="26" r="6.8" fill="#070E0B" />
+      <circle cx="42.5" cy="26" r="6.8" fill="#070E0B" />
+      <circle cx="21.5" cy="26" r="5.4" fill="url(#urutauGold)" />
+      <circle cx="42.5" cy="26" r="5.4" fill="url(#urutauGold)" />
+      <circle cx="21.8" cy="26" r="3.3" fill="#050908" />
+      <circle cx="42.2" cy="26" r="3.3" fill="#050908" />
+      <circle cx="19.8" cy="24" r="1.4" fill="#FFFFFF" />
+      <circle cx="40.2" cy="24" r="1.4" fill="#FFFFFF" />
+    `;
+
+  const mouthMarkup = isSinging
+    ? `
+      <path d="M24 33 Q32 29 40 33 L32 40 Z" fill="#9E5A63" stroke="#070E0B" stroke-width="1.5" stroke-linejoin="round" />
+      <path d="M29.5 34.5 Q32 33 34.5 34.5 L32 38.5 Z" fill="#D4848E" />
+      <path d="M30.4 31.5 L32 36 L33.6 31.5 Z" fill="#3D433C" stroke="#070E0B" stroke-width="1" />
+    `
+    : `
+      <path d="M25.5 32 Q32 28 38.5 32 L35.5 34 L32 38.5 L28.5 34 Z" fill="#5D645B" stroke="#070E0B" stroke-width="1.4" stroke-linejoin="round" />
+      <path d="M30.7 32 L32 38 L33.3 32 Z" fill="#3D433C" stroke="#070E0B" stroke-width="1" />
     `;
 
   const acousticArcsMarkup = isSinging
     ? `
-      <path d="M6 19 Q3 28 6 37" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" fill="none" />
-      <path d="M58 19 Q61 28 58 37" stroke="#34D399" stroke-width="2.2" stroke-linecap="round" fill="none" />
+      <path d="M7 18 Q3.5 26 7 34" stroke="#34D399" stroke-width="2" stroke-linecap="round" fill="none" />
+      <path d="M11 21 Q8.5 26 11 31" stroke="#6EE7B7" stroke-width="1.6" stroke-linecap="round" fill="none" />
+      <path d="M57 18 Q60.5 26 57 34" stroke="#34D399" stroke-width="2" stroke-linecap="round" fill="none" />
+      <path d="M53 21 Q55.5 26 53 31" stroke="#6EE7B7" stroke-width="1.6" stroke-linecap="round" fill="none" />
     `
     : '';
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
     <defs>
-      <linearGradient id="urutauEmerald" x1="12" y1="6" x2="52" y2="58" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="${crestLight}" />
-        <stop offset="55%" stop-color="${crestPrimary}" />
-        <stop offset="100%" stop-color="#059669" />
+      <radialGradient id="urutauBg" cx="50%" cy="46%" r="58%">
+        <stop offset="0%" stop-color="#0F3D31" />
+        <stop offset="62%" stop-color="#071C17" />
+        <stop offset="100%" stop-color="#030D0B" />
+      </radialGradient>
+      <linearGradient id="slenderPlumage" x1="0" y1="10" x2="0" y2="62" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#8A917D" />
+        <stop offset="55%" stop-color="#6F7A65" />
+        <stop offset="100%" stop-color="#586350" />
       </linearGradient>
-      <linearGradient id="urutauGold" x1="16" y1="10" x2="48" y2="54" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stop-color="#FDE68A" />
-        <stop offset="50%" stop-color="#F59E0B" />
-        <stop offset="100%" stop-color="#D97706" />
+      <linearGradient id="urutauBeard" x1="0" y1="34" x2="0" y2="52" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#9A6B3A" />
+        <stop offset="100%" stop-color="#6E4A26" />
       </linearGradient>
+      <radialGradient id="urutauGold" cx="48%" cy="48%" r="52%">
+        <stop offset="0%" stop-color="#FEF08A" />
+        <stop offset="52%" stop-color="#F59E0B" />
+        <stop offset="100%" stop-color="#B45309" />
+      </radialGradient>
     </defs>
+    <rect width="64" height="64" rx="14" fill="url(#urutauBg)" stroke="${accentStroke}" stroke-width="1.6" stroke-opacity="0.55" />
     ${acousticArcsMarkup}
-    <path d="M32 4 L25 14 L14 8 L10 24 L16 38 L32 52 L48 38 L54 24 L50 8 L39 14 Z" fill="#061A14" fill-opacity="0.72" stroke="url(#urutauEmerald)" stroke-width="2.6" stroke-linejoin="round" />
-    <path d="M14 8 L24 22 L32 17 L40 22 L50 8" stroke="url(#urutauGold)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M12 27 L20 42 L32 58 L44 42 L52 27" stroke="url(#urutauEmerald)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-    <path d="M22 46 L32 55 L42 46" stroke="#D9381E" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
-    <polygon points="32,54 28,60 32,62 36,60" fill="url(#urutauGold)" />
+    <path d="M13.5 16.5 L21 11.5 Q32 10 43 11.5 L50.5 16.5 L48.5 23 L51 44 L55.5 62 L8.5 62 L13 44 L15.5 23 Z" fill="url(#slenderPlumage)" stroke="#070E0B" stroke-width="1.8" stroke-linejoin="round" />
+    <polygon points="32,13 35,17.5 32,22 29,17.5" fill="#7EA185" stroke="#070E0B" stroke-width="1.2" stroke-linejoin="round" />
     ${eyesMarkup}
-    <polygon points="32,29 27.5,36.5 32,42.5 36.5,36.5" fill="url(#urutauGold)" stroke="#04120C" stroke-width="1.5" stroke-linejoin="round" />
+    <path d="M14 36.5 Q23 33 32 33.5 Q41 33 50 36.5 L47.5 42.5 L44 40.5 L41.5 46.5 L37.5 43.5 L35 48.5 L32 51.5 L29 48.5 L26.5 43.5 L22.5 46.5 L20 40.5 L16.5 42.5 Z" fill="url(#urutauBeard)" stroke="#070E0B" stroke-width="1.5" stroke-linejoin="round" />
+    ${mouthMarkup}
+    <path d="M11.5 46.5 L32 60 L52.5 46.5 L54.5 53.5 L32 63.5 L9.5 53.5 Z" fill="#6F8A73" stroke="#070E0B" stroke-width="1.5" stroke-linejoin="round" />
+    <path d="M11 49 L32 61.5 L53 49" fill="none" stroke="#C85D3B" stroke-width="2.8" stroke-linejoin="round" />
+    <path d="M11 49 L32 61.5 L53 49" fill="none" stroke="#D4A359" stroke-width="1.1" stroke-dasharray="3 2.5" stroke-linejoin="round" />
   </svg>`;
 
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
@@ -1237,33 +1300,35 @@ export const UrutauEmblemSVG: React.FC<{
   const { isBlinkClosed } = useUrutauBusyBlink(ssePulse || isBlinking);
   const isExplicitAlert =
     postura === 'canto' ||
+    postura === 'canto_suave' ||
+    postura === 'canto_intenso' ||
     postura === 'comunicacao' ||
     String(postura || '').startsWith('canto') ||
     String(postura || '').startsWith('comunicacao') ||
     pose === 'singing';
-  const isSingingWave = useUrutauAlertSongAlternation(!disableAutoBlink && isExplicitAlert);
+  const singingStage = useUrutauAlertSongStage(!disableAutoBlink && isExplicitAlert);
 
   const resolvedKey: string = (() => {
     if (isExplicitAlert) {
       if (disableAutoBlink) {
-        return postura || 'canto';
+        return postura || 'canto_intenso';
       }
-      return isSingingWave ? 'canto' : 'comunicacao';
+      return singingStage;
     }
     if (!disableAutoBlink && (isBlinking || pose === 'blinking' || isBlinkClosed)) {
       return 'olhos_fechados';
     }
-    if (postura === 'olhos_fechados' || postura === 'camuflagem') return 'olhos_fechados';
-    if (pose === 'camouflage') return 'olhos_fechados';
+    if (postura === 'camuflagem' || pose === 'camouflage') return 'camuflagem';
+    if (postura === 'olhos_fechados') return 'olhos_fechados';
     return 'sentinela';
   })();
 
   const pair = useTransparentCircadianPair(resolvedKey);
-  const greenOpacity = 1;
-  const midBoost = 1;
+  const pairMouthOpen = useTransparentCircadianPair('comunicacao');
+  const pairWaveSoft = useTransparentCircadianPair('canto_suave');
+  const pairWaveIntense = useTransparentCircadianPair('canto_intenso');
 
   if (postura === 'favicon') {
-    const symbolicSrc = buildSymbolicUrutauFaviconSvgDataUrl('sentinela', nightFactor);
     return (
       <div
         style={size !== undefined ? { width: size, height: size } : undefined}
@@ -1272,15 +1337,52 @@ export const UrutauEmblemSVG: React.FC<{
         }`}
       >
         <img
-          src={symbolicSrc}
-          alt="Urutau Favicon Simbólico"
-          className="w-full h-full object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+          src={urutauFaviconImg}
+          alt="Urutau Favicon"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover rounded-xl drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
         />
       </div>
     );
   }
 
   const fallbackSvgDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(ICONES_SVG.urutauOrnamental)}`;
+
+  if (!disableAutoBlink && isExplicitAlert) {
+    return (
+      <div
+        style={size !== undefined ? { width: size, height: size } : undefined}
+        className={`relative inline-flex items-center justify-center select-none ${
+          size !== undefined ? '' : className
+        }`}
+      >
+        <img
+          src={pairMouthOpen.greenSrc}
+          alt="Urutau (comunicacao)"
+          referrerPolicy="no-referrer"
+          className={`w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-200 ease-in-out ${
+            singingStage === 'comunicacao' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <img
+          src={pairWaveSoft.greenSrc}
+          alt="Urutau (canto suave)"
+          referrerPolicy="no-referrer"
+          className={`absolute inset-0 w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-200 ease-in-out ${
+            singingStage === 'canto_suave' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <img
+          src={pairWaveIntense.greenSrc}
+          alt="Urutau (canto intenso)"
+          referrerPolicy="no-referrer"
+          className={`absolute inset-0 w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-200 ease-in-out ${
+            singingStage === 'canto_intenso' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1292,12 +1394,13 @@ export const UrutauEmblemSVG: React.FC<{
       <img
         src={pair.greenSrc}
         alt={`Urutau (${resolvedKey})`}
+        referrerPolicy="no-referrer"
         onError={(e) => {
           if (e.currentTarget.src !== fallbackSvgDataUrl) {
             e.currentTarget.src = fallbackSvgDataUrl;
           }
         }}
-        className="w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]"
+        className="w-full h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-150"
       />
     </div>
   );
@@ -3511,7 +3614,13 @@ export const SYSTEM_IMAGE_SLOTS_META: {
 
 export interface UrutauGaleriaPadraoItem {
   id: string;
-  posturaBase: 'sentinela' | 'olhos_fechados' | 'comunicacao' | 'canto';
+  posturaBase:
+    | 'sentinela'
+    | 'olhos_fechados'
+    | 'camuflagem'
+    | 'comunicacao'
+    | 'canto_suave'
+    | 'canto';
   familia: 'esmeralda_circular';
   familiaLabel: string;
   nome: string;
@@ -3526,10 +3635,10 @@ export const URUTAU_GALERIA_PADRAO_ITEMS: UrutauGaleriaPadraoItem[] = [
     id: 'sentinela',
     posturaBase: 'sentinela',
     familia: 'esmeralda_circular',
-    familiaLabel: 'Padrão do Sistema',
-    nome: 'Padrão (Olhos Abertos)',
+    familiaLabel: 'Padrão Esguio',
+    nome: 'Sentinela (Olhos Abertos)',
     nomeCurto: 'Olhos Abertos',
-    resumo: 'Padrão do sistema de olhos abertos e bico fechado.',
+    resumo: 'Novo Urutau esguio em vigilância de olhos abertos e bico fechado.',
     src: urutauPadraoOlhosAbertosImg,
     defaultSlot: 'topo_painel'
   },
@@ -3540,29 +3649,51 @@ export const URUTAU_GALERIA_PADRAO_ITEMS: UrutauGaleriaPadraoItem[] = [
     familiaLabel: 'Piscando (Upload / Download)',
     nome: 'Olhos Fechados (Piscando)',
     nomeCurto: 'Olhos Fechados',
-    resumo: 'Alterna com olhos abertos durante download, upload e processamento.',
+    resumo: 'Alterna com olhos abertos durante download, upload e sincronização.',
     src: urutauOlhosFechadosImg,
     defaultSlot: 'pulso_tempo_real'
+  },
+  {
+    id: 'camuflagem',
+    posturaBase: 'camuflagem',
+    familia: 'esmeralda_circular',
+    familiaLabel: 'Repouso e Offline',
+    nome: 'Camuflado no Tronco',
+    nomeCurto: 'Camuflado',
+    resumo: 'Postura esguia de camuflagem natural para modo offline e inatividade.',
+    src: urutauCamufladoImg,
+    defaultSlot: 'menu_lateral'
   },
   {
     id: 'comunicacao',
     posturaBase: 'comunicacao',
     familia: 'esmeralda_circular',
     familiaLabel: 'Mensagens e Alertas',
-    nome: 'Boca Aberta (Mensagem)',
+    nome: 'Boca Aberta (Chamado)',
     nomeCurto: 'Boca Aberta',
-    resumo: 'Alterna com o canto em mensagens, alertas e notificações.',
+    resumo: 'Inicia a transição vocal do canto em mensagens, alertas e notificações.',
     src: urutauBocaAbertaImg,
+    defaultSlot: 'dialogos_seguranca'
+  },
+  {
+    id: 'canto_suave',
+    posturaBase: 'canto_suave',
+    familia: 'esmeralda_circular',
+    familiaLabel: 'Canto — Intensidade 1',
+    nome: 'Sonoro Suave (Ondas Médias)',
+    nomeCurto: 'Canto Suave',
+    resumo: 'Primeira intensidade acústica na transição contínua do canto do Urutau.',
+    src: urutauBocaAbertaCantoSuaveImg,
     defaultSlot: 'dialogos_seguranca'
   },
   {
     id: 'canto',
     posturaBase: 'canto',
     familia: 'esmeralda_circular',
-    familiaLabel: 'Mensagens e Alertas',
-    nome: 'Boca Aberta com Canto',
-    nomeCurto: 'Boca Aberta Canto',
-    resumo: 'Emissão de ondas acústicas alternando com boca aberta nas notificações.',
+    familiaLabel: 'Canto — Intensidade 2',
+    nome: 'Sonoro Intenso (Ondas Amplas)',
+    nomeCurto: 'Canto Intenso',
+    resumo: 'Segunda intensidade sonora com ondas acústicas plenas até as margens.',
     src: urutauBocaAbertaCantoImg,
     defaultSlot: 'dialogos_seguranca'
   }
@@ -3575,8 +3706,8 @@ export const BUILTIN_BRAND_IMAGES_META: {
 }[] = [
   {
     id: 'sentinela',
-    label: 'Olhos Abertos (Padrão)',
-    resumo: 'Padrão do sistema com olhos abertos e bico fechado.'
+    label: 'Sentinela (Olhos Abertos)',
+    resumo: 'Novo Urutau esguio de olhos abertos e bico fechado.'
   },
   {
     id: 'olhos_fechados',
@@ -3584,39 +3715,51 @@ export const BUILTIN_BRAND_IMAGES_META: {
     resumo: 'Usado para piscar durante upload, download e processamento.'
   },
   {
+    id: 'camuflagem',
+    label: 'Camuflado no Tronco',
+    resumo: 'Anatomia esguia em postura de camuflagem no tronco.'
+  },
+  {
     id: 'comunicacao',
     label: 'Boca Aberta',
-    resumo: 'Alterna com o canto em mensagens, alertas e notificações.'
+    resumo: 'Base vocal da transição de canto em alertas e notificações.'
+  },
+  {
+    id: 'canto_suave',
+    label: 'Canto Suave (Intensidade 1)',
+    resumo: 'Ondas acústicas médias para transição orgânica de canto.'
   },
   {
     id: 'canto',
-    label: 'Boca Aberta com Canto',
-    resumo: 'Ondas sonoras alternando em mensagens, alertas e notificações.'
+    label: 'Canto Intenso (Intensidade 2)',
+    resumo: 'Ondas sonoras amplas completando o ciclo de canto.'
   }
 ];
 
 export const URUTAU_BOTANICA_POSTURAS: Record<string, string> = {
-  camuflagem: urutauOlhosFechadosImg,
+  camuflagem: urutauCamufladoImg,
   sentinela: urutauPadraoOlhosAbertosImg,
   canto: urutauBocaAbertaCantoImg,
+  canto_suave: urutauBocaAbertaCantoSuaveImg,
+  canto_intenso: urutauBocaAbertaCantoImg,
   voando: urutauPadraoOlhosAbertosImg,
   comunicacao: urutauBocaAbertaImg,
   olhos_fechados: urutauOlhosFechadosImg,
-  camuflagem_esmeralda_circular: urutauOlhosFechadosImg,
+  camuflagem_esmeralda_circular: urutauCamufladoImg,
   sentinela_esmeralda_circular: urutauPadraoOlhosAbertosImg,
   canto_esmeralda_circular: urutauBocaAbertaCantoImg,
   voando_esmeralda_circular: urutauPadraoOlhosAbertosImg,
   comunicacao_esmeralda_circular: urutauBocaAbertaImg,
   olhos_fechados_esmeralda_circular: urutauOlhosFechadosImg,
-  camuflagem_madeira_circular: urutauOlhosFechadosImg,
+  camuflagem_madeira_circular: urutauCamufladoImg,
   sentinela_madeira_circular: urutauPadraoOlhosAbertosImg,
   canto_madeira_circular: urutauBocaAbertaCantoImg,
   voando_madeira_circular: urutauPadraoOlhosAbertosImg,
   comunicacao_madeira_circular: urutauBocaAbertaImg,
   olhos_fechados_madeira_circular: urutauOlhosFechadosImg,
-  favicon: '/favicon.svg',
+  favicon: urutauFaviconImg,
   vazado: urutauPadraoOlhosAbertosImg,
-  totem: urutauOlhosFechadosImg,
+  totem: urutauCamufladoImg,
   octogono: urutauPadraoOlhosAbertosImg
 };
 
@@ -3625,8 +3768,8 @@ export const SLOT_BOTANICAL_IMAGE_MAP: Record<SystemImageSlotId, string> = {
   pulso_tempo_real: urutauPadraoOlhosAbertosImg,
   tela_login: urutauPadraoOlhosAbertosImg,
   menu_lateral: urutauPadraoOlhosAbertosImg,
-  dialogos_seguranca: urutauBocaAbertaImg,
-  favicon_guia: '/favicon.svg'
+  dialogos_seguranca: urutauBocaAbertaCantoSuaveImg,
+  favicon_guia: urutauFaviconImg
 };
 
 export function SystemSlotImage({
@@ -3716,13 +3859,18 @@ export function SystemSlotImage({
   const isAlertSlot =
     slot === 'dialogos_seguranca' ||
     overrideSource === 'comunicacao' ||
-    overrideSource === 'canto';
+    overrideSource === 'canto' ||
+    overrideSource === 'canto_suave' ||
+    overrideSource === 'canto_intenso';
 
-  const isSingingWave = useUrutauAlertSongAlternation(isAlertSlot);
+  const singingStage = useUrutauAlertSongStage(isAlertSlot);
 
   const activePostura: UrutauPosturaState = (() => {
     if (isAlertSlot) {
-      return isSingingWave ? 'canto' : 'comunicacao';
+      return singingStage;
+    }
+    if (overrideSource === 'camuflagem') {
+      return 'camuflagem';
     }
     if (isBlinkClosed) {
       return 'olhos_fechados';
@@ -3731,6 +3879,9 @@ export function SystemSlotImage({
   })();
 
   const pair = useTransparentCircadianPair(activePostura);
+  const pairMouthOpen = useTransparentCircadianPair('comunicacao');
+  const pairWaveSoft = useTransparentCircadianPair('canto_suave');
+  const pairWaveIntense = useTransparentCircadianPair('canto_intenso');
 
   if (perchId) {
     return (
@@ -3744,17 +3895,13 @@ export function SystemSlotImage({
   }
 
   if (slot === 'favicon_guia') {
-    const symbolicSrc = buildSymbolicUrutauFaviconSvgDataUrl(
-      activePostura,
-      nightFactor,
-      brandConfig?.effectivePrimaryHex
-    );
     return (
       <div className={`relative inline-flex items-center justify-center select-none ${className}`}>
         <img
-          src={symbolicSrc}
-          alt="Urutau Favicon Simbólico"
-          className="w-full h-full object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+          src={urutauFaviconImg}
+          alt="Urutau Favicon"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover rounded-xl drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
         />
       </div>
     );
@@ -3762,17 +3909,49 @@ export function SystemSlotImage({
 
   const fallbackSvgDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(ICONES_SVG.urutauOrnamental)}`;
 
+  if (isAlertSlot) {
+    return (
+      <div className={`relative inline-flex items-center justify-center select-none ${className}`}>
+        <img
+          src={pairMouthOpen.greenSrc}
+          alt="Urutau (comunicacao)"
+          referrerPolicy="no-referrer"
+          className={`w-full h-full max-w-full max-h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-200 ease-in-out ${
+            singingStage === 'comunicacao' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <img
+          src={pairWaveSoft.greenSrc}
+          alt="Urutau (canto suave)"
+          referrerPolicy="no-referrer"
+          className={`absolute inset-0 w-full h-full max-w-full max-h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-200 ease-in-out ${
+            singingStage === 'canto_suave' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        <img
+          src={pairWaveIntense.greenSrc}
+          alt="Urutau (canto intenso)"
+          referrerPolicy="no-referrer"
+          className={`absolute inset-0 w-full h-full max-w-full max-h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-200 ease-in-out ${
+            singingStage === 'canto_intenso' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={`relative inline-flex items-center justify-center select-none ${className}`}>
       <img
         src={pair.greenSrc}
         alt={`Urutau (${activePostura})`}
+        referrerPolicy="no-referrer"
         onError={(e) => {
           if (e.currentTarget.src !== fallbackSvgDataUrl) {
             e.currentTarget.src = fallbackSvgDataUrl;
           }
         }}
-        className="w-full h-full max-w-full max-h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)]"
+        className="w-full h-full max-w-full max-h-full object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.55)] transition-opacity duration-150"
       />
     </div>
   );
@@ -4907,6 +5086,8 @@ export interface DateMultiViewCriterion {
   onMultiChange?: (vals: string[]) => void;
 }
 
+export type CalendarThemeColor = 'indigo' | 'blue' | 'emerald' | 'amber';
+
 export interface UrutauDateMultiViewProps<T = any> {
   title: string;
   items: T[];
@@ -4923,16 +5104,126 @@ export interface UrutauDateMultiViewProps<T = any> {
   initialDateISO?: string;
   onSelectedDateChange?: (dateISO: string) => void;
   emptyListMessage?: string;
+  themeColor?: CalendarThemeColor;
 }
 
+const CALENDAR_THEME_TOKENS: Record<
+  CalendarThemeColor,
+  {
+    containerBorder: string;
+    headerAccentBar: string;
+    activeBtn: string;
+    primaryCta: string;
+    todayJumpBtn: string;
+    todayJumpBtnActive: string;
+    filterActiveBtn: string;
+    todayWeekdayText: string;
+    todayWeekdayUnderline: string;
+    todayCellPill: string;
+    selectedCellBg: string;
+    selectedDayTag: string;
+    accentText: string;
+    hoverAccentText: string;
+    weekTodayCard: string;
+    checkboxAccent: string;
+    multiSelectActive: string;
+    fabBtn: string;
+  }
+> = {
+  indigo: {
+    containerBorder: 'border-indigo-500/35',
+    headerAccentBar: 'border-b-indigo-500/30',
+    activeBtn: 'bg-indigo-500 text-white font-bold',
+    primaryCta: 'bg-indigo-500 hover:bg-indigo-400 text-white',
+    todayJumpBtn:
+      'bg-indigo-500/15 hover:bg-indigo-500/25 border-indigo-400/45 text-indigo-200',
+    todayJumpBtnActive: 'bg-indigo-500 border-indigo-400 text-white',
+    filterActiveBtn: 'bg-indigo-500/15 border-indigo-500/45 text-indigo-300',
+    todayWeekdayText: 'text-indigo-300 font-semibold',
+    todayWeekdayUnderline: 'bg-indigo-400',
+    todayCellPill: 'bg-indigo-500 text-white font-bold shadow-sm',
+    selectedCellBg: 'bg-indigo-950/55 ring-1 ring-inset ring-indigo-400/50',
+    selectedDayTag: 'text-indigo-300',
+    accentText: 'text-indigo-300',
+    hoverAccentText: 'group-hover:text-indigo-300',
+    weekTodayCard: 'bg-indigo-950/35 border-indigo-500/50',
+    checkboxAccent: 'accent-indigo-500',
+    multiSelectActive: 'bg-indigo-500/20 border-indigo-500/50 text-indigo-200 font-semibold',
+    fabBtn: 'bg-indigo-500 hover:bg-indigo-400 text-white'
+  },
+  blue: {
+    containerBorder: 'border-sky-500/35',
+    headerAccentBar: 'border-b-sky-500/30',
+    activeBtn: 'bg-sky-500 text-slate-950 font-bold',
+    primaryCta: 'bg-sky-500 hover:bg-sky-400 text-slate-950',
+    todayJumpBtn:
+      'bg-sky-500/15 hover:bg-sky-500/25 border-sky-400/45 text-sky-200',
+    todayJumpBtnActive: 'bg-sky-500 border-sky-400 text-slate-950',
+    filterActiveBtn: 'bg-sky-500/15 border-sky-500/45 text-sky-300',
+    todayWeekdayText: 'text-sky-300 font-semibold',
+    todayWeekdayUnderline: 'bg-sky-400',
+    todayCellPill: 'bg-sky-500 text-slate-950 font-bold shadow-sm',
+    selectedCellBg: 'bg-sky-950/55 ring-1 ring-inset ring-sky-400/50',
+    selectedDayTag: 'text-sky-300',
+    accentText: 'text-sky-300',
+    hoverAccentText: 'group-hover:text-sky-300',
+    weekTodayCard: 'bg-sky-950/35 border-sky-500/50',
+    checkboxAccent: 'accent-sky-500',
+    multiSelectActive: 'bg-sky-500/20 border-sky-500/50 text-sky-200 font-semibold',
+    fabBtn: 'bg-sky-500 hover:bg-sky-400 text-slate-950'
+  },
+  emerald: {
+    containerBorder: 'border-emerald-500/35',
+    headerAccentBar: 'border-b-emerald-500/30',
+    activeBtn: 'bg-[#10B981] text-[#05100C] font-bold',
+    primaryCta: 'bg-[#10B981] hover:bg-emerald-400 text-[#05100C]',
+    todayJumpBtn:
+      'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-400/45 text-emerald-200',
+    todayJumpBtnActive: 'bg-[#10B981] border-emerald-400 text-[#05100C]',
+    filterActiveBtn: 'bg-emerald-500/15 border-emerald-500/45 text-emerald-300',
+    todayWeekdayText: 'text-emerald-300 font-semibold',
+    todayWeekdayUnderline: 'bg-[#10B981]',
+    todayCellPill: 'bg-[#10B981] text-[#05100C] font-bold shadow-sm',
+    selectedCellBg: 'bg-emerald-950/45 ring-1 ring-inset ring-emerald-400/50',
+    selectedDayTag: 'text-[#10B981]',
+    accentText: 'text-[#10B981]',
+    hoverAccentText: 'group-hover:text-[#10B981]',
+    weekTodayCard: 'bg-[#121B18] border-[#10B981]/50',
+    checkboxAccent: 'accent-[#10B981]',
+    multiSelectActive: 'bg-[#10B981]/20 border-[#10B981]/50 text-emerald-200 font-semibold',
+    fabBtn: 'bg-[#10B981] hover:bg-emerald-400 text-[#05100C]'
+  },
+  amber: {
+    containerBorder: 'border-amber-500/35',
+    headerAccentBar: 'border-b-amber-500/30',
+    activeBtn: 'bg-amber-500 text-slate-950 font-bold',
+    primaryCta: 'bg-amber-500 hover:bg-amber-400 text-slate-950',
+    todayJumpBtn:
+      'bg-amber-500/15 hover:bg-amber-500/25 border-amber-400/45 text-amber-200',
+    todayJumpBtnActive: 'bg-amber-500 border-amber-400 text-slate-950',
+    filterActiveBtn: 'bg-amber-500/15 border-amber-500/45 text-amber-300',
+    todayWeekdayText: 'text-amber-300 font-semibold',
+    todayWeekdayUnderline: 'bg-amber-400',
+    todayCellPill: 'bg-amber-500 text-slate-950 font-bold shadow-sm',
+    selectedCellBg: 'bg-amber-950/45 ring-1 ring-inset ring-amber-400/50',
+    selectedDayTag: 'text-amber-300',
+    accentText: 'text-amber-300',
+    hoverAccentText: 'group-hover:text-amber-300',
+    weekTodayCard: 'bg-amber-950/30 border-amber-500/50',
+    checkboxAccent: 'accent-amber-500',
+    multiSelectActive: 'bg-amber-500/20 border-amber-500/50 text-amber-200 font-semibold',
+    fabBtn: 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+  }
+};
+
 const DIAS_SEMANA_EXPLORER = [
-  { idx: 0, curto: 'Dom', longo: 'Domingo' },
-  { idx: 1, curto: 'Seg', longo: 'Segunda' },
-  { idx: 2, curto: 'Ter', longo: 'Terça' },
-  { idx: 3, curto: 'Qua', longo: 'Quarta' },
-  { idx: 4, curto: 'Qui', longo: 'Quinta' },
-  { idx: 5, curto: 'Sex', longo: 'Sexta' },
-  { idx: 6, curto: 'Sáb', longo: 'Sábado' }
+  { idx: 0, curto: 'dom.', longo: 'Domingo' },
+  { idx: 1, curto: 'seg.', longo: 'Segunda' },
+  { idx: 2, curto: 'ter.', longo: 'Terça' },
+  { idx: 3, curto: 'qua.', longo: 'Quarta' },
+  { idx: 4, curto: 'qui.', longo: 'Quinta' },
+  { idx: 5, curto: 'sex.', longo: 'Sexta' },
+  { idx: 6, curto: 'sáb.', longo: 'Sábado' }
 ];
 
 const MESES_NOMES = [
@@ -4949,6 +5240,35 @@ const MESES_NOMES = [
   'Novembro',
   'Dezembro'
 ];
+
+const CALENDAR_EVENT_CHIP_PALETTE = [
+  'bg-[#38BDF8] text-[#04131C]',
+  'bg-[#A78BFA] text-[#110926]',
+  'bg-[#FB7185] text-[#22060B]',
+  'bg-[#34D399] text-[#041C13]',
+  'bg-[#FBBF24] text-[#211402]',
+  'bg-[#94A3B8] text-[#0B0E14]'
+];
+
+function resolveCalendarChipTone(badgeColorClass: string | undefined, idx: number): string {
+  const c = String(badgeColorClass || '').toLowerCase();
+  if (c.includes('emerald') || c.includes('green') || c.includes('teal')) {
+    return 'bg-[#34D399] text-[#041C13]';
+  }
+  if (c.includes('rose') || c.includes('red') || c.includes('pink')) {
+    return 'bg-[#F87171] text-[#260707]';
+  }
+  if (c.includes('amber') || c.includes('yellow') || c.includes('orange')) {
+    return 'bg-[#FB923C] text-[#240F02]';
+  }
+  if (c.includes('sky') || c.includes('blue') || c.includes('cyan')) {
+    return 'bg-[#38BDF8] text-[#04131C]';
+  }
+  if (c.includes('purple') || c.includes('violet') || c.includes('indigo')) {
+    return 'bg-[#A78BFA] text-[#110926]';
+  }
+  return CALENDAR_EVENT_CHIP_PALETTE[idx % CALENDAR_EVENT_CHIP_PALETTE.length];
+}
 
 function parseISODateSafe(iso: string): Date {
   const clean = String(iso || '').split('T')[0];
@@ -4986,14 +5306,20 @@ export function UrutauDateMultiView<T = any>({
   defaultView = 'calendario_mes',
   initialDateISO,
   onSelectedDateChange,
-  emptyListMessage = 'Nenhum registro encontrado para os filtros selecionados.'
+  emptyListMessage = 'Nenhum registro encontrado para os filtros selecionados.',
+  themeColor = 'emerald'
 }: UrutauDateMultiViewProps<T>) {
-  const todayISO = toISODateString(new Date());
+  const theme = CALENDAR_THEME_TOKENS[themeColor] || CALENDAR_THEME_TOKENS.emerald;
+  const todayObj = new Date();
+  const todayISO = toISODateString(todayObj);
+  const todayDayNum = todayObj.getDate();
+  const todayDow = todayObj.getDay();
   const [viewMode, setViewMode] = useState<'lista' | 'kanban_semana' | 'calendario_mes'>(defaultView);
   const [cursorDateISO, setCursorDateISO] = useState<string>(initialDateISO || todayISO);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [escopoPeriodoLista, setEscopoPeriodoLista] = useState<'mes' | 'semana' | 'todos'>('mes');
   const [mostrarDiasEmBranco, setMostrarDiasEmBranco] = useState<boolean>(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (initialDateISO && initialDateISO !== cursorDateISO) {
@@ -5004,6 +5330,11 @@ export function UrutauDateMultiView<T = any>({
   const updateCursorDate = (nextISO: string) => {
     setCursorDateISO(nextISO);
     if (onSelectedDateChange) onSelectedDateChange(nextISO);
+  };
+
+  const handleJumpToToday = () => {
+    const nowISO = toISODateString(new Date());
+    updateCursorDate(nowISO);
   };
 
   const stepDays = (deltaDays: number) => {
@@ -5053,22 +5384,39 @@ export function UrutauDateMultiView<T = any>({
       allMonthDaysISO.push(toISODateString(new Date(year, month, d, 12, 0, 0)));
     }
 
-    const cells: { iso: string | null; dayNum: number | null; isCurrentMonth: boolean }[] = [];
-    for (let i = 0; i < startDow; i++) {
-      cells.push({ iso: null, dayNum: null, isCurrentMonth: false });
+    const cells: { iso: string; dayNum: number; isCurrentMonth: boolean }[] = [];
+    for (let i = startDow - 1; i >= 0; i--) {
+      const prevDt = new Date(year, month, -i, 12, 0, 0);
+      cells.push({
+        iso: toISODateString(prevDt),
+        dayNum: prevDt.getDate(),
+        isCurrentMonth: false
+      });
     }
     for (let d = 1; d <= daysInMonth; d++) {
       const iso = toISODateString(new Date(year, month, d, 12, 0, 0));
       cells.push({ iso, dayNum: d, isCurrentMonth: true });
     }
-    while (cells.length % 7 !== 0) {
-      cells.push({ iso: null, dayNum: null, isCurrentMonth: false });
+    let trailingDay = 1;
+    while (cells.length % 7 !== 0 || cells.length < 35) {
+      const nextDt = new Date(year, month + 1, trailingDay, 12, 0, 0);
+      cells.push({
+        iso: toISODateString(nextDt),
+        dayNum: nextDt.getDate(),
+        isCurrentMonth: false
+      });
+      trailingDay += 1;
     }
+
+    const isViewingCurrentMonth =
+      year === todayObj.getFullYear() && month === todayObj.getMonth();
 
     return {
       year,
       month,
+      monthShortLabel: MESES_NOMES[month],
       monthLabel: `${MESES_NOMES[month]} de ${year}`,
+      isViewingCurrentMonth,
       allMonthDaysISO,
       cells
     };
@@ -5124,133 +5472,162 @@ export function UrutauDateMultiView<T = any>({
     itemsByDateMap
   ]);
 
+  const selectedDayItems = itemsByDateMap[cursorDateISO] || [];
+  const selectedDayDateObj = parseISODateSafe(cursorDateISO);
+  const selectedDayDowLabel = DIAS_SEMANA_EXPLORER[selectedDayDateObj.getDay()]?.longo || '';
+  const hasActiveFilters =
+    Boolean(searchTerm.trim()) ||
+    criteriaFilters.some((cf) =>
+      cf.multiSelect
+        ? Boolean(cf.selectedValues && cf.selectedValues.length > 0)
+        : cf.value !== 'TODOS' && cf.value !== 'todos' && cf.value !== '0' && cf.value !== ''
+    );
+
   return (
-    <div className="bg-[#11151E] border border-slate-800/90 rounded-xl overflow-hidden space-y-0">
-      
-      <div className="p-4 border-b border-slate-800/90 bg-[#0D1118] flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <h3 className="text-sm font-bold text-slate-100">{title}</h3>
+    <div className={`bg-[#12161F] border ${theme.containerBorder} rounded-xl overflow-hidden space-y-0 relative w-full max-w-full`}>
+      <div className={`px-2.5 sm:px-4 py-2.5 sm:py-3 border-b ${theme.headerAccentBar} bg-[#0E1117] flex flex-col gap-2.5`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => (viewMode === 'kanban_semana' ? stepDays(-7) : stepMonths(-1))}
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.06] cursor-pointer shrink-0"
+              title="Período anterior"
+              aria-label="Período anterior"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
 
-          
-          <div className="inline-flex items-center p-0.5 rounded-lg bg-[#07130E] border border-[#10B981]/30">
-            <button
-              type="button"
-              onClick={() => setViewMode('calendario_mes')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
-                viewMode === 'calendario_mes'
-                  ? 'bg-[#10B981] text-[#05100C] font-bold shadow'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-              title="Calendário do Mês (Visualização Primária)"
-            >
-              <Calendar className="w-3 h-3" />
-              <span>Calendário</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('kanban_semana')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
-                viewMode === 'kanban_semana'
-                  ? 'bg-[#10B981] text-[#05100C] font-bold shadow'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-              title="Visualização da Semana (Colunas por Dia)"
-            >
-              <Columns className="w-3 h-3" />
-              <span>Semana</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('lista')}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
-                viewMode === 'lista'
-                  ? 'bg-[#10B981] text-[#05100C] font-bold shadow'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-              title="Visualização em Lista"
-            >
-              <ListIcon className="w-3 h-3" />
-              <span>Lista</span>
-            </button>
-          </div>
-        </div>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-1.5">
+                <h3 className="text-base sm:text-sm font-bold text-white truncate">
+                  {dadosMesAtivo.monthShortLabel}
+                </h3>
+                <span className={`text-xs font-mono shrink-0 ${theme.accentText}`}>
+                  {dadosMesAtivo.year}
+                </span>
+              </div>
+              <div className="hidden sm:block text-[11px] text-slate-400 truncate">
+                {title}
+              </div>
+            </div>
 
-        
-        <div className="flex flex-wrap items-center gap-1.5">
-          <div className="inline-flex items-center rounded-lg bg-[#0B0D11] border border-slate-800 p-0.5">
             <button
               type="button"
-              onClick={() => stepMonths(-1)}
-              className="px-2 py-1 text-[11px] font-mono text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 rounded cursor-pointer"
-              title="Recuar 1 Mês"
+              onClick={() => (viewMode === 'kanban_semana' ? stepDays(7) : stepMonths(1))}
+              className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/[0.06] cursor-pointer shrink-0"
+              title="Próximo período"
+              aria-label="Próximo período"
             >
-              ◀◀ Mês
-            </button>
-            <button
-              type="button"
-              onClick={() => stepDays(-7)}
-              className="px-2 py-1 text-[11px] font-mono text-slate-300 hover:text-[#10B981] hover:bg-slate-800/60 rounded cursor-pointer"
-              title="Recuar 1 Semana"
-            >
-              ◀ Sem
-            </button>
-            <button
-              type="button"
-              onClick={() => updateCursorDate(todayISO)}
-              className="px-2.5 py-1 text-[11px] font-mono font-bold text-amber-300 hover:bg-amber-500/15 rounded cursor-pointer"
-              title="Ir para Hoje"
-            >
-              Hoje
-            </button>
-            <button
-              type="button"
-              onClick={() => stepDays(7)}
-              className="px-2 py-1 text-[11px] font-mono text-slate-300 hover:text-[#10B981] hover:bg-slate-800/60 rounded cursor-pointer"
-              title="Avançar 1 Semana"
-            >
-              Sem ▶
-            </button>
-            <button
-              type="button"
-              onClick={() => stepMonths(1)}
-              className="px-2 py-1 text-[11px] font-mono text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 rounded cursor-pointer"
-              title="Avançar 1 Mês"
-            >
-              Mês ▶▶
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
-          <input
-            type="date"
-            value={cursorDateISO}
-            onChange={(e) => e.target.value && updateCursorDate(e.target.value)}
-            className="px-2.5 py-1.5 bg-[#0B0D11] border border-slate-800 rounded-lg text-xs font-mono text-slate-100"
-          />
-
-          {onCreateAtDate && (
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
-              onClick={() => onCreateAtDate(cursorDateISO)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold cursor-pointer"
+              onClick={() => setMobileFiltersOpen((prev) => !prev)}
+              className={`sm:hidden p-2 rounded-lg border text-xs inline-flex items-center justify-center cursor-pointer transition-colors ${
+                mobileFiltersOpen || hasActiveFilters
+                  ? theme.filterActiveBtn
+                  : 'bg-[#181D28] border-white/[0.08] text-slate-300'
+              }`}
+              title="Buscar e filtrar"
+              aria-label="Buscar e filtrar"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{createButtonLabel}</span>
+              <Search className="w-4 h-4" />
             </button>
-          )}
+
+            <button
+              type="button"
+              onClick={handleJumpToToday}
+              className={`h-8 min-w-[34px] px-2.5 rounded-lg border text-xs font-mono font-bold tabular-nums inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors ${
+                cursorDateISO === todayISO ? theme.todayJumpBtnActive : theme.todayJumpBtn
+              }`}
+              title="Voltar para hoje"
+              aria-label={`Voltar para hoje (dia ${todayDayNum})`}
+            >
+              <span>{todayDayNum}</span>
+              <span className="hidden sm:inline font-sans font-semibold">Hoje</span>
+            </button>
+
+            <div className="inline-flex items-center p-0.5 rounded-lg bg-[#181D28] border border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setViewMode('calendario_mes')}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
+                  viewMode === 'calendario_mes'
+                    ? theme.activeBtn
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="Calendário Mensal"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Mês</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban_semana')}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
+                  viewMode === 'kanban_semana'
+                    ? theme.activeBtn
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="Visualização Semanal"
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Semana</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('lista')}
+                className={`px-2 py-1 rounded-md text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer ${
+                  viewMode === 'lista'
+                    ? theme.activeBtn
+                    : 'text-slate-300 hover:text-white'
+                }`}
+                title="Visualização em Lista"
+              >
+                <ListIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+            </div>
+
+            <input
+              type="date"
+              value={cursorDateISO}
+              onChange={(e) => e.target.value && updateCursorDate(e.target.value)}
+              className="hidden lg:block px-2.5 py-1.5 bg-[#12161F] border border-white/[0.1] rounded-lg text-xs font-mono text-slate-100"
+            />
+
+            {onCreateAtDate && (
+              <button
+                type="button"
+                onClick={() => onCreateAtDate(cursorDateISO)}
+                className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors ${theme.primaryCta}`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{createButtonLabel}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      
-      <div className="px-4 py-3 bg-[#0B0D11]/90 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[220px]">
-          <div className="relative min-w-[180px] flex-1 max-w-xs">
+      <div
+        className={`${
+          mobileFiltersOpen ? 'flex' : 'hidden sm:flex'
+        } px-3 sm:px-4 py-2.5 bg-[#0E1117]/80 border-b border-white/[0.08] flex-wrap items-center justify-between gap-2`}
+      >
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Filtrar por texto, pessoa, status..."
-              className="w-full pl-8 pr-3 py-1.5 bg-[#11151E] border border-slate-800 rounded-lg text-xs text-slate-100"
+              className="w-full pl-8 pr-3 py-1.5 bg-[#12161F] border border-white/[0.1] rounded-lg text-xs text-slate-100"
             />
           </div>
 
@@ -5275,13 +5652,13 @@ export function UrutauDateMultiView<T = any>({
               return (
                 <div
                   key={cf.id}
-                  className="flex flex-wrap items-center gap-1.5 bg-[#080C10] border border-white/10 rounded-lg px-2.5 py-1.5"
+                  className="flex flex-wrap items-center gap-1.5 bg-[#12161F] border border-white/[0.08] rounded-lg px-2.5 py-1.5"
                 >
-                  <Filter className="w-3 h-3 text-[#10B981] shrink-0" />
-                  <span className="text-[10px] font-mono uppercase text-emerald-300 font-bold mr-1">
+                  <Filter className="w-3 h-3 text-slate-400 shrink-0" />
+                  <span className="text-[10px] font-mono uppercase text-slate-300 font-semibold mr-1">
                     {cf.label}:
                   </span>
-                  <label className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#131B24] border border-white/10 text-[10px] text-slate-200 cursor-pointer select-none">
+                  <label className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#181D28] border border-white/[0.08] text-[10px] text-slate-200 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={allSelected}
@@ -5298,7 +5675,7 @@ export function UrutauDateMultiView<T = any>({
                         className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] cursor-pointer select-none transition-colors ${
                           isChecked
                             ? 'bg-[#10B981]/20 border-[#10B981]/50 text-emerald-200 font-semibold'
-                            : 'bg-[#131B24]/60 border-white/10 text-slate-400 hover:text-slate-200'
+                            : 'bg-[#181D28]/60 border-white/[0.08] text-slate-400 hover:text-slate-200'
                         }`}
                       >
                         <input
@@ -5321,7 +5698,7 @@ export function UrutauDateMultiView<T = any>({
                 <select
                   value={cf.value}
                   onChange={(e) => cf.onChange(e.target.value)}
-                  className="px-2.5 py-1.5 bg-[#11151E] border border-slate-800 rounded-lg text-xs text-slate-100"
+                  className="px-2.5 py-1.5 bg-[#12161F] border border-white/[0.1] rounded-lg text-xs text-slate-100"
                 >
                   {cf.options.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -5337,13 +5714,13 @@ export function UrutauDateMultiView<T = any>({
         <div className="flex flex-wrap items-center gap-2">
           {viewMode === 'lista' && (
             <>
-              <div className="inline-flex items-center rounded-lg bg-[#11151E] border border-slate-800 p-0.5 text-[11px]">
+              <div className="inline-flex items-center rounded-lg bg-[#12161F] border border-white/[0.08] p-0.5 text-[11px]">
                 <button
                   type="button"
                   onClick={() => setEscopoPeriodoLista('semana')}
                   className={`px-2 py-1 rounded cursor-pointer ${
                     escopoPeriodoLista === 'semana'
-                      ? 'bg-amber-500 text-slate-950 font-bold'
+                      ? 'bg-[#10B981] text-slate-950 font-bold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -5354,7 +5731,7 @@ export function UrutauDateMultiView<T = any>({
                   onClick={() => setEscopoPeriodoLista('mes')}
                   className={`px-2 py-1 rounded cursor-pointer ${
                     escopoPeriodoLista === 'mes'
-                      ? 'bg-amber-500 text-slate-950 font-bold'
+                      ? 'bg-[#10B981] text-slate-950 font-bold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -5368,7 +5745,7 @@ export function UrutauDateMultiView<T = any>({
                   }}
                   className={`px-2 py-1 rounded cursor-pointer ${
                     escopoPeriodoLista === 'todos'
-                      ? 'bg-amber-500 text-slate-950 font-bold'
+                      ? 'bg-[#10B981] text-slate-950 font-bold'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -5388,7 +5765,7 @@ export function UrutauDateMultiView<T = any>({
                 className={`px-3 py-1.5 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
                   mostrarDiasEmBranco
                     ? 'bg-[#10B981]/20 border-[#10B981] text-[#10B981]'
-                    : 'bg-[#11151E] border-slate-800 text-slate-400 hover:text-slate-200'
+                    : 'bg-[#12161F] border-white/[0.08] text-slate-400 hover:text-slate-200'
                 }`}
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -5397,7 +5774,14 @@ export function UrutauDateMultiView<T = any>({
             </>
           )}
 
-          <span className="text-[11px] font-mono text-slate-400">
+          <input
+            type="date"
+            value={cursorDateISO}
+            onChange={(e) => e.target.value && updateCursorDate(e.target.value)}
+            className="lg:hidden px-2 py-1 bg-[#12161F] border border-white/[0.1] rounded-lg text-xs font-mono text-slate-100"
+          />
+
+          <span className="hidden md:inline text-[11px] font-mono text-slate-400">
             {viewMode === 'kanban_semana'
               ? `Semana: ${formatDateBR(diasDaSemanaAtiva[0].iso)} a ${formatDateBR(diasDaSemanaAtiva[6].iso)}`
               : dadosMesAtivo.monthLabel}
@@ -5405,9 +5789,8 @@ export function UrutauDateMultiView<T = any>({
         </div>
       </div>
 
-      
       {viewMode === 'lista' && (
-        <div className="divide-y divide-slate-800/70 max-h-[620px] overflow-y-auto">
+        <div className="divide-y divide-white/[0.06] max-h-[620px] overflow-y-auto">
           {datasParaLista.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400 space-y-2">
               <div>{emptyListMessage}</div>
@@ -5417,7 +5800,7 @@ export function UrutauDateMultiView<T = any>({
                   setEscopoPeriodoLista('todos');
                   setMostrarDiasEmBranco(true);
                 }}
-                className="px-3 py-1.5 rounded-lg bg-slate-800 text-amber-300 text-xs font-semibold cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-[#181D28] text-emerald-300 text-xs font-semibold cursor-pointer"
               >
                 Mostrar Todos os Períodos / Dias em Branco
               </button>
@@ -5434,20 +5817,20 @@ export function UrutauDateMultiView<T = any>({
                   <div
                     key={dateISO}
                     onClick={() => onCreateAtDate && onCreateAtDate(dateISO)}
-                    className="px-4 py-2.5 bg-[#090C11]/70 hover:bg-slate-800/30 transition-colors flex items-center justify-between gap-3 cursor-pointer"
+                    className="px-4 py-2.5 bg-[#0E1117]/70 hover:bg-white/[0.03] transition-colors flex items-center justify-between gap-3 cursor-pointer"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <span className="font-mono text-xs text-slate-500">
                         {formatDateBR(dateISO)}
                       </span>
-                      <span className="text-xs text-slate-500">{dowLabel}</span>
-                      <span className="text-[11px] italic text-slate-500">
-                        — Dia em branco (sem lançamentos)
+                      <span className="text-xs text-slate-500 truncate">{dowLabel}</span>
+                      <span className="text-[11px] italic text-slate-500 hidden sm:inline">
+                        — Sem lançamentos
                       </span>
                     </div>
                     {onCreateAtDate && (
-                      <span className="text-[11px] font-mono text-[#10B981] hover:underline">
-                        + Lançar neste dia
+                      <span className="text-[11px] font-mono text-[#10B981] shrink-0">
+                        + Lançar
                       </span>
                     )}
                   </div>
@@ -5455,10 +5838,10 @@ export function UrutauDateMultiView<T = any>({
               }
 
               return (
-                <div key={dateISO} className="bg-[#11151E]">
-                  <div className="px-4 py-2 bg-[#0D1118] border-b border-slate-800/60 flex items-center justify-between text-xs">
+                <div key={dateISO} className="bg-[#12161F]">
+                  <div className="px-3 sm:px-4 py-2 bg-[#0E1117] border-b border-white/[0.06] flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-amber-400">
+                      <span className="font-mono font-bold text-slate-200">
                         {formatDateBR(dateISO)}
                       </span>
                       <span className="text-slate-400">· {dowLabel}</span>
@@ -5470,7 +5853,7 @@ export function UrutauDateMultiView<T = any>({
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[11px] font-mono text-slate-400">
-                        {dayItems.length} {dayItems.length === 1 ? 'registro' : 'registros'}
+                        {dayItems.length}
                       </span>
                       {onCreateAtDate && (
                         <button
@@ -5483,7 +5866,7 @@ export function UrutauDateMultiView<T = any>({
                       )}
                     </div>
                   </div>
-                  <div className="divide-y divide-slate-800/40">
+                  <div className="divide-y divide-white/[0.05]">
                     {dayItems.map((it, idx) => {
                       const badge = getBadge ? getBadge(it) : null;
                       const rightMeta = getRightMeta ? getRightMeta(it) : null;
@@ -5491,7 +5874,7 @@ export function UrutauDateMultiView<T = any>({
                         <div
                           key={idx}
                           onClick={() => onEditItem(it)}
-                          className="px-4 py-3 hover:bg-[#10B981]/10 transition-colors cursor-pointer flex items-center justify-between gap-4 group"
+                          className="px-3 sm:px-4 py-3 hover:bg-white/[0.03] transition-colors cursor-pointer flex items-center justify-between gap-3 group"
                           title="Clique para editar este registro"
                         >
                           <div className="min-w-0 flex-1 space-y-0.5">
@@ -5521,9 +5904,6 @@ export function UrutauDateMultiView<T = any>({
                                 {rightMeta}
                               </span>
                             )}
-                            <span className="text-[11px] font-mono text-slate-400 group-hover:text-amber-300">
-                              Editar 
-                            </span>
                           </div>
                         </div>
                       );
@@ -5536,10 +5916,9 @@ export function UrutauDateMultiView<T = any>({
         </div>
       )}
 
-      
       {viewMode === 'kanban_semana' && (
-        <div className="p-4 overflow-x-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3 min-w-[920px]">
+        <div className="p-2.5 sm:p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5">
             {diasDaSemanaAtiva.map((dia) => {
               const dayItems = itemsByDateMap[dia.iso] || [];
               const isToday = dia.iso === todayISO;
@@ -5547,28 +5926,31 @@ export function UrutauDateMultiView<T = any>({
               return (
                 <div
                   key={dia.iso}
-                  className={`rounded-xl border flex flex-col min-h-[320px] transition-colors ${
+                  className={`rounded-xl border flex flex-col min-h-[160px] lg:min-h-[300px] transition-colors ${
                     isToday
-                      ? 'bg-[#0A1F17]/70 border-[#10B981]/60'
+                      ? 'bg-[#121B18] border-[#10B981]/50'
                       : isSelected
-                      ? 'bg-[#131B26] border-amber-500/50'
-                      : 'bg-[#0B0D11] border-slate-800'
+                      ? 'bg-[#181D28] border-white/20'
+                      : 'bg-[#0E1117] border-white/[0.08]'
                   }`}
                 >
                   <div
                     onClick={() => updateCursorDate(dia.iso)}
-                    className="p-2.5 border-b border-slate-800/80 flex items-center justify-between cursor-pointer"
+                    className="p-2.5 border-b border-white/[0.06] flex items-center justify-between cursor-pointer"
                   >
-                    <div>
-                      <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                        <span>{dia.curto}</span>
-                        {isToday && (
-                          <span className="w-2 h-2 rounded-full bg-[#10B981]" title="Hoje" />
-                        )}
-                      </div>
-                      <div className="text-[11px] font-mono text-amber-400">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase text-slate-200">
+                        {dia.curto}
+                      </span>
+                      <span
+                        className={`text-[11px] font-mono ${
+                          isToday
+                            ? 'px-1.5 py-0.5 rounded-full bg-[#10B981] text-[#05100C] font-bold'
+                            : 'text-slate-400'
+                        }`}
+                      >
                         {String(dia.dayNum).padStart(2, '0')}/{String(dia.monthNum).padStart(2, '0')}
-                      </div>
+                      </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-[11px] font-mono text-slate-400">
@@ -5581,7 +5963,7 @@ export function UrutauDateMultiView<T = any>({
                             e.stopPropagation();
                             onCreateAtDate(dia.iso);
                           }}
-                          className="p-1 rounded bg-slate-800 hover:bg-[#10B981] text-slate-200 hover:text-slate-950 transition-colors cursor-pointer"
+                          className="p-1 rounded bg-[#181D28] hover:bg-[#10B981] text-slate-200 hover:text-slate-950 transition-colors cursor-pointer"
                           title={`Adicionar em ${formatDateBR(dia.iso)}`}
                         >
                           <Plus className="w-3 h-3" />
@@ -5590,16 +5972,13 @@ export function UrutauDateMultiView<T = any>({
                     </div>
                   </div>
 
-                  <div className="p-2 space-y-2 flex-1 overflow-y-auto max-h-[420px]">
+                  <div className="p-2 space-y-1.5 flex-1 overflow-y-auto max-h-[340px]">
                     {dayItems.length === 0 ? (
                       <div
                         onClick={() => onCreateAtDate && onCreateAtDate(dia.iso)}
-                        className="h-28 rounded-lg border border-dashed border-slate-800/80 flex flex-col items-center justify-center text-center p-2 text-[11px] text-slate-500 hover:border-slate-700 hover:text-slate-300 cursor-pointer"
+                        className="h-20 rounded-lg border border-dashed border-white/[0.08] flex flex-col items-center justify-center text-center p-2 text-[11px] text-slate-500 hover:text-slate-300 cursor-pointer"
                       >
                         <span>Sem registros</span>
-                        {onCreateAtDate && (
-                          <span className="text-[10px] text-[#10B981] mt-1">+ Clique p/ criar</span>
-                        )}
                       </div>
                     ) : (
                       dayItems.map((it, idx) => {
@@ -5609,7 +5988,7 @@ export function UrutauDateMultiView<T = any>({
                           <div
                             key={idx}
                             onClick={() => onEditItem(it)}
-                            className="p-2.5 rounded-lg bg-[#141A24] border border-slate-800 hover:border-[#10B981] transition-all cursor-pointer space-y-1 shadow-sm group"
+                            className="p-2 rounded-lg bg-[#181D28] border border-white/[0.08] hover:border-white/25 transition-all cursor-pointer space-y-1 group"
                             title="Clique para editar"
                           >
                             <div className="text-xs font-semibold text-slate-100 group-hover:text-[#10B981] line-clamp-2">
@@ -5620,8 +5999,8 @@ export function UrutauDateMultiView<T = any>({
                                 {getSubtitle(it)}
                               </div>
                             )}
-                            <div className="pt-1 flex items-center justify-between gap-1 text-[10px] font-mono border-t border-slate-800/80">
-                              <span className={badge?.colorClass || 'text-amber-400'}>
+                            <div className="pt-1 flex items-center justify-between gap-1 text-[10px] font-mono border-t border-white/[0.06]">
+                              <span className={badge?.colorClass || 'text-slate-400'}>
                                 {badge?.text || 'Editar'}
                               </span>
                               {rightMeta && (
@@ -5640,95 +6019,205 @@ export function UrutauDateMultiView<T = any>({
         </div>
       )}
 
-      
       {viewMode === 'calendario_mes' && (
-        <div className="p-4 overflow-x-auto">
-          <div className="min-w-[760px]">
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {DIAS_SEMANA_EXPLORER.map((d) => (
+        <div className="w-full">
+          <div className="grid grid-cols-7 w-full bg-[#0E1117] border-b border-white/[0.08]">
+            {DIAS_SEMANA_EXPLORER.map((d) => {
+              const isTodayCol = dadosMesAtivo.isViewingCurrentMonth && d.idx === todayDow;
+              return (
                 <div
                   key={d.idx}
-                  className="py-1.5 text-center text-xs font-mono uppercase text-slate-400 bg-[#0B0D11] rounded-lg border border-slate-800/80"
+                  className={`py-1.5 sm:py-2 text-center text-[11px] sm:text-xs font-medium relative select-none ${
+                    isTodayCol ? theme.todayWeekdayText : 'text-slate-400'
+                  }`}
                 >
-                  {d.curto}
+                  <span>{d.curto}</span>
+                  {isTodayCol && (
+                    <span className={`absolute bottom-0 left-0 right-0 h-[2px] ${theme.todayWeekdayUnderline}`} />
+                  )}
                 </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-              {dadosMesAtivo.cells.map((cell, cIdx) => {
-                if (!cell.isCurrentMonth || !cell.iso) {
-                  return (
-                    <div
-                      key={cIdx}
-                      className="min-h-[110px] rounded-xl bg-[#080B10]/50 border border-slate-900/60"
-                    />
-                  );
-                }
-                const dayItems = itemsByDateMap[cell.iso] || [];
-                const isToday = cell.iso === todayISO;
-                const isSelected = cell.iso === cursorDateISO;
-                return (
-                  <div
-                    key={cell.iso}
-                    onClick={() => updateCursorDate(cell.iso!)}
-                    className={`min-h-[115px] rounded-xl border p-2 flex flex-col justify-between transition-colors ${
-                      isToday
-                        ? 'bg-[#0A1F17]/80 border-[#10B981]'
-                        : isSelected
-                        ? 'bg-[#141C28] border-amber-500/60'
-                        : 'bg-[#0B0D11] border-slate-800/90 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-7 w-full gap-px bg-white/[0.07]">
+            {dadosMesAtivo.cells.map((cell) => {
+              const dayItems = itemsByDateMap[cell.iso] || [];
+              const isToday = cell.iso === todayISO;
+              const isSelected = cell.iso === cursorDateISO;
+              const maxVisibleChips = 5;
+              const visibleItems = dayItems.slice(0, maxVisibleChips);
+              const overflowCount = Math.max(0, dayItems.length - maxVisibleChips);
+
+              return (
+                <div
+                  key={cell.iso}
+                  onClick={() => updateCursorDate(cell.iso)}
+                  className={`min-w-0 overflow-hidden min-h-[92px] sm:min-h-[122px] p-[2px] sm:p-1.5 flex flex-col cursor-pointer transition-colors ${
+                    !cell.isCurrentMonth
+                      ? 'bg-[#0C0F16]'
+                      : isSelected
+                      ? theme.selectedCellBg
+                      : 'bg-[#12161F] hover:bg-[#161B26]'
+                  }`}
+                >
+                  <div className="flex items-center justify-center sm:justify-between mb-1 shrink-0">
+                    {isToday ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJumpToToday();
+                        }}
+                        title="Voltar para hoje"
+                        className={`inline-flex items-center justify-center leading-none text-[11px] sm:text-xs rounded-full px-2 py-[3px] min-w-[24px] cursor-pointer transition-transform active:scale-95 ${theme.todayCellPill}`}
+                      >
+                        {cell.dayNum}
+                      </button>
+                    ) : (
                       <span
-                        className={`text-xs font-mono font-bold ${
-                          isToday ? 'text-[#10B981]' : 'text-slate-300'
+                        className={`inline-flex items-center justify-center leading-none text-[11px] sm:text-xs font-semibold transition-colors ${
+                          isSelected
+                            ? 'bg-white/15 text-white rounded-full px-1.5 py-[3px] min-w-[22px]'
+                            : cell.isCurrentMonth
+                            ? 'text-slate-200 py-[2px]'
+                            : 'text-slate-500 py-[2px]'
                         }`}
                       >
-                        {String(cell.dayNum).padStart(2, '0')}
+                        {cell.dayNum}
                       </span>
-                      {onCreateAtDate && (
+                    )}
+
+                    {onCreateAtDate && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreateAtDate(cell.iso);
+                        }}
+                        className="hidden sm:inline-flex items-center justify-center w-5 h-5 rounded text-slate-500 hover:text-[#10B981] hover:bg-white/[0.06] text-xs font-mono cursor-pointer"
+                        title={`Novo registro em ${formatDateBR(cell.iso)}`}
+                      >
+                        +
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-[2px] sm:space-y-1 flex-1 min-w-0 overflow-hidden">
+                    {visibleItems.map((it, idx) => {
+                      const badge = getBadge ? getBadge(it) : null;
+                      const chipTone = resolveCalendarChipTone(badge?.colorClass, idx);
+                      return (
                         <button
+                          key={idx}
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onCreateAtDate(cell.iso!);
+                            onEditItem(it);
                           }}
-                          className="text-[10px] font-mono text-slate-400 hover:text-[#10B981] px-1 rounded cursor-pointer"
-                          title={`Novo registro em ${formatDateBR(cell.iso)}`}
+                          className={`w-full max-w-full block text-left px-1 sm:px-1.5 py-[1.5px] sm:py-[2px] rounded-[3px] text-[9px] sm:text-[10.5px] font-semibold leading-[1.2] truncate cursor-pointer transition-opacity hover:opacity-90 ${chipTone}`}
+                          title={`${getTitle(it)}${badge?.text ? ` (${badge.text})` : ''}`}
                         >
-                          +
+                          {getTitle(it)}
                         </button>
-                      )}
-                    </div>
-
-                    <div className="space-y-1 flex-1 overflow-y-auto max-h-[85px]">
-                      {dayItems.map((it, idx) => {
-                        const badge = getBadge ? getBadge(it) : null;
-                        return (
-                          <button
-                            key={idx}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEditItem(it);
-                            }}
-                            className="w-full text-left px-1.5 py-1 rounded bg-[#151D2A] hover:bg-[#10B981]/20 border border-slate-800 hover:border-[#10B981] text-[10px] text-slate-100 truncate transition-colors cursor-pointer block"
-                            title={`${getTitle(it)} — Clique para editar`}
-                          >
-                            <span className="font-semibold">{getTitle(it)}</span>
-                            {badge?.text && (
-                              <span className="text-amber-300 ml-1">({badge.text})</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                      );
+                    })}
+                    {overflowCount > 0 && (
+                      <div className="text-[10px] font-bold text-slate-400 leading-none px-0.5 pt-0.5 tracking-widest">
+                        •••
+                      </div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
+
+          <div className="border-t border-white/[0.08] bg-[#0E1117] px-3 sm:px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-semibold text-white flex items-center gap-2">
+                  <span>{formatDateBR(cursorDateISO)}</span>
+                  <span className="text-slate-400 font-normal">· {selectedDayDowLabel}</span>
+                  {cursorDateISO === todayISO && (
+                    <span className={`text-[10px] font-mono font-bold ${theme.selectedDayTag}`}>HOJE</span>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  {selectedDayItems.length === 0
+                    ? 'Nenhum registro nesta data'
+                    : `${selectedDayItems.length} ${
+                        selectedDayItems.length === 1 ? 'registro' : 'registros'
+                      }`}
+                </div>
+              </div>
+
+              {onCreateAtDate && (
+                <button
+                  type="button"
+                  onClick={() => onCreateAtDate(cursorDateISO)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 cursor-pointer shrink-0 transition-colors ${theme.primaryCta}`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{createButtonLabel}</span>
+                </button>
+              )}
+            </div>
+
+            {selectedDayItems.length > 0 && (
+              <div className="divide-y divide-white/[0.06] rounded-lg bg-[#12161F] border border-white/[0.08] overflow-hidden">
+                {selectedDayItems.map((it, idx) => {
+                  const badge = getBadge ? getBadge(it) : null;
+                  const rightMeta = getRightMeta ? getRightMeta(it) : null;
+                  const chipTone = resolveCalendarChipTone(badge?.colorClass, idx);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => onEditItem(it)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-white/[0.04] transition-colors flex items-center justify-between gap-3 cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                        <span className={`w-1.5 self-stretch rounded-full shrink-0 ${chipTone}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold text-white truncate">
+                            {getTitle(it)}
+                          </div>
+                          {getSubtitle && (
+                            <div className="text-[11px] text-slate-400 truncate">
+                              {getSubtitle(it)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 space-y-0.5">
+                        {badge?.text && (
+                          <div className={`text-[10px] font-mono font-semibold ${badge.colorClass || 'text-slate-300'}`}>
+                            {badge.text}
+                          </div>
+                        )}
+                        {rightMeta && (
+                          <div className="text-[11px] font-mono text-slate-300">{rightMeta}</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {onCreateAtDate && (
+            <button
+              type="button"
+              onClick={() => onCreateAtDate(cursorDateISO)}
+              className={`sm:hidden fixed bottom-5 right-5 z-40 w-14 h-14 rounded-2xl shadow-xl flex items-center justify-center cursor-pointer active:scale-95 transition-transform ${theme.fabBtn}`}
+              aria-label={createButtonLabel}
+              title={createButtonLabel}
+            >
+              <Plus className="w-6 h-6 stroke-[2.5]" />
+            </button>
+          )}
         </div>
       )}
     </div>
