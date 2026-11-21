@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { isStagingEnvironment } from '../../db/sqliteEngine.ts';
+import { isStagingEnvironment } from '../../db/postgresEngine.ts';
 import { createIsolatedMotorRouter, safeMotorCall, wrapMotorHandler } from '../motorRuntime.ts';
 
 export interface WhatsAppIaContextProvider {

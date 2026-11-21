@@ -15,3 +15,5 @@ data/
 *.sqlite
 *.bak
 .gmp_cache/
+uploads/
+/uploads

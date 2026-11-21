@@ -2,9 +2,10 @@ import { Express, Request, Response } from 'express';
 import {
   cloneProductionDatabaseToStaging,
   isStagingEnvironment,
-  resolveDatabaseFilePath,
-  resolveProdDatabaseFilePath
-} from '../db/sqliteEngine.ts';
+  maskDatabaseUrl,
+  resolveDatabaseUrl,
+  resolveProdDatabaseUrl
+} from '../db/postgresEngine.ts';
 import { getMotorHealthRegistry, safeMotorCall } from './motorRuntime.ts';
 import { createEscalaMotorRouter } from './escala/index.ts';
 import { createReservasMotorRouter } from './reservas/index.ts';
@@ -39,6 +40,7 @@ export function registerAllIsolatedMotors(app: Express, bridge: UrutauMotorHostB
       ok: true,
       appEnv: isStagingEnvironment() ? 'staging' : process.env.APP_ENV || process.env.NODE_ENV || 'production',
       stagingSandboxActive: isStagingEnvironment(),
+      databaseEngine: 'postgresql',
       motors: getMotorHealthRegistry()
     });
   });
@@ -50,8 +52,9 @@ export function registerAllIsolatedMotors(app: Express, bridge: UrutauMotorHostB
       appEnv: isStaging ? 'staging' : process.env.APP_ENV || process.env.NODE_ENV || 'production',
       isStaging,
       stagingSandboxActive: isStaging,
-      databasePath: resolveDatabaseFilePath(),
-      prodDatabasePath: resolveProdDatabaseFilePath()
+      databaseEngine: 'postgresql',
+      databaseTarget: maskDatabaseUrl(resolveDatabaseUrl()),
+      prodDatabaseTarget: maskDatabaseUrl(resolveProdDatabaseUrl())
     });
   });
 
@@ -67,8 +70,8 @@ export function registerAllIsolatedMotors(app: Express, bridge: UrutauMotorHostB
 
     const result = await safeMotorCall(
       'governanca',
-      () => {
-        const report = cloneProductionDatabaseToStaging();
+      async () => {
+        const report = await cloneProductionDatabaseToStaging();
         if (bridge.reloadJsonDbFromDisk) {
           bridge.reloadJsonDbFromDisk();
         }

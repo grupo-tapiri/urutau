@@ -16,6 +16,7 @@ import {
   InvalidWebhookSignatureError,
   WebhookAndHardLimitService
 } from '../services/webhookAndHardLimitService.ts';
+import { getBackupSchedulerStatus } from '../services/postgresBackupScheduler.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -44,6 +45,8 @@ const PUBLIC_API_EXACT_PATHS = new Set<string>([
   '/api/motors/health',
   '/api/v31/quadro-branco'
 ]);
+
+const PUBLIC_API_PREFIXES = ['/api/storage/signed/'];
 
 const SUPER_ADMIN_ONLY_PREFIXES = [
   '/api/vps/files/',
@@ -89,9 +92,13 @@ export function extractTargetEmpresaIdsFromRequest(req: Request): number[] {
     req.params?.empresaId,
     req.query?.empresa_id,
     req.query?.empresaId,
+    req.query?.companyId,
+    req.query?.company_id,
     req.headers['x-empresa-id'],
     req.body?.empresa_id,
     req.body?.empresaId,
+    req.body?.company_id,
+    req.body?.companyId,
     req.body?.id_empresa
   ];
 
@@ -167,9 +174,12 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
     backupEncryptionSecret
   } = params;
 
-  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  app.use('/api', async (req: Request, res: Response, next: NextFunction) => {
     const fullPath = `/api${req.path === '/' ? '' : req.path}`;
-    if (PUBLIC_API_EXACT_PATHS.has(fullPath)) {
+    if (
+      PUBLIC_API_EXACT_PATHS.has(fullPath) ||
+      PUBLIC_API_PREFIXES.some((prefix) => fullPath.startsWith(prefix))
+    ) {
       next();
       return;
     }
@@ -193,7 +203,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
 
     try {
       const rateScope = `uid_${sessao.uid}`;
-      getWebhookService().enforceEndpointRateHardLimit(rateScope);
+      await getWebhookService().enforceEndpointRateHardLimit(rateScope);
     } catch (rateErr) {
       handleDomainErrorResponse(rateErr, res);
       return;
@@ -267,7 +277,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
     });
   });
 
-  app.post('/api/webhooks/pagamentos', (req: Request, res: Response) => {
+  app.post('/api/webhooks/pagamentos', async (req: Request, res: Response) => {
     try {
       const signature =
         (req.headers['x-urutau-webhook-signature'] as string | undefined) ||
@@ -280,7 +290,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
           : JSON.stringify(req.body || {});
 
       const legacyDb = getLegacyDb();
-      const result = getWebhookService().processSignedPaymentWebhook({
+      const result = await getWebhookService().processSignedPaymentWebhook({
         rawBody,
         signatureHeader: signature,
         payload: req.body || {},
@@ -297,17 +307,17 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
     }
   });
 
-  app.post('/api/pdv/cobrancas/emitir', (req: Request, res: Response) => {
+  app.post('/api/pdv/cobrancas/emitir', async (req: Request, res: Response) => {
     try {
       const sessao = (req as any).urutauAuthSession as AuthenticatedOperatorContext;
-      const result = getCommerceService().emitirCobrancaGatewayIdempotente(sessao, req.body || {});
+      const result = await getCommerceService().emitirCobrancaGatewayIdempotente(sessao, req.body || {});
       res.status(200).json(result);
     } catch (err) {
       handleDomainErrorResponse(err, res);
     }
   });
 
-  app.get('/api/governanca/status', (req: Request, res: Response) => {
+  app.get('/api/governanca/status', async (req: Request, res: Response) => {
     try {
       const sessao = (req as any).urutauAuthSession as AuthenticatedOperatorContext;
       const roleLower = `${sessao.cargo} ${sessao.tipo}`.toLowerCase();
@@ -328,17 +338,22 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
 
       const activeRepo = getRepo();
       const engine = activeRepo.getEngine();
-      const migrations = engine.listAppliedMigrations();
-      const queryPlans = engine.auditQueryPlans();
-      const recentWebhooks = activeRepo.listRecentProcessedEvents(15);
-      const hardLimits = activeRepo.listCurrentHardLimits(15);
+      const migrations = await engine.listAppliedMigrations();
+      const queryPlans = await engine.auditQueryPlans();
+      const recentWebhooks = await activeRepo.listRecentProcessedEvents(15);
+      const hardLimits = await activeRepo.listCurrentHardLimits(15);
 
       const backupsDir = path.join(ROOT_DIR, 'backups');
       let backupsVerificados: Array<{ filename: string; sizeBytes: number; createdAtUtc: string }> = [];
       if (fs.existsSync(backupsDir)) {
         backupsVerificados = fs
           .readdirSync(backupsDir)
-          .filter((f) => f.startsWith('urutau_verified_backup_') || f.startsWith('urutau_backup_'))
+          .filter(
+            (f) =>
+              f.startsWith('urutau_pg_verified_backup_') ||
+              f.startsWith('urutau_verified_backup_') ||
+              f.startsWith('urutau_backup_')
+          )
           .map((filename) => {
             const st = fs.statSync(path.join(backupsDir, filename));
             return {
@@ -354,11 +369,21 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
       res.json({
         ok: true,
         ambiente: engine.getEnvironment(),
-        motorRelacional: 'SQLite Nativo WAL + STRICT + BEGIN IMMEDIATE ACID',
-        caminhoBancoIsolado: path.basename(engine.getDatabasePath()),
-        constraintsAtivas: ['NOT NULL', 'UNIQUE', 'CHECK (saldo_mili >= 0)', 'CHECK (preco_centavos >= 0)', 'FOREIGN KEY ON'],
+        motorRelacional: engine.isConfigured()
+          ? 'PostgreSQL Pool (pg) + ACID Transactions + Hybrid Storage'
+          : 'PostgreSQL Engine (aguardando DATABASE_URL) + Fallback Operacional',
+        caminhoBancoIsolado: engine.getDatabaseTargetLabel(),
+        backupWorkerStatus: getBackupSchedulerStatus(),
+        constraintsAtivas: [
+          'NOT NULL',
+          'UNIQUE',
+          'CHECK (saldo_mili >= 0)',
+          'CHECK (preco_centavos >= 0)',
+          'FOREIGN KEY CASCADE/RESTRICT',
+          'MULTI-TENANT company_id'
+        ],
         moedaArmazenamento: 'INTEGER (Centavos Exatos)',
-        padraoTemporal: 'UTC ISO-8601',
+        padraoTemporal: 'TIMESTAMPTZ UTC ISO-8601',
         migrationsAplicadas: migrations,
         auditoriaIndicesExplain: queryPlans,
         eventosWebhookIdempotentes: recentWebhooks,
@@ -366,7 +391,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
         backupsVerificados,
         scriptsInfraDisponiveis: [
           { id: 'vps-ssh-ufw', filename: 'vps-hardening-ssh-ufw.sh', titulo: 'Blindagem SSH Somente Chave + Restart Daemon + Firewall UFW' },
-          { id: 'backup-restore', filename: 'backup-and-verify-restore.sh', titulo: 'Backup Diário Criptografado + Restauração Testada Isolada' },
+          { id: 'backup-restore', filename: 'postgres-gdrive-backup.ts', titulo: 'Backup Horário PostgreSQL (pg_dump + gzip) -> Google Drive API v3' },
           { id: 'postgres-least-priv', filename: 'postgres-least-privilege.sql', titulo: 'Role PostgreSQL de Menor Privilégio (Sem DROP/SUPERUSER)' }
         ]
       });
@@ -375,7 +400,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
     }
   });
 
-  app.post('/api/governanca/backup-testar-restauracao', (req: Request, res: Response) => {
+  app.post('/api/governanca/backup-testar-restauracao', async (req: Request, res: Response) => {
     try {
       const sessao = (req as any).urutauAuthSession as AuthenticatedOperatorContext;
       const roleLower = `${sessao.cargo} ${sessao.tipo}`.toLowerCase();
@@ -389,8 +414,8 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
 
       const activeRepo = getRepo();
       const legacyDb = getLegacyDb();
-      activeRepo.syncCatalogAndStockFromMemoryDb(legacyDb);
-      const report = activeRepo.getEngine().verifyBackupAndIsolatedRestore(backupEncryptionSecret);
+      await activeRepo.syncCatalogAndStockFromMemoryDb(legacyDb);
+      const report = await activeRepo.getEngine().verifyBackupAndIsolatedRestore(backupEncryptionSecret);
       res.json(report);
     } catch (err) {
       handleDomainErrorResponse(err, res);
@@ -406,7 +431,7 @@ export function registerZeroTrustMiddlewareAndRoutes(params: {
       }
       const map: Record<string, { file: string; mime: string }> = {
         'vps-ssh-ufw': { file: 'vps-hardening-ssh-ufw.sh', mime: 'text/x-shellscript; charset=utf-8' },
-        'backup-restore': { file: 'backup-and-verify-restore.sh', mime: 'text/x-shellscript; charset=utf-8' },
+        'backup-restore': { file: 'postgres-gdrive-backup.ts', mime: 'application/typescript; charset=utf-8' },
         'postgres-least-priv': { file: 'postgres-least-privilege.sql', mime: 'application/sql; charset=utf-8' }
       };
       const entry = map[String(req.params.scriptId || '')];

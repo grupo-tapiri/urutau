@@ -203,7 +203,7 @@ export class ZeroTrustCommerceService {
     };
   }
 
-  public abrirOuAdicionarItensZeroTrust(
+  public async abrirOuAdicionarItensZeroTrust(
     operator: AuthenticatedOperatorContext,
     rawPayload: any,
     legacyDb?: any
@@ -240,11 +240,11 @@ export class ZeroTrustCommerceService {
       rawPayload?.op_uuid || `OP-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
     );
 
-    const txResult = this.repo.getEngine().runInImmediateTransaction((conn) => {
-      this.repo.ensureEmpresaExists(empresaId);
+    const txResult = await this.repo.runAtomicTransaction(async (client) => {
+      await this.repo.ensureEmpresaExists(empresaId, `Empresa ${empresaId}`, client);
 
       const requestedProductIds = rawNovosItens.map((it: any) => Number(it.produto_id));
-      const catalogMap = this.repo.findProductsByIdsConsolidated(conn, empresaId, requestedProductIds);
+      const catalogMap = await this.repo.findProductsByIdsConsolidated(client, empresaId, requestedProductIds);
 
       for (const pid of requestedProductIds) {
         if (!catalogMap.has(pid)) {
@@ -265,8 +265,8 @@ export class ZeroTrustCommerceService {
           : `Comanda #${Date.now().toString().slice(-4)}`;
       const identLimpo = String(rawPayload?.identificador || defaultIdent).trim();
 
-      let comandaRow = this.repo.findActiveComanda(
-        conn,
+      let comandaRow = await this.repo.findActiveComanda(
+        client,
         empresaId,
         unidadeId,
         rawPayload?.comanda_id ? Number(rawPayload.comanda_id) : undefined,
@@ -279,7 +279,7 @@ export class ZeroTrustCommerceService {
           ? String(rawPayload?.zona_entrega_codigo || 'PADRAO').trim().toUpperCase()
           : 'RETIRADA';
       const zonaAutoritativa =
-        modalidade === 'delivery' ? this.repo.findDeliveryFeeZone(conn, empresaId, zonaCodigo) : null;
+        modalidade === 'delivery' ? await this.repo.findDeliveryFeeZone(client, empresaId, zonaCodigo) : null;
       const taxaEntregaAutoritativaCentavos =
         modalidade === 'delivery' ? Number(zonaAutoritativa?.taxa_centavos ?? 800) : 0;
 
@@ -294,47 +294,38 @@ export class ZeroTrustCommerceService {
         : comandaRow?.cupom_codigo || null;
 
       if (!comandaRow) {
-        const insertRes = conn
-          .prepare(
-            `INSERT INTO pdv_comandas_acid (
-              op_uuid, empresa_id, unidade_id, modalidade, identificador, mesa_numero,
-              cliente_nome, cliente_telefone, endereco_entrega, entregador_nome,
-              zona_entrega_codigo, cupom_codigo, garcom_nome, pessoas_mesa,
-              subtotal_itens_centavos, desconto_centavos, taxa_entrega_centavos,
-              aplicar_gorjeta_10, gorjeta_centavos, total_centavos,
-              pago_acumulado_centavos, saldo_restante_centavos, status, arquivado_legal,
-              criado_em_utc, atualizado_em_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 0, 0, 0, 0, 'aberta', 0, ?, ?)`
-          )
-          .run(
-            reqUuid,
-            empresaId,
-            unidadeId,
-            modalidade,
-            identLimpo,
-            mesaNumStr || (modalidade === 'mesa' ? identLimpo.replace(/\D/g, '') || '01' : ''),
-            String(rawPayload?.cliente_nome || '').trim(),
-            String(rawPayload?.cliente_telefone || '').trim(),
-            String(rawPayload?.endereco_entrega || '').trim(),
-            String(rawPayload?.entregador_nome || '').trim(),
-            zonaCodigo,
-            cupomSolicitado,
-            String(operator.nome || rawPayload?.garcom_nome || 'Atendente').trim(),
-            pessoasMesa,
-            taxaEntregaAutoritativaCentavos,
-            aplicarGorjeta ? 1 : 0,
-            nowUtc,
-            nowUtc
-          );
-        const newId = Number(insertRes.lastInsertRowid);
-        comandaRow = conn
-          .prepare('SELECT * FROM pdv_comandas_acid WHERE id = ?')
-          .get(newId) as unknown as AcidComandaRow;
+        comandaRow = await this.repo.createComanda(client, {
+          op_uuid: reqUuid,
+          empresa_id: empresaId,
+          unidade_id: unidadeId,
+          modalidade,
+          identificador: identLimpo,
+          mesa_numero: mesaNumStr || (modalidade === 'mesa' ? identLimpo.replace(/\D/g, '') || '01' : ''),
+          cliente_nome: String(rawPayload?.cliente_nome || '').trim(),
+          cliente_telefone: String(rawPayload?.cliente_telefone || '').trim(),
+          endereco_entrega: String(rawPayload?.endereco_entrega || '').trim(),
+          entregador_nome: String(rawPayload?.entregador_nome || '').trim(),
+          zona_entrega_codigo: zonaCodigo,
+          cupom_codigo: cupomSolicitado,
+          garcom_nome: String(operator.nome || rawPayload?.garcom_nome || 'Atendente').trim(),
+          pessoas_mesa: pessoasMesa,
+          subtotal_itens_centavos: 0,
+          desconto_centavos: 0,
+          taxa_entrega_centavos: taxaEntregaAutoritativaCentavos,
+          aplicar_gorjeta_10: aplicarGorjeta ? 1 : 0,
+          gorjeta_centavos: 0,
+          total_centavos: 0,
+          pago_acumulado_centavos: 0,
+          saldo_restante_centavos: 0,
+          status: 'aberta',
+          arquivado_legal: 0,
+          criado_em_utc: nowUtc,
+          atualizado_em_utc: nowUtc,
+          fechado_em_utc: null
+        });
       }
 
-      const existingItems = conn
-        .prepare('SELECT * FROM pdv_comanda_itens_acid WHERE comanda_id = ? AND cancelado = 0')
-        .all(comandaRow.id) as unknown as AcidComandaItemRow[];
+      const existingItems = await this.repo.listActiveComandaItens(client, comandaRow.id);
       const existingItemIds = new Set(existingItems.map((i) => i.id));
 
       const itensInseridos: AcidComandaItemRow[] = [];
@@ -344,14 +335,6 @@ export class ZeroTrustCommerceService {
         saldo_restante_mili: number;
         nome: string;
       }> = [];
-
-      const insertItemStmt = conn.prepare(
-        `INSERT INTO pdv_comanda_itens_acid (
-          id, comanda_id, empresa_id, produto_id, nome_snapshot, categoria_snapshot,
-          quantidade, preco_unitario_centavos, subtotal_centavos, setor_impressao,
-          observacao, garcom_nome, cancelado, criado_em_utc
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
-      );
 
       for (const rawIt of rawNovosItens) {
         const itemIdUnico = String(
@@ -368,15 +351,15 @@ export class ZeroTrustCommerceService {
 
         if (prod.estoque_item_id && prod.qtd_baixa_mili > 0) {
           const totalBaixarMili = qtd * prod.qtd_baixa_mili;
-          const updatedStock = this.repo.decrementStockAtomically(
-            conn,
+          const updatedStock = await this.repo.decrementStockAtomically(
+            client,
             empresaId,
             prod.estoque_item_id,
             totalBaixarMili,
             nowUtc
           );
           if (!updatedStock) {
-            const currentStock = this.repo.getStockBalance(empresaId, prod.estoque_item_id);
+            const currentStock = await this.repo.getStockBalance(empresaId, prod.estoque_item_id, client);
             throw new InsufficientStockError(
               `Estoque insuficiente para "${prod.nome}". Operacao abortada atomicamente sem alterar saldos.`,
               {
@@ -412,34 +395,17 @@ export class ZeroTrustCommerceService {
           criado_em_utc: nowUtc
         };
 
-        insertItemStmt.run(
-          newItemRow.id,
-          newItemRow.comanda_id,
-          newItemRow.empresa_id,
-          newItemRow.produto_id,
-          newItemRow.nome_snapshot,
-          newItemRow.categoria_snapshot,
-          newItemRow.quantidade,
-          newItemRow.preco_unitario_centavos,
-          newItemRow.subtotal_centavos,
-          newItemRow.setor_impressao,
-          newItemRow.observacao,
-          newItemRow.garcom_nome,
-          newItemRow.criado_em_utc
-        );
-
+        await this.repo.insertComandaItem(client, newItemRow);
         existingItemIds.add(itemIdUnico);
         itensInseridos.push(newItemRow);
       }
 
       const todosItensAtivos = [...existingItems, ...itensInseridos];
-      const pagamentosExistentes = conn
-        .prepare('SELECT * FROM pdv_pagamentos_acid WHERE comanda_id = ?')
-        .all(comandaRow.id) as unknown as AcidPagamentoRow[];
+      const pagamentosExistentes = await this.repo.listComandaPagamentos(client, comandaRow.id);
 
       let cupomDescontoCentavos = 0;
       if (cupomSolicitado) {
-        const cupomRow = this.repo.findValidCoupon(conn, empresaId, cupomSolicitado, nowUtc);
+        const cupomRow = await this.repo.findValidCoupon(client, empresaId, cupomSolicitado, nowUtc);
         if (!cupomRow) {
           throw new DomainValidationError(`Cupom "${cupomSolicitado}" invalido, expirado ou esgotado.`);
         }
@@ -450,7 +416,7 @@ export class ZeroTrustCommerceService {
           cupomDescontoCentavos = cupomRow.valor;
         }
         if (comandaRow.cupom_codigo !== cupomRow.codigo) {
-          const okCupom = this.repo.consumeCouponAtomically(conn, cupomRow.id);
+          const okCupom = await this.repo.consumeCouponAtomically(client, cupomRow.id);
           if (!okCupom) {
             throw new DomainValidationError(`Cupom "${cupomSolicitado}" esgotou durante a concorrencia.`);
           }
@@ -466,52 +432,27 @@ export class ZeroTrustCommerceService {
         pagamentosRealizados: pagamentosExistentes
       });
 
-      conn
-        .prepare(
-          `UPDATE pdv_comandas_acid SET
-            cliente_nome = CASE WHEN ? != '' THEN ? ELSE cliente_nome END,
-            cliente_telefone = CASE WHEN ? != '' THEN ? ELSE cliente_telefone END,
-            endereco_entrega = CASE WHEN ? != '' THEN ? ELSE endereco_entrega END,
-            entregador_nome = CASE WHEN ? != '' THEN ? ELSE entregador_nome END,
-            zona_entrega_codigo = ?,
-            cupom_codigo = ?,
-            pessoas_mesa = ?,
-            aplicar_gorjeta_10 = ?,
-            subtotal_itens_centavos = ?,
-            desconto_centavos = ?,
-            taxa_entrega_centavos = ?,
-            gorjeta_centavos = ?,
-            total_centavos = ?,
-            pago_acumulado_centavos = ?,
-            saldo_restante_centavos = ?,
-            atualizado_em_utc = ?
-           WHERE id = ?`
-        )
-        .run(
-          String(rawPayload?.cliente_nome || '').trim(),
-          String(rawPayload?.cliente_nome || '').trim(),
-          String(rawPayload?.cliente_telefone || '').trim(),
-          String(rawPayload?.cliente_telefone || '').trim(),
-          String(rawPayload?.endereco_entrega || '').trim(),
-          String(rawPayload?.endereco_entrega || '').trim(),
-          String(rawPayload?.entregador_nome || '').trim(),
-          String(rawPayload?.entregador_nome || '').trim(),
-          zonaCodigo,
-          cupomSolicitado,
-          pessoasMesa,
-          aplicarGorjeta ? 1 : 0,
-          totals.subtotalItensCentavos,
-          totals.descontoEfetivoCentavos,
-          taxaEntregaAutoritativaCentavos,
-          totals.gorjetaCentavos,
-          totals.totalCentavos,
-          totals.pagoAcumuladoCentavos,
-          totals.saldoRestanteCentavos,
-          nowUtc,
-          comandaRow.id
-        );
+      await this.repo.updateComandaTotalsAndMeta(client, {
+        comandaId: comandaRow.id,
+        cliente_nome: String(rawPayload?.cliente_nome || '').trim(),
+        cliente_telefone: String(rawPayload?.cliente_telefone || '').trim(),
+        endereco_entrega: String(rawPayload?.endereco_entrega || '').trim(),
+        entregador_nome: String(rawPayload?.entregador_nome || '').trim(),
+        zona_entrega_codigo: zonaCodigo,
+        cupom_codigo: cupomSolicitado,
+        pessoas_mesa: pessoasMesa,
+        aplicar_gorjeta_10: aplicarGorjeta ? 1 : 0,
+        subtotal_itens_centavos: totals.subtotalItensCentavos,
+        desconto_centavos: totals.descontoEfetivoCentavos,
+        taxa_entrega_centavos: taxaEntregaAutoritativaCentavos,
+        gorjeta_centavos: totals.gorjetaCentavos,
+        total_centavos: totals.totalCentavos,
+        pago_acumulado_centavos: totals.pagoAcumuladoCentavos,
+        saldo_restante_centavos: totals.saldoRestanteCentavos,
+        atualizado_em_utc: nowUtc
+      });
 
-      const consolidated = this.repo.getComandaWithDetailsConsolidated(conn, empresaId, comandaRow.id)!;
+      const consolidated = (await this.repo.getComandaWithDetailsConsolidated(client, empresaId, comandaRow.id))!;
       return {
         consolidated,
         itensInseridos,
@@ -538,7 +479,7 @@ export class ZeroTrustCommerceService {
     };
   }
 
-  public pagarOuFecharComandaZeroTrust(
+  public async pagarOuFecharComandaZeroTrust(
     operator: AuthenticatedOperatorContext,
     rawPayload: any,
     legacyDb?: any
@@ -570,11 +511,8 @@ export class ZeroTrustCommerceService {
       rawPayload?.op_uuid || `PG-${Date.now()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`
     );
 
-    const txResult = this.repo.getEngine().runInImmediateTransaction((conn) => {
-      const comandaCheck = conn
-        .prepare('SELECT * FROM pdv_comandas_acid WHERE id = ? AND arquivado_legal = 0')
-        .get(comandaId) as unknown as AcidComandaRow | undefined;
-
+    const txResult = await this.repo.runAtomicTransaction(async (client) => {
+      const comandaCheck = await this.repo.findComandaById(client, comandaId);
       if (!comandaCheck) {
         throw new ResourceNotFoundError('Comanda ou mesa nao localizada.');
       }
@@ -587,12 +525,8 @@ export class ZeroTrustCommerceService {
         throw new UnauthorizedPrivilegeError('Acesso negado para operar comanda de outra empresa (BOLA/IDOR bloqueado).');
       }
 
-      const itensAtivos = conn
-        .prepare('SELECT * FROM pdv_comanda_itens_acid WHERE comanda_id = ? AND cancelado = 0')
-        .all(comandaId) as unknown as AcidComandaItemRow[];
-      const pagamentosAntes = conn
-        .prepare('SELECT * FROM pdv_pagamentos_acid WHERE comanda_id = ? ORDER BY criado_em_utc ASC')
-        .all(comandaId) as unknown as AcidPagamentoRow[];
+      const itensAtivos = await this.repo.listActiveComandaItens(client, comandaId);
+      const pagamentosAntes = await this.repo.listComandaPagamentos(client, comandaId);
 
       const aplicarGorjeta =
         rawPayload?.aplicar_gorjeta_10 !== undefined
@@ -618,7 +552,7 @@ export class ZeroTrustCommerceService {
       });
 
       if (preTotals.saldoRestanteCentavos === 0 && comandaCheck.status === 'fechada') {
-        const details = this.repo.getComandaWithDetailsConsolidated(conn, comandaCheck.empresa_id, comandaId)!;
+        const details = (await this.repo.getComandaWithDetailsConsolidated(client, comandaCheck.empresa_id, comandaId))!;
         return {
           consolidated: details,
           trocoCentavos: 0,
@@ -652,33 +586,23 @@ export class ZeroTrustCommerceService {
             ? Math.round((valorAplicarCentavos * preTotals.gorjetaCentavos) / preTotals.totalCentavos)
             : 0;
 
-        conn
-          .prepare(
-            `INSERT INTO pdv_pagamentos_acid (
-              id, comanda_id, empresa_id, metodo, valor_pago_centavos,
-              recebido_dinheiro_centavos, troco_centavos, gorjeta_proporcional_centavos,
-              pagante_ref, operador_uid, operador_nome, criado_em_utc
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          )
-          .run(
-            pagId,
-            comandaId,
-            comandaCheck.empresa_id,
-            metodoValido,
-            valorAplicarCentavos,
-            recebidoDinheiroCentavos,
-            trocoCentavos,
-            gorjetaProporcionalCentavos,
-            String(rawPayload?.pagante_ref || '').trim().slice(0, 120),
-            operator.uid,
-            operator.nome,
-            nowUtc
-          );
+        await this.repo.insertPagamento(client, {
+          id: pagId,
+          comanda_id: comandaId,
+          empresa_id: comandaCheck.empresa_id,
+          metodo: metodoValido,
+          valor_pago_centavos: valorAplicarCentavos,
+          recebido_dinheiro_centavos: recebidoDinheiroCentavos,
+          troco_centavos: trocoCentavos,
+          gorjeta_proporcional_centavos: gorjetaProporcionalCentavos,
+          pagante_ref: String(rawPayload?.pagante_ref || '').trim().slice(0, 120),
+          operador_uid: operator.uid,
+          operador_nome: operator.nome,
+          criado_em_utc: nowUtc
+        });
       }
 
-      const pagamentosDepois = conn
-        .prepare('SELECT * FROM pdv_pagamentos_acid WHERE comanda_id = ? ORDER BY criado_em_utc ASC')
-        .all(comandaId) as unknown as AcidPagamentoRow[];
+      const pagamentosDepois = await this.repo.listComandaPagamentos(client, comandaId);
 
       const postTotals = this.computeTotalsPureInteger({
         itensAtivos,
@@ -692,37 +616,20 @@ export class ZeroTrustCommerceService {
       const fechouCompleta = postTotals.saldoRestanteCentavos === 0;
       const novoStatus = fechouCompleta ? 'fechada' : 'aguardando_pagamento';
 
-      conn
-        .prepare(
-          `UPDATE pdv_comandas_acid SET
-            pessoas_mesa = ?,
-            aplicar_gorjeta_10 = ?,
-            subtotal_itens_centavos = ?,
-            desconto_centavos = ?,
-            gorjeta_centavos = ?,
-            total_centavos = ?,
-            pago_acumulado_centavos = ?,
-            saldo_restante_centavos = ?,
-            status = ?,
-            atualizado_em_utc = ?,
-            fechado_em_utc = CASE WHEN ? = 1 THEN ? ELSE fechado_em_utc END
-           WHERE id = ?`
-        )
-        .run(
-          pessoasMesa,
-          aplicarGorjeta ? 1 : 0,
-          postTotals.subtotalItensCentavos,
-          postTotals.descontoEfetivoCentavos,
-          postTotals.gorjetaCentavos,
-          postTotals.totalCentavos,
-          postTotals.pagoAcumuladoCentavos,
-          postTotals.saldoRestanteCentavos,
-          novoStatus,
-          nowUtc,
-          fechouCompleta ? 1 : 0,
-          nowUtc,
-          comandaId
-        );
+      await this.repo.updateComandaPaymentStatus(client, {
+        comandaId,
+        pessoas_mesa: pessoasMesa,
+        aplicar_gorjeta_10: aplicarGorjeta ? 1 : 0,
+        subtotal_itens_centavos: postTotals.subtotalItensCentavos,
+        desconto_centavos: postTotals.descontoEfetivoCentavos,
+        gorjeta_centavos: postTotals.gorjetaCentavos,
+        total_centavos: postTotals.totalCentavos,
+        pago_acumulado_centavos: postTotals.pagoAcumuladoCentavos,
+        saldo_restante_centavos: postTotals.saldoRestanteCentavos,
+        status: novoStatus,
+        atualizado_em_utc: nowUtc,
+        fechouCompleta
+      });
 
       const lancamentosCaixa: any[] = [];
       if (fechouCompleta) {
@@ -731,37 +638,32 @@ export class ZeroTrustCommerceService {
         const categoriaPrincipal = comandaCheck.modalidade === 'delivery' ? 'Delivery' : 'Faturamento Salão';
         const dataRefUtc = nowUtc.slice(0, 10);
 
-        const insertCaixaStmt = conn.prepare(
-          `INSERT OR IGNORE INTO caixa_lancamentos_acid (
-            op_uuid, empresa_id, unidade_id, data_referencia_utc, tipo, categoria,
-            descricao, valor_centavos, forma_pagamento, responsavel, origem_comanda_id,
-            arquivado_legal, criado_em_utc
-          ) VALUES (?, ?, ?, ?, 'Entrada', ?, ?, ?, ?, ?, ?, 0, ?)`
-        );
-
         if (principalSemGorjetaCentavos > 0) {
           const opPrinc = `CX-PRINC-CMD-${comandaId}`;
-          const r1 = insertCaixaStmt.run(
-            opPrinc,
-            comandaCheck.empresa_id,
-            comandaCheck.unidade_id,
-            dataRefUtc,
-            categoriaPrincipal,
-            `PDV ${comandaCheck.identificador}${comandaCheck.cliente_nome ? ` (${comandaCheck.cliente_nome})` : ''} [${metodosResumo}]`,
-            principalSemGorjetaCentavos,
-            metodosResumo,
-            operator.nome,
-            comandaId,
-            nowUtc
-          );
-          if (Number(r1.changes || 0) === 1) {
+          const descPrinc = `PDV ${comandaCheck.identificador}${comandaCheck.cliente_nome ? ` (${comandaCheck.cliente_nome})` : ''} [${metodosResumo}]`;
+          const r1 = await this.repo.insertCaixaLancamentoIdempotent(client, {
+            op_uuid: opPrinc,
+            empresa_id: comandaCheck.empresa_id,
+            unidade_id: comandaCheck.unidade_id,
+            data_referencia_utc: dataRefUtc,
+            tipo: 'Entrada',
+            categoria: categoriaPrincipal,
+            descricao: descPrinc,
+            valor_centavos: principalSemGorjetaCentavos,
+            forma_pagamento: metodosResumo,
+            responsavel: operator.nome,
+            origem_comanda_id: comandaId,
+            arquivado_legal: 0,
+            criado_em_utc: nowUtc
+          });
+          if (r1.inserted) {
             lancamentosCaixa.push({
-              id: Number(r1.lastInsertRowid),
+              id: r1.id,
               op_uuid: opPrinc,
               data: dataRefUtc,
               tipo: 'Entrada',
               categoria: categoriaPrincipal,
-              descricao: `PDV ${comandaCheck.identificador}${comandaCheck.cliente_nome ? ` (${comandaCheck.cliente_nome})` : ''} [${metodosResumo}]`,
+              descricao: descPrinc,
               expressao: String(centavosToReais(principalSemGorjetaCentavos)),
               valor: centavosToReais(principalSemGorjetaCentavos),
               valor_centavos: principalSemGorjetaCentavos,
@@ -778,27 +680,30 @@ export class ZeroTrustCommerceService {
 
         if (aplicarGorjeta && postTotals.gorjetaCentavos > 0) {
           const opGorj = `CX-GORJ-CMD-${comandaId}`;
-          const r2 = insertCaixaStmt.run(
-            opGorj,
-            comandaCheck.empresa_id,
-            comandaCheck.unidade_id,
-            dataRefUtc,
-            '10% Gorjeta',
-            `10% Gorjeta Garçom (${comandaCheck.garcom_nome}) — ${comandaCheck.identificador}`,
-            postTotals.gorjetaCentavos,
-            metodosResumo,
-            comandaCheck.garcom_nome || operator.nome,
-            comandaId,
-            nowUtc
-          );
-          if (Number(r2.changes || 0) === 1) {
+          const descGorj = `10% Gorjeta Garçom (${comandaCheck.garcom_nome}) — ${comandaCheck.identificador}`;
+          const r2 = await this.repo.insertCaixaLancamentoIdempotent(client, {
+            op_uuid: opGorj,
+            empresa_id: comandaCheck.empresa_id,
+            unidade_id: comandaCheck.unidade_id,
+            data_referencia_utc: dataRefUtc,
+            tipo: 'Entrada',
+            categoria: '10% Gorjeta',
+            descricao: descGorj,
+            valor_centavos: postTotals.gorjetaCentavos,
+            forma_pagamento: metodosResumo,
+            responsavel: comandaCheck.garcom_nome || operator.nome,
+            origem_comanda_id: comandaId,
+            arquivado_legal: 0,
+            criado_em_utc: nowUtc
+          });
+          if (r2.inserted) {
             lancamentosCaixa.push({
-              id: Number(r2.lastInsertRowid),
+              id: r2.id,
               op_uuid: opGorj,
               data: dataRefUtc,
               tipo: 'Entrada',
               categoria: '10% Gorjeta',
-              descricao: `10% Gorjeta Garçom (${comandaCheck.garcom_nome}) — ${comandaCheck.identificador}`,
+              descricao: descGorj,
               expressao: String(centavosToReais(postTotals.gorjetaCentavos)),
               valor: centavosToReais(postTotals.gorjetaCentavos),
               valor_centavos: postTotals.gorjetaCentavos,
@@ -814,7 +719,7 @@ export class ZeroTrustCommerceService {
         }
       }
 
-      const consolidated = this.repo.getComandaWithDetailsConsolidated(conn, comandaCheck.empresa_id, comandaId)!;
+      const consolidated = (await this.repo.getComandaWithDetailsConsolidated(client, comandaCheck.empresa_id, comandaId))!;
       return {
         consolidated,
         trocoCentavos,
@@ -847,7 +752,7 @@ export class ZeroTrustCommerceService {
     };
   }
 
-  public emitirCobrancaGatewayIdempotente(
+  public async emitirCobrancaGatewayIdempotente(
     operator: AuthenticatedOperatorContext,
     rawPayload: any
   ) {
@@ -860,10 +765,8 @@ export class ZeroTrustCommerceService {
       ? String(rawPayload.idempotency_key).trim()
       : '';
 
-    return this.repo.getEngine().runInImmediateTransaction((conn) => {
-      const comanda = conn
-        .prepare('SELECT * FROM pdv_comandas_acid WHERE id = ? AND arquivado_legal = 0')
-        .get(comandaId) as unknown as AcidComandaRow | undefined;
+    return this.repo.runAtomicTransaction(async (client) => {
+      const comanda = await this.repo.findComandaById(client, comandaId);
       if (!comanda) {
         throw new ResourceNotFoundError('Comanda nao localizada para emissao de cobranca.');
       }
@@ -882,18 +785,7 @@ export class ZeroTrustCommerceService {
         clientProvidedIdempKey ||
         `IDEMP-CMD-${comanda.empresa_id}-${comanda.id}-${comanda.saldo_restante_centavos}-${gateway}`;
 
-      const existing = conn
-        .prepare('SELECT * FROM cobrancas_saida_idempotentes WHERE idempotency_key = ?')
-        .get(idempotencyKey) as
-        | {
-            idempotency_key: string;
-            valor_centavos: number;
-            status: string;
-            resposta_json: string;
-            criado_em_utc: string;
-          }
-        | undefined;
-
+      const existing = await this.repo.findOutgoingChargeByKey(client, idempotencyKey);
       if (existing) {
         return {
           ok: true,
@@ -919,21 +811,16 @@ export class ZeroTrustCommerceService {
         emitido_em_utc: nowUtc
       };
 
-      conn
-        .prepare(
-          `INSERT INTO cobrancas_saida_idempotentes (
-            idempotency_key, empresa_id, comanda_id, gateway, valor_centavos, status, resposta_json, criado_em_utc
-          ) VALUES (?, ?, ?, ?, ?, 'EMITIDA', ?, ?)`
-        )
-        .run(
-          idempotencyKey,
-          comanda.empresa_id,
-          comanda.id,
-          gateway,
-          comanda.saldo_restante_centavos,
-          JSON.stringify(chargePayload),
-          nowUtc
-        );
+      await this.repo.insertOutgoingCharge(client, {
+        idempotency_key: idempotencyKey,
+        empresa_id: comanda.empresa_id,
+        comanda_id: comanda.id,
+        gateway,
+        valor_centavos: comanda.saldo_restante_centavos,
+        status: 'EMITIDA',
+        resposta_json: JSON.stringify(chargePayload),
+        criado_em_utc: nowUtc
+      });
 
       return {
         ok: true,

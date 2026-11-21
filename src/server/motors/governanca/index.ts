@@ -5,7 +5,13 @@ import {
   safeMotorCall,
   wrapMotorHandler
 } from '../motorRuntime.ts';
-import { isStagingEnvironment, resolveDatabaseFilePath, resolveProdDatabaseFilePath } from '../../db/sqliteEngine.ts';
+import {
+  isStagingEnvironment,
+  maskDatabaseUrl,
+  resolveDatabaseUrl,
+  resolveProdDatabaseUrl
+} from '../../db/postgresEngine.ts';
+import { getBackupSchedulerStatus } from '../../services/postgresBackupScheduler.ts';
 
 export interface GovernancaContextProvider {
   getDb: () => any;
@@ -33,8 +39,10 @@ export async function buildIsolatedGovernancaSnapshot(provider: GovernancaContex
     degraded: auditRes.degraded || backupsRes.degraded,
     appEnv: isStagingEnvironment() ? 'staging' : process.env.APP_ENV || process.env.NODE_ENV || 'production',
     stagingSandboxActive: isStagingEnvironment(),
-    databasePath: resolveDatabaseFilePath(),
-    prodDatabasePath: resolveProdDatabaseFilePath(),
+    databaseEngine: 'postgresql',
+    databaseTarget: maskDatabaseUrl(resolveDatabaseUrl()),
+    prodDatabaseTarget: maskDatabaseUrl(resolveProdDatabaseUrl()),
+    backupScheduler: getBackupSchedulerStatus(),
     motorsHealth: getMotorHealthRegistry(),
     auditLogs: auditRes.data ?? [],
     backupsHorarios: backupsRes.data ?? []

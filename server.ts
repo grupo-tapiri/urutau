@@ -8,10 +8,10 @@ import { fileURLToPath } from 'url';
 import { GeminiBotService } from './src/services/geminiBotService.ts';
 import { embeddedWhatsApp } from './src/services/embeddedWhatsAppService.ts';
 import {
-  getSqliteEngine,
+  getPostgresEngine,
   isStagingEnvironment,
-  resetSqliteEngineForTests
-} from './src/server/db/sqliteEngine.ts';
+  resetPostgresEngineForTests
+} from './src/server/db/postgresEngine.ts';
 import { CommerceRepository } from './src/server/repositories/commerceRepository.ts';
 import {
   canAuthorizeManualDiscount,
@@ -24,6 +24,11 @@ import {
   verifyWebhookSignatureConstantTime,
   WebhookAndHardLimitService
 } from './src/server/services/webhookAndHardLimitService.ts';
+import {
+  HybridStorageService,
+  registerHybridStorageRoutes
+} from './src/server/services/hybridStorageService.ts';
+import { startPostgresBackupWorkerThread } from './src/server/services/postgresBackupScheduler.ts';
 import {
   handleDomainErrorResponse,
   isTrustedCorsOrigin,
@@ -290,12 +295,13 @@ function verificarAcessoEmpresaRequisicao(req: Request, targetEmpresaId: number)
   return sessao.emps.includes(Number(targetEmpresaId)) || sessao.emp === Number(targetEmpresaId);
 }
 
-export let commerceRepository = new CommerceRepository(getSqliteEngine());
+export let commerceRepository = new CommerceRepository(getPostgresEngine());
 export let zeroTrustCommerceService = new ZeroTrustCommerceService(commerceRepository);
 export let webhookAndHardLimitService = new WebhookAndHardLimitService(
   commerceRepository,
   WEBHOOK_HMAC_SECRET
 );
+export let hybridStorageService = new HybridStorageService(getPostgresEngine());
 
 registerZeroTrustMiddlewareAndRoutes({
   app,
@@ -308,16 +314,22 @@ registerZeroTrustMiddlewareAndRoutes({
   backupEncryptionSecret: process.env.BACKUP_ENCRYPTION_KEY || instanceKeys.aesSecret
 });
 
+registerHybridStorageRoutes({
+  app,
+  getStorageService: () => hybridStorageService
+});
+
 registerAllIsolatedMotors(app, {
   getDb: () => db,
   saveDb: () => saveDbToDisk(),
   reloadJsonDbFromDisk: () => {
-    commerceRepository = new CommerceRepository(getSqliteEngine());
+    commerceRepository = new CommerceRepository(getPostgresEngine());
     zeroTrustCommerceService = new ZeroTrustCommerceService(commerceRepository);
     webhookAndHardLimitService = new WebhookAndHardLimitService(
       commerceRepository,
       WEBHOOK_HMAC_SECRET
     );
+    hybridStorageService = new HybridStorageService(getPostgresEngine());
     try {
       const prodJsonCandidate =
         process.env.PROD_JSON_DATABASE_PATH ||
@@ -7028,32 +7040,32 @@ app.post('/api/v20/caixa/salvar', async (req: Request, res: Response) => {
           }
         }
 
-        commerceRepository.getEngine().runInImmediateTransaction((conn) => {
-          commerceRepository.ensureEmpresaExists(empIdAutorizado);
-          conn
-            .prepare(
-              `INSERT OR REPLACE INTO caixa_lancamentos_acid (
-                op_uuid, empresa_id, unidade_id, data_referencia_utc, tipo, categoria,
-                descricao, valor_centavos, forma_pagamento, responsavel, origem_comanda_id,
-                arquivado_legal, criado_em_utc
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Direto Caixa', ?, NULL, 0, ?)`
-            )
-            .run(
-              `CX-DIR-${empIdAutorizado}-${idGerado || Date.now()}`,
-              empIdAutorizado,
-              unidId,
-              dataRef,
-              tipoValido,
-              String(categoria || 'Operacional').trim(),
-              String(descricao).trim(),
-              valorCentavos,
-              sessao.nome,
-              nowUtc
-            );
-        });
       },
       { agregado: 'CAIXA', tipo: 'caixa.movimentacao_registrada', payload: { data: dataRef, tipo: tipoValido, descricao, valor: valorExatoReais } }
     );
+
+    await commerceRepository.runAtomicTransaction(async (client) => {
+      await commerceRepository.ensureEmpresaExists(empIdAutorizado, `Empresa ${empIdAutorizado}`, client);
+      await commerceRepository.insertCaixaLancamentoIdempotent(
+        client,
+        {
+          op_uuid: `CX-DIR-${empIdAutorizado}-${idGerado || Date.now()}`,
+          empresa_id: empIdAutorizado,
+          unidade_id: unidId,
+          data_referencia_utc: dataRef,
+          tipo: tipoValido,
+          categoria: String(categoria || 'Operacional').trim(),
+          descricao: String(descricao).trim(),
+          valor_centavos: valorCentavos,
+          forma_pagamento: 'Direto Caixa',
+          responsavel: sessao.nome,
+          origem_comanda_id: null,
+          arquivado_legal: 0,
+          criado_em_utc: nowUtc
+        },
+        true
+      );
+    });
 
     await registrarAuditLog(sessao.nome, 'LANCAMENTO_CAIXA', `${tipoValido}: ${descricao} — R$ ${valorExatoReais.toFixed(2)} (${valorCentavos} centavos)`, req.ip, sessao.cargo);
     const dispConsumer = await dispararLancamentoConsumerApi(empIdAutorizado, 'CAIXA', {
@@ -7501,16 +7513,6 @@ app.post('/api/v20/estoque/salvar', async (req: Request, res: Response) => {
           });
         }
 
-        commerceRepository.upsertSingleStockItem({
-          id: itemIdSalvo,
-          empresa_id: empIdAutorizado,
-          insumo_nome: nomeResolvido,
-          unidade_medida: unidMedidaFinal,
-          saldo_mili: saldoMili,
-          minimo_mili: minMili,
-          custo_unitario_centavos: custoCentavos
-        });
-
         if (fornecedor && String(fornecedor).trim()) {
           upsertCadastroPessoaAutomatico({
             nome: String(fornecedor).trim(),
@@ -7524,6 +7526,16 @@ app.post('/api/v20/estoque/salvar', async (req: Request, res: Response) => {
       },
       { agregado: 'ESTOQUE', tipo: 'estoque.atualizado', payload: { nome: nomeResolvido, quantidade: qtdNum, em_compras: flagCompras } }
     );
+
+    await commerceRepository.upsertSingleStockItem({
+      id: itemIdSalvo,
+      empresa_id: empIdAutorizado,
+      insumo_nome: nomeResolvido,
+      unidade_medida: unidMedidaFinal,
+      saldo_mili: saldoMili,
+      minimo_mili: minMili,
+      custo_unitario_centavos: custoCentavos
+    });
 
     await registrarAuditLog(sessao.nome, 'ATUALIZAR_ESTOQUE', `Insumo ${nomeResolvido}: ${qtdNum} ${unidMedidaFinal} (Em compras: ${flagCompras})`, req.ip, sessao.cargo);
     const dispConsumer = await dispararLancamentoConsumerApi(empIdAutorizado, 'ESTOQUE_COMPRA', {
@@ -8044,7 +8056,7 @@ const processarMensagemWebhookWAHA = async (req: Request, res: Response) => {
         typeof (req as any).rawBody === 'string'
           ? (req as any).rawBody
           : JSON.stringify(payload);
-      const firstTime = webhookAndHardLimitService.registerIdempotentChatWebhookEvent({
+      const firstTime = await webhookAndHardLimitService.registerIdempotentChatWebhookEvent({
         eventId: rawEventId,
         empresaId: Number(empresaId || 1),
         rawBody: rawBodyStr
@@ -8059,7 +8071,7 @@ const processarMensagemWebhookWAHA = async (req: Request, res: Response) => {
       }
     }
 
-    webhookAndHardLimitService.enforceAiConsumptionHardLimit(Number(empresaId || 1));
+    await webhookAndHardLimitService.enforceAiConsumptionHardLimit(Number(empresaId || 1));
 
     const agora = new Date();
     const horarioStr = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
@@ -10552,10 +10564,10 @@ app.post('/api/erp/restaurar-backup-completo', async (req: Request, res: Respons
     }
 
     saveDbToDisk();
-    let sqliteSincronizado = false;
+    let postgresSincronizado = false;
     try {
-      commerceRepository.syncCatalogAndStockFromMemoryDb(db);
-      sqliteSincronizado = true;
+      await commerceRepository.syncCatalogAndStockFromMemoryDb(db);
+      postgresSincronizado = true;
     } catch {}
 
     await cacheERP.invalidatePrefix('erp:');
@@ -10575,7 +10587,7 @@ app.post('/api/erp/restaurar-backup-completo', async (req: Request, res: Respons
       modo_aplicado: modo,
       registros_sincronizados: totalInseridosOuAtualizados,
       persistido_disco: true,
-      sincronizado_sqlite_wal: sqliteSincronizado,
+      sincronizado_postgres: postgresSincronizado,
       resumo_contagens: {
         empresas: (db.empresas || []).length,
         reservas: (db.reservas || []).length,
@@ -10639,10 +10651,14 @@ function buildCleanVpsFullCodePayload() {
     { relPath: '.env.example', category: 'config', label: '.env.example' },
     { relPath: 'index.html', category: 'frontend', label: 'index.html' },
     { relPath: 'server.ts', category: 'backend', label: 'server.ts' },
-    { relPath: 'src/server/db/sqliteEngine.ts', category: 'backend', label: 'src/server/db/sqliteEngine.ts' },
+    { relPath: 'src/server/db/postgresEngine.ts', category: 'backend', label: 'src/server/db/postgresEngine.ts' },
     { relPath: 'src/server/repositories/commerceRepository.ts', category: 'backend', label: 'src/server/repositories/commerceRepository.ts' },
     { relPath: 'src/server/services/zeroTrustCommerceService.ts', category: 'backend', label: 'src/server/services/zeroTrustCommerceService.ts' },
     { relPath: 'src/server/services/webhookAndHardLimitService.ts', category: 'backend', label: 'src/server/services/webhookAndHardLimitService.ts' },
+    { relPath: 'src/server/services/hybridStorageService.ts', category: 'backend', label: 'src/server/services/hybridStorageService.ts' },
+    { relPath: 'src/server/services/googleDriveServiceAccount.ts', category: 'backend', label: 'src/server/services/googleDriveServiceAccount.ts' },
+    { relPath: 'src/server/services/postgresBackupScheduler.ts', category: 'backend', label: 'src/server/services/postgresBackupScheduler.ts' },
+    { relPath: 'src/server/workers/postgresBackupWorker.ts', category: 'backend', label: 'src/server/workers/postgresBackupWorker.ts' },
     { relPath: 'src/server/controllers/securityAndZeroTrustController.ts', category: 'backend', label: 'src/server/controllers/securityAndZeroTrustController.ts' },
     { relPath: 'src/services/geminiBotService.ts', category: 'backend', label: 'src/services/geminiBotService.ts' },
     { relPath: 'src/services/embeddedWhatsAppService.ts', category: 'backend', label: 'src/services/embeddedWhatsAppService.ts' },
@@ -12909,7 +12925,7 @@ app.post('/api/pdv/produtos/salvar', async (req: Request, res: Response) => {
     );
 
     if (salvo) {
-      commerceRepository.upsertSingleCatalogProduct({
+      await commerceRepository.upsertSingleCatalogProduct({
         id: Number(salvo.id),
         empresa_id: empId,
         codigo: String(salvo.codigo || `PDV-${salvo.id}`),
@@ -12958,7 +12974,7 @@ app.post('/api/pdv/comandas/abrir-ou-adicionar', async (req: Request, res: Respo
     }
 
     const { op_uuid, garcom_nome, imprimir_setores, unidade_id } = req.body || {};
-    const resultadoAcid = zeroTrustCommerceService.abrirOuAdicionarItensZeroTrust(sessao, req.body || {}, db);
+    const resultadoAcid = await zeroTrustCommerceService.abrirOuAdicionarItensZeroTrust(sessao, req.body || {}, db);
     const comanda = resultadoAcid.comanda;
     const itensInseridos = resultadoAcid.itensInseridos;
     const baixasEstoqueRealizadas = resultadoAcid.baixasEstoqueRealizadas;
@@ -13207,7 +13223,7 @@ app.post('/api/pdv/comandas/pagar-fechar', async (req: Request, res: Response) =
     }
 
     const { op_uuid, metodo, pagante_ref } = req.body || {};
-    const resultadoAcid = zeroTrustCommerceService.pagarOuFecharComandaZeroTrust(sessao, req.body || {}, db);
+    const resultadoAcid = await zeroTrustCommerceService.pagarOuFecharComandaZeroTrust(sessao, req.body || {}, db);
     const comanda = resultadoAcid.comanda;
     const troco = resultadoAcid.troco;
     const valorAplicar = resultadoAcid.valor_aplicado;
@@ -13475,16 +13491,17 @@ app.get('/sw.js', (_req: Request, res: Response) => {
   res.sendFile(swPath);
 });
 
-export async function initServerForTests(customSqlitePath?: string) {
+export async function initServerForTests(customDatabaseUrl?: string) {
   if (process.env.NODE_ENV !== 'test') {
     throw new Error('initServerForTests exclusivo para NODE_ENV=test.');
   }
-  const freshEngine = resetSqliteEngineForTests(customSqlitePath);
+  const freshEngine = await resetPostgresEngineForTests(customDatabaseUrl);
   commerceRepository = new CommerceRepository(freshEngine);
   zeroTrustCommerceService = new ZeroTrustCommerceService(commerceRepository);
   webhookAndHardLimitService = new WebhookAndHardLimitService(commerceRepository, WEBHOOK_HMAC_SECRET);
+  hybridStorageService = new HybridStorageService(freshEngine);
   await initDatabase();
-  commerceRepository.syncCatalogAndStockFromMemoryDb(db);
+  await commerceRepository.syncCatalogAndStockFromMemoryDb(db);
   geminiBot = new GeminiBotService({
     db,
     executarComOutbox,
@@ -13498,13 +13515,19 @@ export async function initServerForTests(customSqlitePath?: string) {
     db,
     commerceRepository,
     zeroTrustCommerceService,
-    webhookAndHardLimitService
+    webhookAndHardLimitService,
+    hybridStorageService
   };
 }
 
 async function startServer() {
   await initDatabase();
-  commerceRepository.syncCatalogAndStockFromMemoryDb(db);
+  try {
+    await commerceRepository.syncCatalogAndStockFromMemoryDb(db);
+  } catch (pgSyncErr: any) {
+    console.warn('[PostgreSQL Sync] Aviso durante sincronizacao inicial:', pgSyncErr?.message);
+  }
+  startPostgresBackupWorkerThread();
 
   geminiBot = new GeminiBotService({
     db,
@@ -13561,7 +13584,7 @@ async function startServer() {
     });
 
     try {
-      webhookAndHardLimitService.enforceAiConsumptionHardLimit(1);
+      await webhookAndHardLimitService.enforceAiConsumptionHardLimit(1);
     } catch {
       return;
     }
@@ -13693,7 +13716,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Urutau ERP (${AMBIENTE}) ativo na porta ${PORT} — Zero-Trust, SQLite WAL ACID em Centavos, Anti-BOLA e 18 Módulos.`);
+    console.log(`Urutau ERP (${AMBIENTE}) ativo na porta ${PORT} — PostgreSQL Pool, Backup Horário Drive, Storage Híbrido Multi-Tenant e Zero-Trust.`);
   });
 }
 
